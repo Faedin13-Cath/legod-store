@@ -1,0 +1,86 @@
+import type { Product, Category, User } from '@/types'
+
+export const cats: Category[] = [
+  { id: 'starwars', label: 'Star Wars',       emoji: '⚔' },
+  { id: 'marvel',   label: 'Marvel',          emoji: '◆' },
+  { id: 'dc',       label: 'DC',              emoji: '◐' },
+  { id: 'harry',    label: 'Harry Potter',    emoji: '⚡' },
+  { id: 'stranger', label: 'Stranger Things', emoji: '◉' },
+  { id: 'castle',   label: 'Castle',          emoji: '♜' },
+  { id: 'sports',   label: 'Deportes',        emoji: '⚽' },
+  { id: 'custom',   label: 'Custom',          emoji: '✦' },
+]
+
+export const products: Product[] = [
+  { id:'cr7',    sku:'LGD-CR7-001', name:'CR7',           cat:'sports',   type:'minifig', tag:'Portugal · #7',          price:220,  stock:8,  state:'new',        rarity:'comun',    photo:'/assets/posters/social-cr7.png',       tags:['nuevo','restock'],      fig:{c1:'#B61E1E', c2:'#0F8A4A'}, desc:'Cristiano Ronaldo en kit de Portugal 2024. Detalles impresos en frente y espalda, brazos articulados, base 4×4.' },
+  { id:'vecna',  sku:'LGD-VEC-001', name:'Vecna',         cat:'stranger', type:'minifig', tag:'Stranger Things S4',     price:320,  stock:2,  state:'new',        rarity:'rara',     photo:'/assets/posters/social-vecna.png',     tags:['edicion-limitada'],     fig:{c1:'#5A0F0F', c2:'#1A1233'}, desc:'El villano de Hawkins en su forma final. Pieza coleccionable, edición limitada, accesorio bastón opcional.' },
+  { id:'motti',  sku:'LGD-MOT-001', name:'Motti',         cat:'starwars', type:'minifig', tag:'General Imperial',       price:240,  stock:5,  state:'perfect',    rarity:'comun',    photo:'/assets/posters/social-motti.png',     tags:['restock'],              fig:{c1:'#3F4759', c2:'#1F2937'}, desc:'Oficial de la Estrella de la Muerte. Detalles impresos. Gorra removible.' },
+  { id:'maythe4',sku:'LGD-MAY-001', name:'Pack May the 4th', cat:'starwars', type:'minifig', tag:'Star Wars · Bundle', price:880,  stock:1,  state:'new',        rarity:'limitada', photo:'/assets/posters/social-maythe4th.png', tags:['promo','limitada'],     fig:{c1:'#1B1B3F', c2:'#5526AD'}, desc:'Pack conmemorativo Star Wars Day. Incluye 4 minifiguras seleccionadas.' },
+  { id:'jango',  sku:'LGD-JNG-001', name:'Jango Fett',    cat:'starwars', type:'minifig', tag:'Cazarrecompensas',      price:380,  stock:3,  state:'perfect',    rarity:'rara',                                                   tags:['popular'],              fig:{c1:'#1E40AF', c2:'#1F2937'}, desc:'Mandaloriano clásico. Casco removible, jetpack incluido, pistolas blaster duales.' },
+  { id:'mando',  sku:'LGD-MND-001', name:'Mando',         cat:'starwars', type:'minifig', tag:'The Mandalorian',       price:360,  stock:4,  state:'perfect',    rarity:'comun',                                                  tags:['restock'],              fig:{c1:'#B0B7C3', c2:'#3C3C3C'}, desc:'Din Djarin en armadura beskar completa. Grogu disponible por separado.' },
+  { id:'grogu',  sku:'LGD-GRG-001', name:'Grogu',         cat:'starwars', type:'minifig', tag:'Baby Yoda',             price:140,  stock:12, state:'new',        rarity:'comun',                                                  tags:['popular'],              fig:{c1:'#7CB67C', c2:'#3F2C1B'}, desc:'Pieza pequeña con orejas verdes y túnica beige.' },
+  { id:'eleven', sku:'LGD-EL-001',  name:'Eleven',        cat:'stranger', type:'minifig', tag:'Stranger Things',       price:280,  stock:0,  state:'new',        rarity:'comun',                                                  tags:['agotado'],              fig:{c1:'#DC2626', c2:'#FECACA'}, desc:'011 con vestido rosa de la S1. Pelo rapado, sangre nasal impresa.' },
+  { id:'hopper', sku:'LGD-HOP-001', name:'Hopper',        cat:'stranger', type:'minifig', tag:'Sheriff de Hawkins',    price:240,  stock:6,  state:'crack',      rarity:'comun',                                                  tags:['oferta'],               fig:{c1:'#5C3D1F', c2:'#3B2A1B'}, desc:'Jim Hopper con uniforme. Pequeño crack en el cuello del torso.' },
+  { id:'spidey', sku:'LGD-SPI-001', name:'Spider-Man',    cat:'marvel',   type:'minifig', tag:'Across the Spiderverse', price:260, stock:9,  state:'new',        rarity:'comun',                                                  tags:['popular'],              fig:{c1:'#0F0F0F', c2:'#B71C1C'}, desc:'Miles Morales con traje negro y detalles rojos.' },
+  { id:'venom',  sku:'LGD-VNM-001', name:'Venom',         cat:'marvel',   type:'minifig', tag:'Symbiote',              price:340,  stock:3,  state:'perfect',    rarity:'rara',                                                   tags:['restock'],              fig:{c1:'#111111', c2:'#5A0F0F'}, desc:'Eddie Brock simbionte. Lengua extra-larga, dientes impresos.' },
+  { id:'thanos', sku:'LGD-THN-001', name:'Thanos',        cat:'marvel',   type:'minifig', tag:'Endgame',               price:420,  stock:2,  state:'new',        rarity:'rara',                                                   tags:['nuevo'],                fig:{c1:'#7C3F8C', c2:'#3C194C'}, desc:'Pieza grande, guantelete del infinito con piedras impresas.' },
+  { id:'iron',   sku:'LGD-IRN-001', name:'Iron Man',      cat:'marvel',   type:'minifig', tag:'Mk85',                  price:280,  stock:5,  state:'perfect',    rarity:'comun',                                                  tags:[],                       fig:{c1:'#B71C1C', c2:'#F5C84A'}, desc:'Tony Stark armadura Mark 85. Casco removible, reactor arc impreso.' },
+  { id:'batman', sku:'LGD-BAT-001', name:'Batman',        cat:'dc',       type:'minifig', tag:'The Batman',            price:300,  stock:7,  state:'new',        rarity:'comun',                                                  tags:['nuevo'],                fig:{c1:'#1A1A1A', c2:'#3C3C3C'}, desc:'Robert Pattinson Batman. Capa de tela, batarang incluido.' },
+  { id:'joker',  sku:'LGD-JKR-001', name:'Joker',         cat:'dc',       type:'minifig', tag:'Heath Ledger',          price:340,  stock:1,  state:'new',        rarity:'rara',                                                   tags:['edicion-limitada'],     fig:{c1:'#5C2D5C', c2:'#0F6A2F'}, desc:'Joker DKR con maquillaje detallado, navaja accesorio.' },
+  { id:'harley', sku:'LGD-HAR-001', name:'Harley Quinn',  cat:'dc',       type:'minifig', tag:'Suicide Squad',         price:240,  stock:4,  state:'perfect',    rarity:'comun',                                                  tags:[],                       fig:{c1:'#D4145A', c2:'#0066B3'},  desc:'Harley con cabello bicolor, bate de béisbol.' },
+  { id:'harry',  sku:'LGD-HP-001',  name:'Harry Potter',  cat:'harry',    type:'minifig', tag:'Año 5',                 price:200,  stock:11, state:'new',        rarity:'comun',                                                  tags:['popular'],              fig:{c1:'#7C1F22', c2:'#2A2A2A'}, desc:'Harry con varita y túnica de Gryffindor. Cicatriz impresa.' },
+  { id:'hermione',sku:'LGD-HER-001',name:'Hermione',      cat:'harry',    type:'minifig', tag:'Año 3',                 price:200,  stock:8,  state:'new',        rarity:'comun',                                                  tags:[],                       fig:{c1:'#7C1F22', c2:'#3F2C1B'}, desc:'Hermione con suéter y varita. Cabello pelo café claro.' },
+  { id:'voldy',  sku:'LGD-VOL-001', name:'Voldemort',     cat:'harry',    type:'minifig', tag:'Reliquias de la Muerte', price:280, stock:0,  state:'new',        rarity:'rara',                                                   tags:['agotado'],              fig:{c1:'#1B1B1B', c2:'#5A5A5A'}, desc:'Cabeza calva impresa, capa larga, varita de saúco.' },
+  { id:'kraken', sku:'LGD-KRK-001', name:'Caballero',     cat:'castle',   type:'minifig', tag:'Castle Classic',        price:180,  stock:5,  state:'no-acc',     rarity:'comun',                                                  tags:['oferta'],               fig:{c1:'#3F4759', c2:'#7A6A4D'}, desc:'Caballero con escudo dragón, espada larga.' },
+  { id:'messi',  sku:'LGD-MSI-001', name:'Messi',         cat:'sports',   type:'minifig', tag:'Argentina · #10',       price:220,  stock:6,  state:'new',        rarity:'comun',                                                  tags:['popular'],              fig:{c1:'#5DA5C7', c2:'#FFFFFF'}, desc:'Messi edición Mundial 2022. Trofeo opcional, brazaletes amarillos.' },
+  { id:'mbappe', sku:'LGD-MBP-001', name:'Mbappé',        cat:'sports',   type:'minifig', tag:'Real Madrid · #9',      price:220,  stock:7,  state:'new',        rarity:'comun',                                                  tags:[],                       fig:{c1:'#FFFFFF', c2:'#1A1A1A'}, desc:'Kit Real Madrid 2024-25 blanco. Botines impresos.' },
+  { id:'custom1',sku:'LGD-CUS-001', name:'Tu personaje',  cat:'custom',   type:'minifig', tag:'Pedido a la medida',    price:420,  stock:99, state:'new',        rarity:'unica',                                                  tags:['custom'],               fig:{c1:'#5526AD', c2:'#F5C84A'}, desc:'Mándanos una foto y te hacemos tu minifigura. 3-4 semanas.' },
+  { id:'set-mf', sku:'LGD-SET-MF', name:'Millennium Falcon', cat:'starwars', type:'set-sealed', tag:'75257 · 1351 pzas', price:5800, stock:1, state:'new',      rarity:'limitada',                                               tags:['sellado'],              fig:{c1:'#5C5C5C', c2:'#1A1A1A'}, desc:'Set sellado. Caja con detalles mínimos de almacén. Envío a cotizar.' },
+  { id:'set-dt', sku:'LGD-SET-DT', name:'Death Star',     cat:'starwars', type:'set-sealed', tag:'75159 · 4016 pzas', price:12500, stock:1, state:'new',       rarity:'limitada',                                               tags:['sellado'],              fig:{c1:'#7A7A7A', c2:'#3C3C3C'}, desc:'Estrella de la Muerte UCS. Caja sellada original.' },
+  { id:'set-hg', sku:'LGD-SET-HG', name:'Hogwarts Castle', cat:'harry',   type:'set-sealed', tag:'71043 · 6020 pzas', price:11800, stock:0, state:'new',       rarity:'limitada',                                               tags:['agotado','sellado'],    fig:{c1:'#7A6A4D', c2:'#3F2C1B'}, desc:'Castillo de Hogwarts UCS. Sin stock — disponible bajo pedido.' },
+  { id:'set-bp', sku:'LGD-USD-BP', name:'Bricks Pile 800g', cat:'castle', type:'set-used',   tag:'Lote mixto',        price:480,  stock:3,  state:'crack',      rarity:'comun',                                                  tags:['usado'],                fig:{c1:'#B7A057', c2:'#5C3D1F'}, desc:'Lote sin clasificar, 800 gramos de piezas misceláneas LEGO.' },
+  { id:'set-ng', sku:'LGD-USD-NG', name:'Ninjago Set 2017', cat:'castle', type:'set-used',   tag:'70617 · 932 pzas',  price:1800, stock:1,  state:'incomplete', rarity:'comun',                                                  tags:['usado'],                fig:{c1:'#0F8A4A', c2:'#1A1A1A'}, desc:'Templo Ninjago, faltan ~15 piezas, instrucciones originales.' },
+]
+
+export const sampleUser: User = {
+  id: 'fabian',
+  handle: 'fabian',
+  name: 'Fabián',
+  email: 'fabian@hotmail.com',
+  avatar: null,
+  joined: '2024-03',
+  pointsTotal: 1280,
+  pointsNextReward: 1500,
+  profilePublic: 'link-only',
+  channels: {},
+  collection: ['cr7','motti','jango','spidey','grogu','harry','messi','iron','batman','harley','hermione','mando','venom'],
+  wishlist: ['vecna','joker','voldy','set-hg','set-mf','maythe4'],
+  apartados: [
+    { productId:'set-mf', total:5800, paid:1740, dueAt: Date.now() + 5*24*60*60*1000, notify:{whatsapp:false, email:false} },
+    { productId:'thanos',  total:420,  paid:126,  dueAt: Date.now() + 2*24*60*60*1000, notify:{whatsapp:false, email:false} },
+  ],
+  orders: [
+    { id:'#A24831', date:'15 May 2026', total:780,  status:'enviado',   productIds:['cr7','grogu','iron'],    tracking:'8124-EST-93021' },
+    { id:'#A24820', date:'02 May 2026', total:240,  status:'entregado', productIds:['motti'],                 tracking:'CRR-554-72122' },
+    { id:'#A24795', date:'18 Abr 2026', total:580,  status:'pagado',    productIds:['jango','grogu'],         tracking:undefined },
+    { id:'#A24750', date:'02 Abr 2026', total:300,  status:'entregado', productIds:['batman'],                tracking:'EST-23211-7' },
+  ],
+  alerts: [
+    { type:'restock',  productId:'vecna',  message:'Vecna volvió a stock — 2 disponibles', at:'hace 2 horas', read:false },
+    { type:'pricedrop',productId:'joker',  message:'Bajó de precio: Joker $340 → $300',    at:'ayer',         read:false },
+    { type:'restock',  productId:'voldy',  message:'Voldemort sigue agotado, te avisamos', at:'hace 3 días',  read:true },
+    { type:'restock',  productId:'motti',  message:'Restock de Motti — 5 disponibles',     at:'hace 5 días',  read:true },
+  ],
+}
+
+export const faqs = [
+  { sec:'Pagos', items:[
+    { q:'¿Cómo funciona el apartado del 30%?', a:'Dejas el 30% del total como anticipo y tienes 7 días para liquidar el saldo restante. Si no se liquida en tiempo, el anticipo no es reembolsable y el producto vuelve a stock.' },
+    { q:'¿Aceptan pagos en Rock Show?', a:'Sí. Si nos vemos en el Roc puedes apartar con 30% y liquidar el resto el día del evento. Hay que confirmar disponibilidad por DM antes.' },
+    { q:'¿Qué métodos de pago aceptan?', a:'Transferencia, tarjeta vía MercadoPago, efectivo si nos vemos en persona en CDMX.' },
+  ]},
+  { sec:'Envíos', items:[
+    { q:'¿Cuánto cuesta el envío de minifiguras?', a:'Correos México $75, Estafeta $150, FedEx $250.' },
+    { q:'¿Y los sets sellados?', a:'Por tamaño y peso los sets sellados van a cotización individual. Te respondemos en menos de 24h.' },
+  ]},
+]
