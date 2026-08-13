@@ -132,6 +132,18 @@ export async function POST(req: NextRequest) {
   const attrs = order.note_attributes ?? []
   const attr  = (key: string) => attrs.find(a => a.name === key)?.value
 
+  /* ── Liquidación: mark apartado as completed ── */
+  if (attr('tipo') === 'liquidacion') {
+    const apartadoId = attr('apartado_id')
+    if (apartadoId) {
+      await supabase
+        .from('apartados')
+        .update({ status: 'completed' })
+        .eq('id', apartadoId)
+    }
+    return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
+  }
+
   if (attr('tipo') === 'apartado') {
     const subtotal = parseInt(attr('subtotal_original') ?? '0', 10)
     const deposit  = parseInt(attr('anticipo_monto')    ?? '0', 10)

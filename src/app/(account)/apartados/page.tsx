@@ -71,17 +71,19 @@ function ApartadoCard({ ap, onPaid }: { ap: Apartado; onPaid: (id: string) => vo
     window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
-  function pagarSaldo() {
-    const msg = [
-      `¡Hola! Quiero liquidar el saldo de mi apartado:`,
-      ``,
-      `📦 ${itemNames}`,
-      ``,
-      `🏷️ Saldo pendiente: $${ap.balance.toLocaleString('es-MX')} MXN`,
-      ``,
-      `¿Cómo procedo?`,
-    ].join('\n')
-    window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`, '_blank')
+  async function pagarSaldo() {
+    const res = await fetch('/api/checkout/liquidar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apartadoId: ap.id,
+        items: ap.items.map(i => ({ name: i.name, qty: i.qty })),
+        balance: ap.balance,
+        subtotal: ap.subtotal,
+      }),
+    })
+    const data = await res.json()
+    if (data.checkoutUrl) window.open(data.checkoutUrl, '_blank')
   }
 
   async function cancelar() {
@@ -145,7 +147,7 @@ function ApartadoCard({ ap, onPaid }: { ap: Apartado; onPaid: (id: string) => vo
                 Pagar anticipo ${ap.deposit.toLocaleString('es-MX')} MXN →
               </button>
               <button onClick={pagarSaldo} className="btn btn-secondary btn-sm">
-                Ya pagué — liquidar saldo
+                Pagar saldo ${ap.balance.toLocaleString('es-MX')} MXN →
               </button>
               <button onClick={cancelar} className="btn btn-secondary btn-sm" style={{ color: 'var(--ink-3)' }}>
                 Cancelar
