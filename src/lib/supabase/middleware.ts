@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const PROTECTED_ROUTES = [
   '/perfil', '/pedidos', '/coleccion', '/wishlist',
-  '/apartados', '/alertas', '/lealtad',
+  '/apartados', '/alertas', '/lealtad', '/saldo',
 ]
 
 export async function updateSession(request: NextRequest) {

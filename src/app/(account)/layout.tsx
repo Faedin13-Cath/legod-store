@@ -12,7 +12,8 @@ const NAV = [
   { href: '/wishlist',  icon: 'star',    label: 'Wishlist' },
   { href: '/apartados', icon: 'clock',   label: 'Apartados' },
   { href: '/alertas',   icon: 'bell',    label: 'Alertas' },
-  { href: '/lealtad',   icon: 'sparkle', label: 'Lealtad' },
+  { href: '/lealtad',   icon: 'sparkle',   label: 'Lealtad' },
+  { href: '/saldo',     icon: 'gift-card', label: 'Saldo' },
 ]
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {

@@ -144,6 +144,50 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
   }
 
+  if (attr('tipo') === 'topup') {
+    const amount = parseInt(attr('amount') ?? '0', 10)
+    const userId = attr('user_id')
+    if (amount > 0 && userId) {
+      const { data: prof } = await supabase.from('profiles').select('balance').eq('id', userId).single()
+      await supabase.from('profiles').update({ balance: (prof?.balance ?? 0) + amount }).eq('id', userId)
+      await supabase.from('balance_transactions').insert({
+        user_id:      userId,
+        type:         'topup',
+        amount,
+        description:  `Recarga de saldo — Orden #${orderNum ?? orderId}`,
+        reference_id: orderId,
+      })
+    }
+    return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
+  }
+
+  if (attr('tipo') === 'gift') {
+    const amount      = parseInt(attr('amount') ?? '0', 10)
+    const senderId    = attr('sender_id')
+    const recipientId = attr('recipient_id')
+    if (amount > 0 && senderId && recipientId) {
+      const { data: rProf } = await supabase.from('profiles').select('balance').eq('id', recipientId).single()
+      await supabase.from('profiles').update({ balance: (rProf?.balance ?? 0) + amount }).eq('id', recipientId)
+      await supabase.from('balance_transactions').insert([
+        {
+          user_id:      recipientId,
+          type:         'gift_received',
+          amount,
+          description:  'Gift card recibida',
+          reference_id: orderId,
+        },
+        {
+          user_id:      senderId,
+          type:         'gift_sent',
+          amount,
+          description:  `Gift card enviada — Orden #${orderNum ?? orderId}`,
+          reference_id: orderId,
+        },
+      ])
+    }
+    return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
+  }
+
   if (attr('tipo') === 'apartado') {
     const subtotal = parseInt(attr('subtotal_original') ?? '0', 10)
     const deposit  = parseInt(attr('anticipo_monto')    ?? '0', 10)
