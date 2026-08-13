@@ -190,7 +190,7 @@ export default function ApartadosPage() {
     <div>
       <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--ink)', margin: '0 0 8px' }}>Apartados</h1>
       <p style={{ fontSize: 13, color: 'var(--ink-3)', margin: '0 0 24px', lineHeight: 1.5 }}>
-        Tus figuras están reservadas. Toca <strong>"Pagar anticipo"</strong> para enviarnos los datos y confirmar tu apartado.
+        Tus figuras están reservadas. Toca <strong>&ldquo;Pagar anticipo&rdquo;</strong> para enviarnos los datos y confirmar tu apartado.
       </p>
 
       {loading ? (
