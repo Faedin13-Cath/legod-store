@@ -287,35 +287,56 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
               )}
             </div>
 
-            {/* Use balance toggle */}
-            {user && userBalance > 0 && (
-              <button
-                onClick={() => setUseBalance(v => !v)}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '9px 13px', borderRadius: 10, marginBottom: 10,
-                  background: useBalance ? 'var(--accent-soft)' : 'var(--cream)',
-                  border: `1px solid ${useBalance ? 'var(--accent)' : 'var(--line)'}`,
-                  cursor: 'pointer', transition: 'all .12s',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{
-                    width: 16, height: 16, borderRadius: 4, flexShrink: 0,
-                    background: useBalance ? 'var(--accent)' : 'var(--paper)',
-                    border: `2px solid ${useBalance ? 'var(--accent)' : 'var(--line)'}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {useBalance && <Icon name="check" size={9} color="#fff" />}
+            {/* Saldo section — always visible when logged in */}
+            {user && (
+              userBalance > 0 ? (
+                <button
+                  onClick={() => setUseBalance(v => !v)}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '9px 13px', borderRadius: 10, marginBottom: 10,
+                    background: useBalance ? 'var(--accent-soft)' : 'var(--cream)',
+                    border: `1px solid ${useBalance ? 'var(--accent)' : 'var(--line)'}`,
+                    cursor: 'pointer', transition: 'all .12s',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                      background: useBalance ? 'var(--accent)' : 'var(--paper)',
+                      border: `2px solid ${useBalance ? 'var(--accent)' : 'var(--line)'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {useBalance && <Icon name="check" size={9} color="#fff" />}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: useBalance ? 'var(--accent)' : 'var(--ink-2)' }}>
+                      Usar mi saldo
+                    </span>
                   </div>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: useBalance ? 'var(--accent)' : 'var(--ink-2)' }}>
-                    Usar mi saldo
+                  <span style={{ fontSize: 13, fontWeight: 700, color: useBalance ? 'var(--accent)' : 'var(--ink-3)' }}>
+                    ${userBalance.toLocaleString('es-MX')} disponibles
                   </span>
+                </button>
+              ) : (
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '9px 13px', borderRadius: 10, marginBottom: 10,
+                  background: 'var(--cream)', border: '1px solid var(--line)',
+                }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--ink-4)', marginBottom: 1 }}>Tu saldo</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink-3)' }}>$0 MXN</div>
+                  </div>
+                  <Link
+                    href="/saldo"
+                    onClick={onClose}
+                    className="btn btn-secondary btn-sm"
+                    style={{ textDecoration: 'none', fontSize: 12 }}
+                  >
+                    Agregar saldo
+                  </Link>
                 </div>
-                <span style={{ fontSize: 13, fontWeight: 700, color: useBalance ? 'var(--accent)' : 'var(--ink-3)' }}>
-                  ${userBalance.toLocaleString('es-MX')} disponibles
-                </span>
-              </button>
+              )
             )}
 
             {/* Full payment button */}

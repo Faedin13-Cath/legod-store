@@ -82,8 +82,8 @@ export async function POST(req: NextRequest) {
   const orderId     = String(order.id ?? '')
   const orderNum    = order.order_number
 
-  if (!email || pointsToAdd <= 0) {
-    return NextResponse.json({ ok: true, skipped: 'no email or zero amount' })
+  if (!email) {
+    return NextResponse.json({ ok: true, skipped: 'no email' })
   }
 
   const supabase = createAdminClient()
@@ -99,6 +99,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Check for duplicate (same order already processed)
+  // Always insert into points_history (even 0 pts) so this check works for $0 orders too
   const { data: existing } = await supabase
     .from('points_history')
     .select('id')
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
 
   if (existing) return NextResponse.json({ ok: true, skipped: 'already processed' })
 
-  // Add to points_history
+  // Always record in points_history for idempotency; only award actual points when > 0
   await supabase.from('points_history').insert({
     user_id:     authUser.id,
     points:      pointsToAdd,
@@ -116,17 +117,18 @@ export async function POST(req: NextRequest) {
     order_id:    orderId,
   })
 
-  // Increment points_total on profile
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('points_total')
-    .eq('id', authUser.id)
-    .single()
+  if (pointsToAdd > 0) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('points_total')
+      .eq('id', authUser.id)
+      .single()
 
-  await supabase
-    .from('profiles')
-    .update({ points_total: (profile?.points_total ?? 0) + pointsToAdd })
-    .eq('id', authUser.id)
+    await supabase
+      .from('profiles')
+      .update({ points_total: (profile?.points_total ?? 0) + pointsToAdd })
+      .eq('id', authUser.id)
+  }
 
   /* ── Apartado: create record if this is a deposit order ── */
   const attrs = order.note_attributes ?? []
