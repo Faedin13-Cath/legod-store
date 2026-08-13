@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import Icon from '@/components/ui/Icon'
-import { sampleUser, products } from '@/lib/data'
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; label: string }> = {
   pagado:    { bg: '#EAE5F4', color: '#5526AD', border: '#D3C8EC', label: 'Pagado' },
@@ -10,7 +9,7 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; 
 }
 
 export default function PedidosPage() {
-  const { orders } = sampleUser
+  const orders: never[] = []
 
   return (
     <div>

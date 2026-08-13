@@ -1,15 +1,43 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Icon from '@/components/ui/Icon'
-import { sampleUser } from '@/lib/data'
+import { useAuth } from '@/components/auth/AuthProvider'
+import { createClient } from '@/lib/supabase/client'
 
 export default function PerfilPage() {
-  const user = sampleUser
-  const [saved, setSaved] = useState(false)
+  const { profile, refreshProfile } = useAuth()
+  const supabase = createClient()
 
-  function handleSave(e: React.FormEvent) {
+  const [name,   setName]   = useState('')
+  const [handle, setHandle] = useState('')
+  const [email,  setEmail]  = useState('')
+  const [wa,     setWa]     = useState('')
+  const [privacy, setPrivacy] = useState('link-only')
+  const [saved,  setSaved]  = useState(false)
+  const [error,  setError]  = useState('')
+  const [busy,   setBusy]   = useState(false)
+
+  useEffect(() => {
+    if (profile) {
+      setName(profile.name ?? '')
+      setHandle(profile.handle ?? '')
+      setEmail(profile.email ?? '')
+      setWa(profile.whatsapp ?? '')
+      setPrivacy(profile.profile_public ?? 'link-only')
+    }
+  }, [profile])
+
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault()
+    setError(''); setBusy(true)
+    const { error } = await supabase
+      .from('profiles')
+      .update({ name, handle: handle.toLowerCase().replace(/\s+/g, ''), email, whatsapp: wa, profile_public: privacy })
+      .eq('id', profile!.id)
+    setBusy(false)
+    if (error) { setError(error.message); return }
+    await refreshProfile()
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
@@ -27,26 +55,32 @@ export default function PerfilPage() {
           <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 20px' }}>
             Información personal
           </h2>
+
+          {error && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#DC2626' }}>
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSave} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div>
               <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nombre</label>
-              <input defaultValue={user.name} className="input" style={{ width: '100%' }} />
+              <input value={name} onChange={e => setName(e.target.value)} className="input" style={{ width: '100%' }} />
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Handle</label>
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-3)', fontSize: 14 }}>@</span>
-                <input defaultValue={user.handle} className="input" style={{ width: '100%', paddingLeft: 26 }} />
+                <input value={handle} onChange={e => setHandle(e.target.value)} className="input" style={{ width: '100%', paddingLeft: 26 }} />
               </div>
             </div>
             <div style={{ gridColumn: '1/-1' }}>
               <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</label>
-              <input defaultValue={user.email} type="email" className="input" style={{ width: '100%' }} />
+              <input value={email} onChange={e => setEmail(e.target.value)} type="email" className="input" style={{ width: '100%' }} />
             </div>
-
             <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-              <button type="submit" className="btn btn-primary" style={{ padding: '10px 24px' }}>
-                {saved ? <><Icon name="check" size={14} /> Guardado</> : 'Guardar cambios'}
+              <button type="submit" disabled={busy} className="btn btn-primary" style={{ padding: '10px 24px' }}>
+                {saved ? <><Icon name="check" size={14} /> Guardado</> : busy ? 'Guardando…' : 'Guardar cambios'}
               </button>
               {saved && <span style={{ fontSize: 13, color: 'var(--success)' }}>✓ Cambios guardados</span>}
             </div>
@@ -62,18 +96,20 @@ export default function PerfilPage() {
             Canales de notificación
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[
-              { icon: 'whatsapp', label: 'WhatsApp', placeholder: '+52 55 ...', value: user.channels.whatsapp ?? '' },
-              { icon: 'user',     label: 'Email',     placeholder: user.email,  value: user.channels.email ?? user.email },
-            ].map(ch => (
-              <div key={ch.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ color: 'var(--accent)', flexShrink: 0 }}><Icon name={ch.icon as never} size={18} /></span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 4, fontWeight: 500 }}>{ch.label}</div>
-                  <input defaultValue={ch.value} placeholder={ch.placeholder} className="input" style={{ width: '100%' }} />
-                </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ color: 'var(--accent)', flexShrink: 0 }}><Icon name="whatsapp" size={18} /></span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 4, fontWeight: 500 }}>WhatsApp</div>
+                <input value={wa} onChange={e => setWa(e.target.value)} placeholder="+52 55 ..." className="input" style={{ width: '100%' }} />
               </div>
-            ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ color: 'var(--accent)', flexShrink: 0 }}><Icon name="user" size={18} /></span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 4, fontWeight: 500 }}>Email</div>
+                <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder={email} className="input" style={{ width: '100%' }} />
+              </div>
+            </div>
           </div>
         </section>
 
@@ -91,16 +127,16 @@ export default function PerfilPage() {
               { value: 'link-only', label: 'Solo con link', desc: 'Solo quien tenga el link directo puede verlo' },
               { value: 'private',   label: 'Privado', desc: 'Solo tú puedes ver tu perfil' },
             ].map(opt => (
-              <label key={opt.value} style={{
+              <label key={opt.value} onClick={() => setPrivacy(opt.value)} style={{
                 display: 'flex', alignItems: 'flex-start', gap: 10,
-                padding: '12px 14px', borderRadius: 10,
-                border: `1px solid ${user.profilePublic === opt.value ? 'var(--accent)' : 'var(--line)'}`,
-                background: user.profilePublic === opt.value ? 'var(--accent-soft)' : 'transparent',
-                cursor: 'pointer',
+                padding: '12px 14px', borderRadius: 10, cursor: 'pointer',
+                border: `1px solid ${privacy === opt.value ? 'var(--accent)' : 'var(--line)'}`,
+                background: privacy === opt.value ? 'var(--accent-soft)' : 'transparent',
               }}>
                 <input
-                  type="radio" name="privacy" defaultValue={opt.value}
-                  defaultChecked={user.profilePublic === opt.value}
+                  type="radio" name="privacy" value={opt.value}
+                  checked={privacy === opt.value}
+                  onChange={() => setPrivacy(opt.value)}
                   style={{ marginTop: 2, accentColor: 'var(--accent)' }}
                 />
                 <div>
@@ -113,12 +149,10 @@ export default function PerfilPage() {
         </section>
 
         {/* Stats strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
           {[
-            { label: 'En colección', value: user.collection.length },
-            { label: 'En wishlist',  value: user.wishlist.length },
-            { label: 'Pedidos',      value: user.orders.length },
-            { label: 'Puntos',       value: user.pointsTotal.toLocaleString('es-MX') },
+            { label: 'Puntos acumulados', value: profile?.points_total?.toLocaleString('es-MX') ?? '0' },
+            { label: 'Próxima recompensa', value: `${profile?.points_next_reward?.toLocaleString('es-MX') ?? '1500'} pts` },
           ].map(s => (
             <div key={s.label} style={{
               background: 'var(--paper)', border: '1px solid var(--line)',

@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import ProductCard from '@/components/product/ProductCard'
 import Icon from '@/components/ui/Icon'
 import { useCart } from '@/components/cart/CartProvider'
+import { useAuth } from '@/components/auth/AuthProvider'
+import { createClient } from '@/lib/supabase/client'
 import { cats } from '@/lib/data'
 import { getProducts, shopifyToProduct } from '@/lib/shopify'
 import type { Product } from '@/types'
@@ -35,13 +37,15 @@ function TiendaContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { addItem } = useCart()
+  const { user, profile } = useAuth()
+  const supabase = createClient()
 
   const [search,    setSearch]    = useState(searchParams.get('q')    ?? '')
   const [catFilter, setCatFilter] = useState(searchParams.get('cat')  ?? '')
   const [typeTab,   setTypeTab]   = useState(searchParams.get('tipo') ?? 'all')
   const [stateFilter, setStateFilter] = useState(searchParams.get('estado') ?? '')
   const [sort,      setSort]      = useState('nuevo')
-  const [wishlist,  setWishlist]  = useState<Set<string>>(new Set())
+  const [wishlist,    setWishlist]    = useState<Set<string>>(new Set())
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -51,6 +55,13 @@ function TiendaContent() {
       .catch(() => setAllProducts([]))
       .finally(() => setLoading(false))
   }, [])
+
+  // Sync wishlist from profile when user logs in
+  useEffect(() => {
+    if (profile?.wishlist) setWishlist(new Set(profile.wishlist))
+    else setWishlist(new Set())
+  }, [profile?.wishlist])
+
 
   const filtered = useMemo(() => {
     let list = [...allProducts]
@@ -79,12 +90,13 @@ function TiendaContent() {
     setStateFilter('')
   }
 
-  function toggleWish(p: Product) {
-    setWishlist(prev => {
-      const next = new Set(prev)
-      if (next.has(p.id)) { next.delete(p.id) } else { next.add(p.id) }
-      return next
-    })
+  async function toggleWish(p: Product) {
+    const next = new Set(wishlist)
+    if (next.has(p.id)) { next.delete(p.id) } else { next.add(p.id) }
+    setWishlist(next)
+    if (user) {
+      await supabase.from('profiles').update({ wishlist: Array.from(next) }).eq('id', user.id)
+    }
   }
 
   function addToCart(p: Product) {
@@ -271,7 +283,7 @@ function TiendaContent() {
                 wished={wishlist.has(p.id)}
                 onView={viewProduct}
                 onAdd={addToCart}
-                onWish={toggleWish}
+                onWish={user ? toggleWish : undefined}
               />
             ))}
           </div>

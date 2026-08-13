@@ -3,6 +3,7 @@ import './globals.css'
 import Header from '@/components/header/Header'
 import Footer from '@/components/footer/Footer'
 import CartProvider from '@/components/cart/CartProvider'
+import { AuthProvider } from '@/components/auth/AuthProvider'
 
 export const metadata: Metadata = {
   title: 'LEGOD — Minifiguras LEGO · Jango\'s Store',
@@ -13,11 +14,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es-MX">
       <body>
-        <CartProvider>
-          <Header />
-          <main>{children}</main>
-          <Footer />
-        </CartProvider>
+        <AuthProvider>
+          <CartProvider>
+            <Header />
+            <main>{children}</main>
+            <Footer />
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   )

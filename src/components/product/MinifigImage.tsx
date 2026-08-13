@@ -5,16 +5,14 @@ import Image from 'next/image'
 export default function MinifigImage({ product }: { product: Product }) {
   if (product.photo) {
     return (
-      <>
-        <Dragon className="absolute inset-0 w-full h-full text-accent opacity-[0.07]" />
-        <Image
-          src={product.photo}
-          alt={product.name}
-          fill
-          className="object-cover"
-          sizes="(max-width: 640px) 50vw, 25vw"
-        />
-      </>
+      <Image
+        src={product.photo}
+        alt={product.name}
+        fill
+        className="object-contain"
+        style={{ padding: '12px' }}
+        sizes="(max-width: 640px) 50vw, 25vw"
+      />
     )
   }
 

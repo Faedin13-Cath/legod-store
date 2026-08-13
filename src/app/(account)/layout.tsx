@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
-import { sampleUser } from '@/lib/data'
+import { useAuth } from '@/components/auth/AuthProvider'
 
 const NAV = [
   { href: '/perfil',    icon: 'user',    label: 'Mi perfil' },
@@ -17,9 +17,21 @@ const NAV = [
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname()
-  const user = sampleUser
+  const { profile, loading, signOut } = useAuth()
 
-  const pct = Math.round((user.pointsTotal / user.pointsNextReward) * 100)
+  const displayName = profile?.name || 'Usuario'
+  const displayHandle = profile?.handle || 'usuario'
+  const pts  = profile?.points_total ?? 0
+  const next = profile?.points_next_reward ?? 1500
+  const pct  = Math.min(100, Math.round((pts / next) * 100))
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--cream)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: 'var(--ink-3)', fontSize: 15 }}>Cargando…</div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
@@ -42,20 +54,20 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 20, fontWeight: 700, marginBottom: 12,
             }}>
-              {user.name[0]}
+              {displayName[0]?.toUpperCase()}
             </div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{user.name}</div>
-            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 14 }}>@{user.handle}</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{displayName}</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 14 }}>@{displayHandle}</div>
 
             {/* Points bar */}
             <div style={{ fontSize: 11, color: 'var(--ink-3)', marginBottom: 5 }}>
-              {user.pointsTotal.toLocaleString('es-MX')} / {user.pointsNextReward.toLocaleString('es-MX')} pts
+              {pts.toLocaleString('es-MX')} / {next.toLocaleString('es-MX')} pts
             </div>
             <div style={{ height: 4, borderRadius: 99, background: 'var(--line)', overflow: 'hidden' }}>
               <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent)', borderRadius: 99, transition: 'width .4s' }} />
             </div>
             <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 4 }}>
-              {user.pointsNextReward - user.pointsTotal} pts para tu próxima recompensa
+              {next - pts} pts para tu próxima recompensa
             </div>
           </div>
 
@@ -86,19 +98,19 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                 </Link>
               )
             })}
-            <Link
-              href="/"
+            <button
+              onClick={signOut}
               style={{
-                display: 'flex', alignItems: 'center', gap: 10,
+                display: 'flex', alignItems: 'center', gap: 10, width: '100%',
                 padding: '12px 16px', fontSize: 14, fontWeight: 400,
-                color: 'var(--danger)', textDecoration: 'none',
-                borderTop: '1px solid var(--line)',
-                transition: 'background .12s',
+                color: 'var(--danger)', background: 'none',
+                border: 'none', borderTop: '1px solid var(--line)',
+                cursor: 'pointer', transition: 'background .12s', textAlign: 'left',
               }}
             >
               <Icon name="arrow-left" size={16} />
               Cerrar sesión
-            </Link>
+            </button>
           </nav>
         </aside>
 

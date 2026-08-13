@@ -46,7 +46,7 @@ export default function ProductCard({ product, wished, onView, onAdd, onWish }: 
         style={{
           position: 'relative',
           paddingTop: '133%',
-          background: 'radial-gradient(circle at 30% 30%, var(--accent-soft) 0%, transparent 70%), var(--paper-soft)',
+          background: '#fff',
           borderBottom: '1px solid var(--line-soft)',
           overflow: 'hidden',
         }}
@@ -70,33 +70,26 @@ export default function ProductCard({ product, wished, onView, onAdd, onWish }: 
           ))}
         </div>
 
-        {/* Wishlist star */}
-        <button
-          className={'prod-wishlist ' + (wished ? 'active' : '')}
-          onClick={e => { e.stopPropagation(); onWish?.(product) }}
-          aria-label="Wishlist"
-          style={{
-            position: 'absolute', top: 10, right: 10,
-            width: 32, height: 32, borderRadius: '50%',
-            background: 'rgba(255,255,255,0.95)',
-            border: '1px solid var(--line)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: wished ? 'var(--gold)' : 'var(--ink-2)',
-            cursor: 'pointer',
-          }}
-        >
-          <Icon name={wished ? 'star-fill' : 'star'} size={14} />
-        </button>
+        {/* Wishlist star — solo visible cuando el usuario está logueado (onWish definido) */}
+        {onWish && (
+          <button
+            className={'prod-wishlist ' + (wished ? 'active' : '')}
+            onClick={e => { e.stopPropagation(); onWish(product) }}
+            aria-label="Wishlist"
+            style={{
+              position: 'absolute', top: 10, right: 10,
+              width: 32, height: 32, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.95)',
+              border: '1px solid var(--line)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: wished ? 'var(--gold)' : 'var(--ink-2)',
+              cursor: 'pointer',
+            }}
+          >
+            <Icon name={wished ? 'star-fill' : 'star'} size={14} />
+          </button>
+        )}
 
-        {/* SKU watermark */}
-        <div style={{
-          position: 'absolute', bottom: 10, left: 10,
-          fontSize: 10, fontWeight: 600, color: 'var(--ink-3)',
-          letterSpacing: '0.06em', textTransform: 'uppercase',
-          opacity: 0.7,
-        }}>
-          {product.sku}
-        </div>
       </div>
 
       {/* Body */}
@@ -124,6 +117,7 @@ export default function ProductCard({ product, wished, onView, onAdd, onWish }: 
             <Icon name="plus" size={15} />
           </button>
         </div>
+
       </div>
     </article>
   )

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Icon from '@/components/ui/Icon'
-import { sampleUser, products } from '@/lib/data'
+import { products } from '@/lib/data'
 
 const TYPE_ICON: Record<string, string> = {
   restock:   'bell',
@@ -12,7 +12,8 @@ const TYPE_ICON: Record<string, string> = {
 }
 
 export default function AlertasPage() {
-  const [alerts, setAlerts] = useState(sampleUser.alerts)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [alerts, setAlerts] = useState<any[]>([])
 
   function markRead(idx: number) {
     setAlerts(prev => prev.map((a, i) => i === idx ? { ...a, read: true } : a))

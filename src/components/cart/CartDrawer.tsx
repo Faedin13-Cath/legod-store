@@ -2,25 +2,69 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
+import { useAuth } from '@/components/auth/AuthProvider'
 import type { CartItem } from '@/types'
 
 interface Props {
-  open:    boolean
-  items:   CartItem[]
-  onClose: () => void
-  onRemove: (id: string) => void
+  open:        boolean
+  items:       CartItem[]
+  onClose:     () => void
+  onRemove:    (id: string) => void
   onChangeQty: (id: string, qty: number) => void
 }
 
+function deadlineLabel(total: number) {
+  if (total <= 1000) return '1 semana'
+  if (total <= 4000) return '15 días'
+  return '1 mes'
+}
+
 export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty }: Props) {
-  const drawerRef = useRef<HTMLDivElement>(null)
-  const [loading, setLoading] = useState(false)
+  const drawerRef       = useRef<HTMLDivElement>(null)
+  const { user }        = useAuth()
+  const router          = useRouter()
+  const [loading,        setLoading]       = useState(false)
+  const [loadingApt,     setLoadingApt]    = useState(false)
+  const [infoOpen,       setInfoOpen]      = useState(false)
+  const infoRef          = useRef<HTMLDivElement>(null)
+
+  const subtotal = items.reduce((s, it) => s + it.price * it.qty, 0)
+  const count    = items.reduce((s, it) => s + it.qty, 0)
+  const deposit  = Math.round(subtotal * 0.40)
+  const balance  = subtotal - deposit
+
+  /* ── close info popup on outside click ── */
+  useEffect(() => {
+    if (!infoOpen) return
+    function handler(e: MouseEvent) {
+      if (infoRef.current && !infoRef.current.contains(e.target as Node)) {
+        setInfoOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [infoOpen])
+
+  /* ── Escape key ── */
+  useEffect(() => {
+    if (!open) return
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+
+  /* ── body scroll lock ── */
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [open])
 
   async function goToCheckout() {
     setLoading(true)
     try {
-      const res = await fetch('/api/checkout', {
+      const res  = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: items.map(i => ({ id: i.id, qty: i.qty })) }),
@@ -38,22 +82,39 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
     }
   }
 
-  // Close on Escape
-  useEffect(() => {
-    if (!open) return
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  async function goToApartado() {
+    if (!user) { router.push('/login'); onClose(); return }
+    setLoadingApt(true)
+    try {
+      const res  = await fetch('/api/checkout/apartado', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items:    items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+          subtotal,
+        }),
+      })
+      const data = await res.json()
 
-  // Lock scroll when open
-  useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [open])
+      if (!data.checkoutUrl) {
+        throw new Error('No se pudo crear el apartado')
+      }
 
-  const subtotal = items.reduce((s, it) => s + it.price * it.qty, 0)
-  const count    = items.reduce((s, it) => s + it.qty, 0)
+      onClose()
+
+      if (data.via === 'whatsapp') {
+        // Fallback: no Admin API token — open WhatsApp + redirect to apartados page
+        window.open(data.checkoutUrl, '_blank')
+        router.push('/apartados')
+      } else {
+        // Shopify Draft Order invoice: redirect customer to pay deposit there
+        window.location.href = data.checkoutUrl
+      }
+    } catch {
+      alert('Error al procesar el apartado. Inténtalo de nuevo.')
+      setLoadingApt(false)
+    }
+  }
 
   return (
     <>
@@ -93,15 +154,9 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Icon name="cart" size={18} />
-            <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>
-              Carrito
-            </span>
+            <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>Carrito</span>
             {count > 0 && (
-              <span style={{
-                fontSize: 11, fontWeight: 700,
-                background: 'var(--accent)', color: '#fff',
-                padding: '2px 8px', borderRadius: 999,
-              }}>
+              <span style={{ fontSize: 11, fontWeight: 700, background: 'var(--accent)', color: '#fff', padding: '2px 8px', borderRadius: 999 }}>
                 {count}
               </span>
             )}
@@ -109,12 +164,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
           <button
             onClick={onClose}
             aria-label="Cerrar carrito"
-            style={{
-              width: 36, height: 36, borderRadius: 8,
-              background: 'var(--cream)', border: '1px solid var(--line)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--ink-2)', cursor: 'pointer',
-            }}
+            style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--cream)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)', cursor: 'pointer' }}
           >
             <Icon name="close" size={16} />
           </button>
@@ -123,33 +173,18 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
         {/* Items */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
           {items.length === 0 ? (
-            <div style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
-              justifyContent: 'center', height: '100%', gap: 12, textAlign: 'center',
-            }}>
-              <div style={{ color: 'var(--ink-4)', marginBottom: 4 }}>
-                <Icon name="cart" size={40} />
-              </div>
-              <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--ink-2)', margin: 0 }}>
-                Tu carrito está vacío
-              </p>
-              <p style={{ fontSize: 13, color: 'var(--ink-3)', margin: 0 }}>
-                Agrega minifiguras o sets desde la tienda
-              </p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12, textAlign: 'center' }}>
+              <div style={{ color: 'var(--ink-4)', marginBottom: 4 }}><Icon name="cart" size={40} /></div>
+              <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--ink-2)', margin: 0 }}>Tu carrito está vacío</p>
+              <p style={{ fontSize: 13, color: 'var(--ink-3)', margin: 0 }}>Agrega minifiguras o sets desde la tienda</p>
               <button onClick={onClose} className="btn btn-primary btn-sm" style={{ marginTop: 8 }}>
-                <Link href="/tienda" style={{ color: 'inherit', textDecoration: 'none' }}>
-                  Explorar tienda
-                </Link>
+                <Link href="/tienda" style={{ color: 'inherit', textDecoration: 'none' }}>Explorar tienda</Link>
               </button>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {items.map(item => (
-                <div key={item.id} style={{
-                  display: 'flex', gap: 12, alignItems: 'flex-start',
-                  padding: '12px 14px', borderRadius: 12,
-                  background: 'var(--cream)', border: '1px solid var(--line)',
-                }}>
+                <div key={item.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 12, background: 'var(--cream)', border: '1px solid var(--line)' }}>
                   {/* Color chip */}
                   <div style={{
                     width: 52, height: 52, borderRadius: 8, flexShrink: 0,
@@ -165,54 +200,29 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', marginBottom: 2 }}>
-                      {item.name}
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--ink-3)', marginBottom: 8 }}>
-                      {item.tag}
-                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', marginBottom: 2 }}>{item.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--ink-3)', marginBottom: 8 }}>{item.tag}</div>
                     {/* Qty controls */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{
-                        display: 'flex', alignItems: 'center',
-                        border: '1px solid var(--line)', borderRadius: 8,
-                        background: 'var(--paper)', overflow: 'hidden',
-                      }}>
+                      <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--paper)', overflow: 'hidden' }}>
                         <button
                           onClick={() => item.qty <= 1 ? onRemove(item.id) : onChangeQty(item.id, item.qty - 1)}
-                          style={{
-                            width: 28, height: 28, background: 'none', border: 'none',
-                            color: 'var(--ink-2)', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          }}
+                          style={{ width: 28, height: 28, background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
                           <Icon name="minus" size={12} />
                         </button>
-                        <span style={{ width: 24, textAlign: 'center', fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
-                          {item.qty}
-                        </span>
+                        <span style={{ width: 24, textAlign: 'center', fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{item.qty}</span>
                         <button
                           onClick={() => onChangeQty(item.id, item.qty + 1)}
                           disabled={item.qty >= item.stock}
-                          style={{
-                            width: 28, height: 28, background: 'none', border: 'none',
-                            color: item.qty >= item.stock ? 'var(--ink-4)' : 'var(--ink-2)',
-                            cursor: item.qty >= item.stock ? 'not-allowed' : 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          }}
+                          style={{ width: 28, height: 28, background: 'none', border: 'none', color: item.qty >= item.stock ? 'var(--ink-4)' : 'var(--ink-2)', cursor: item.qty >= item.stock ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
                           <Icon name="plus" size={12} />
                         </button>
                       </div>
                       <button
                         onClick={() => onRemove(item.id)}
-                        style={{
-                          width: 28, height: 28, borderRadius: 6,
-                          background: 'none', border: '1px solid transparent',
-                          color: 'var(--ink-3)', cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          transition: 'all .12s',
-                        }}
+                        style={{ width: 28, height: 28, borderRadius: 6, background: 'none', border: '1px solid transparent', color: 'var(--ink-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
                         <Icon name="close" size={13} />
                       </button>
@@ -230,46 +240,135 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
 
         {/* Footer */}
         {items.length > 0 && (
-          <div style={{
-            padding: '20px 24px',
-            borderTop: '1px solid var(--line)',
-          }}>
-            {/* Apartado note */}
-            <div style={{
-              padding: '10px 14px', borderRadius: 10,
-              background: 'var(--accent-soft)', border: '1px solid var(--accent)',
-              fontSize: 13, color: 'var(--ink-2)', marginBottom: 14,
-              lineHeight: 1.5,
-            }}>
-              <span style={{ color: 'var(--accent)', fontWeight: 600 }}>30% para apartar</span> ·{' '}
-              <span style={{ fontWeight: 500 }}>
-                ${Math.round(subtotal * 0.3).toLocaleString('es-MX')} MXN anticipo
-              </span>
-            </div>
+          <div style={{ padding: '20px 24px', borderTop: '1px solid var(--line)' }}>
 
             {/* Subtotal */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
-              <span style={{ fontSize: 14, color: 'var(--ink-2)' }}>Subtotal ({count} {count === 1 ? 'artículo' : 'artículos'})</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+              <span style={{ fontSize: 14, color: 'var(--ink-2)' }}>
+                Subtotal ({count} {count === 1 ? 'artículo' : 'artículos'})
+              </span>
               <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)' }}>
                 ${subtotal.toLocaleString('es-MX')}
                 <small style={{ fontSize: 13, fontWeight: 400, color: 'var(--ink-3)', marginLeft: 3 }}>MXN</small>
               </span>
             </div>
 
-            {/* Checkout */}
+            {/* Full payment button */}
             <button
               onClick={goToCheckout}
-              disabled={loading}
+              disabled={loading || loadingApt}
               className="btn btn-primary"
-              style={{ width: '100%', justifyContent: 'center', fontSize: 15, height: 48, opacity: loading ? 0.7 : 1 }}
+              style={{ width: '100%', justifyContent: 'center', fontSize: 15, height: 48, opacity: (loading || loadingApt) ? 0.7 : 1, marginBottom: 8 }}
             >
-              {loading ? 'Conectando…' : 'Pagar con Shopify →'}
+              {loading ? 'Conectando…' : 'Pagar completo →'}
             </button>
-            <button
-              onClick={onClose}
-              className="btn btn-secondary"
-              style={{ width: '100%', marginTop: 8, fontSize: 14 }}
-            >
+
+            {/* Apartar row: button + info icon */}
+            <div style={{ position: 'relative', marginBottom: 8 }} ref={infoRef}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button
+                  onClick={goToApartado}
+                  disabled={loading || loadingApt}
+                  style={{
+                    flex: 1, height: 44, borderRadius: 10,
+                    background: 'var(--accent-soft)',
+                    border: '1px solid var(--accent)',
+                    color: 'var(--accent)', fontSize: 14, fontWeight: 600,
+                    cursor: (loading || loadingApt) ? 'not-allowed' : 'pointer',
+                    opacity: (loading || loadingApt) ? 0.7 : 1,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    transition: 'background .12s',
+                  }}
+                >
+                  {loadingApt ? 'Procesando…' : (
+                    <>
+                      Apartar con 40%
+                      <span style={{ fontSize: 12, fontWeight: 500, opacity: 0.85 }}>
+                        (${deposit.toLocaleString('es-MX')} MXN)
+                      </span>
+                    </>
+                  )}
+                </button>
+
+                {/* Info icon */}
+                <button
+                  onClick={() => setInfoOpen(v => !v)}
+                  aria-label="¿Cómo funciona el apartado?"
+                  style={{
+                    width: 36, height: 44, borderRadius: 10, flexShrink: 0,
+                    background: infoOpen ? 'var(--accent)' : 'var(--cream)',
+                    border: `1px solid ${infoOpen ? 'var(--accent)' : 'var(--line)'}`,
+                    color: infoOpen ? '#fff' : 'var(--ink-3)',
+                    cursor: 'pointer', fontSize: 16,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all .12s',
+                  }}
+                >
+                  ℹ
+                </button>
+              </div>
+
+              {/* Info popup */}
+              {infoOpen && (
+                <div style={{
+                  position: 'absolute', bottom: 'calc(100% + 8px)', right: 0,
+                  width: 280, borderRadius: 14,
+                  background: 'var(--paper)',
+                  border: '1px solid var(--accent)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                  padding: '16px 18px',
+                  zIndex: 10,
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>
+                    ¿Cómo funciona el apartado?
+                  </div>
+                  <p style={{ fontSize: 12, color: 'var(--ink-2)', margin: '0 0 12px', lineHeight: 1.6 }}>
+                    Pagas el <strong>40%</strong> hoy para reservar tus figuras. Tienes plazo para liquidar el resto según el monto total:
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+                    {[
+                      { range: 'Hasta $1,000',         time: '1 semana',  active: subtotal <= 1000 },
+                      { range: '$1,001 — $4,000',      time: '15 días',   active: subtotal > 1000 && subtotal <= 4000 },
+                      { range: 'Más de $4,000',        time: '1 mes',     active: subtotal > 4000 },
+                    ].map(row => (
+                      <div key={row.range} style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '6px 10px', borderRadius: 8,
+                        background: row.active ? 'var(--accent-soft)' : 'var(--cream)',
+                        border: `1px solid ${row.active ? 'var(--accent)' : 'var(--line)'}`,
+                      }}>
+                        <span style={{ fontSize: 11, color: row.active ? 'var(--accent)' : 'var(--ink-3)', fontWeight: row.active ? 600 : 400 }}>
+                          {row.range}
+                        </span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: row.active ? 'var(--accent)' : 'var(--ink-2)' }}>
+                          {row.time}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Current order summary */}
+                  <div style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ink-3)', marginBottom: 3 }}>
+                      <span>Tu anticipo (40%)</span>
+                      <span style={{ fontWeight: 600, color: 'var(--ink-2)' }}>${deposit.toLocaleString('es-MX')} MXN</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ink-3)' }}>
+                      <span>Saldo al liquidar</span>
+                      <span style={{ fontWeight: 600, color: 'var(--ink-2)' }}>${balance.toLocaleString('es-MX')} MXN</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginTop: 3 }}>
+                      <span style={{ color: 'var(--ink-3)' }}>Tienes hasta</span>
+                      <span style={{ fontWeight: 700, color: 'var(--accent)' }}>{deadlineLabel(subtotal)}</span>
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 10, color: 'var(--ink-4)', margin: '10px 0 0', lineHeight: 1.5 }}>
+                    Si no se liquida en el plazo, el apartado se pierde. Te contactamos por WhatsApp antes de que venza.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <button onClick={onClose} className="btn btn-secondary" style={{ width: '100%', fontSize: 14 }}>
               Seguir comprando
             </button>
           </div>

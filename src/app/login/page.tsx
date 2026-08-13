@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
+import { createClient } from '@/lib/supabase/client'
 
 type View = 'login' | 'register' | 'forgot'
 
@@ -14,21 +16,48 @@ export default function LoginPage() {
   const [name,    setName]    = useState('')
   const [showPw,  setShowPw]  = useState(false)
   const [sent,    setSent]    = useState(false)
+  const [error,   setError]   = useState('')
+  const [busy,    setBusy]    = useState(false)
 
-  function handleLogin(e: React.FormEvent) {
+  const router   = useRouter()
+  const supabase = createClient()
+
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
-    // Phase 3: connect Shopify Customer Account API
-    console.log('login', email, pass)
+    setError(''); setBusy(true)
+    const { error } = await supabase.auth.signInWithPassword({ email, password: pass })
+    setBusy(false)
+    if (error) { setError(error.message); return }
+    router.push('/perfil')
+    router.refresh()
   }
 
-  function handleRegister(e: React.FormEvent) {
+  async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
+    setError(''); setBusy(true)
+    const { error } = await supabase.auth.signUp({
+      email,
+      password: pass,
+      options: { data: { name } },
+    })
+    setBusy(false)
+    if (error) { setError(error.message); return }
     setSent(true)
   }
 
-  function handleForgot(e: React.FormEvent) {
+  async function handleForgot(e: React.FormEvent) {
     e.preventDefault()
+    setError(''); setBusy(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/perfil`,
+    })
+    setBusy(false)
+    if (error) { setError(error.message); return }
     setSent(true)
+  }
+
+  function switchView(v: View) {
+    setView(v); setSent(false); setError('')
   }
 
   return (
@@ -63,7 +92,7 @@ export default function LoginPage() {
               {(['login', 'register'] as const).map(v => (
                 <button
                   key={v}
-                  onClick={() => { setView(v); setSent(false) }}
+                  onClick={() => switchView(v)}
                   style={{
                     flex: 1, padding: '8px 0', background: 'none', border: 'none',
                     fontSize: 14, fontWeight: view === v ? 600 : 400,
@@ -75,6 +104,17 @@ export default function LoginPage() {
                   {v === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* Error banner */}
+          {error && (
+            <div style={{
+              background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 10,
+              padding: '10px 14px', marginBottom: 14,
+              fontSize: 13, color: '#DC2626',
+            }}>
+              {error}
             </div>
           )}
 
@@ -93,7 +133,7 @@ export default function LoginPage() {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
                   <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Contraseña</label>
-                  <button type="button" onClick={() => { setView('forgot'); setSent(false) }} style={{ fontSize: 12, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
+                  <button type="button" onClick={() => switchView('forgot')} style={{ fontSize: 12, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
                     ¿Olvidaste tu contraseña?
                   </button>
                 </div>
@@ -104,19 +144,13 @@ export default function LoginPage() {
                     placeholder="••••••••"
                     className="input" style={{ width: '100%', paddingRight: 40 }}
                   />
-                  <button
-                    type="button" onClick={() => setShowPw(!showPw)}
-                    style={{
-                      position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                      background: 'none', border: 'none', color: 'var(--ink-3)', cursor: 'pointer', display: 'flex',
-                    }}
-                  >
+                  <button type="button" onClick={() => setShowPw(!showPw)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--ink-3)', cursor: 'pointer', display: 'flex' }}>
                     <Icon name={showPw ? 'eye-off' : 'eye'} size={16} />
                   </button>
                 </div>
               </div>
-              <button type="submit" className="btn btn-primary" style={{ marginTop: 4, height: 44, fontSize: 15 }}>
-                Entrar
+              <button type="submit" disabled={busy} className="btn btn-primary" style={{ marginTop: 4, height: 44, fontSize: 15 }}>
+                {busy ? 'Entrando…' : 'Entrar'}
               </button>
             </form>
           )}
@@ -152,13 +186,7 @@ export default function LoginPage() {
                     minLength={8}
                     className="input" style={{ width: '100%', paddingRight: 40 }}
                   />
-                  <button
-                    type="button" onClick={() => setShowPw(!showPw)}
-                    style={{
-                      position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                      background: 'none', border: 'none', color: 'var(--ink-3)', cursor: 'pointer', display: 'flex',
-                    }}
-                  >
+                  <button type="button" onClick={() => setShowPw(!showPw)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--ink-3)', cursor: 'pointer', display: 'flex' }}>
                     <Icon name={showPw ? 'eye-off' : 'eye'} size={16} />
                   </button>
                 </div>
@@ -168,8 +196,8 @@ export default function LoginPage() {
                 <Link href="#" style={{ color: 'var(--accent)' }}>Términos</Link>{' '}y{' '}
                 <Link href="#" style={{ color: 'var(--accent)' }}>Política de Privacidad</Link>.
               </p>
-              <button type="submit" className="btn btn-primary" style={{ marginTop: 4, height: 44, fontSize: 15 }}>
-                Crear cuenta
+              <button type="submit" disabled={busy} className="btn btn-primary" style={{ marginTop: 4, height: 44, fontSize: 15 }}>
+                {busy ? 'Creando cuenta…' : 'Crear cuenta'}
               </button>
             </form>
           )}
@@ -188,7 +216,7 @@ export default function LoginPage() {
               <p style={{ fontSize: 14, color: 'var(--ink-2)', margin: '0 0 20px', lineHeight: 1.5 }}>
                 Revisa tu correo para confirmar tu cuenta.
               </p>
-              <button onClick={() => { setView('login'); setSent(false) }} className="btn btn-secondary" style={{ width: '100%' }}>
+              <button onClick={() => switchView('login')} className="btn btn-secondary" style={{ width: '100%' }}>
                 Ir al inicio de sesión
               </button>
             </div>
@@ -198,7 +226,7 @@ export default function LoginPage() {
           {view === 'forgot' && !sent && (
             <form onSubmit={handleForgot} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ marginBottom: 6 }}>
-                <button type="button" onClick={() => setView('login')} style={{ background: 'none', border: 'none', color: 'var(--ink-3)', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4, padding: 0 }}>
+                <button type="button" onClick={() => switchView('login')} style={{ background: 'none', border: 'none', color: 'var(--ink-3)', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4, padding: 0 }}>
                   <Icon name="chevron-left" size={14} /> Volver
                 </button>
               </div>
@@ -215,8 +243,8 @@ export default function LoginPage() {
                   className="input" style={{ width: '100%' }}
                 />
               </div>
-              <button type="submit" className="btn btn-primary" style={{ height: 44, fontSize: 15 }}>
-                Enviar enlace
+              <button type="submit" disabled={busy} className="btn btn-primary" style={{ height: 44, fontSize: 15 }}>
+                {busy ? 'Enviando…' : 'Enviar enlace'}
               </button>
             </form>
           )}
@@ -235,7 +263,7 @@ export default function LoginPage() {
               <p style={{ fontSize: 14, color: 'var(--ink-2)', margin: '0 0 20px', lineHeight: 1.5 }}>
                 Revisa tu correo y sigue las instrucciones. El enlace expira en 1 hora.
               </p>
-              <button onClick={() => { setView('login'); setSent(false) }} className="btn btn-secondary" style={{ width: '100%' }}>
+              <button onClick={() => switchView('login')} className="btn btn-secondary" style={{ width: '100%' }}>
                 Volver al inicio de sesión
               </button>
             </div>

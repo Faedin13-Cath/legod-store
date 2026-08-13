@@ -1,40 +1,64 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import ProductCard from '@/components/product/ProductCard'
 import Icon from '@/components/ui/Icon'
-import { sampleUser, products } from '@/lib/data'
+import ProductCard from '@/components/product/ProductCard'
+import { useAuth } from '@/components/auth/AuthProvider'
+import { createClient } from '@/lib/supabase/client'
+import { getProducts, shopifyToProduct } from '@/lib/shopify'
+import type { Product } from '@/types'
 
 export default function WishlistPage() {
   const router = useRouter()
-  const [wishlist, setWishlist] = useState<string[]>(sampleUser.wishlist)
+  const { user, profile } = useAuth()
+  const supabase = createClient()
 
-  const wished = products.filter(p => wishlist.includes(p.id))
+  const [items, setItems] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
 
-  function removeFromWishlist(id: string) {
-    setWishlist(prev => prev.filter(x => x !== id))
+  useEffect(() => {
+    const handles = profile?.wishlist ?? []
+    if (handles.length === 0) { setLoading(false); return }
+
+    getProducts()
+      .then(all => {
+        const wished = all
+          .filter(p => handles.includes(p.handle))
+          .map(shopifyToProduct)
+        setItems(wished)
+      })
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false))
+  }, [profile?.wishlist])
+
+  async function removeFromWishlist(p: Product) {
+    const next = (profile?.wishlist ?? []).filter(h => h !== p.id)
+    setItems(prev => prev.filter(x => x.id !== p.id))
+    if (user) {
+      await supabase.from('profiles').update({ wishlist: next }).eq('id', user.id)
+    }
   }
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--ink)', margin: '0 0 4px' }}>Wishlist</h1>
-          <p style={{ fontSize: 13, color: 'var(--ink-3)', margin: 0 }}>
-            {wished.length} {wished.length === 1 ? 'artículo' : 'artículos'} guardados
-          </p>
-        </div>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--ink)', margin: '0 0 4px' }}>Wishlist</h1>
+        <p style={{ fontSize: 13, color: 'var(--ink-3)', margin: 0 }}>
+          {loading ? '…' : `${items.length} ${items.length === 1 ? 'artículo' : 'artículos'} guardados`}
+        </p>
       </div>
 
-      {wished.length === 0 ? (
+      {loading ? (
+        <div style={{ padding: '56px', textAlign: 'center', color: 'var(--ink-3)' }}>Cargando…</div>
+      ) : items.length === 0 ? (
         <div style={{
           background: 'var(--paper)', border: '1px solid var(--line)',
           borderRadius: 16, padding: '56px', textAlign: 'center',
         }}>
           <div style={{ color: 'var(--gold)', marginBottom: 12 }}><Icon name="star" size={32} /></div>
           <p style={{ color: 'var(--ink-3)', margin: '0 0 20px' }}>
-            Tu wishlist está vacía. Guarda tus figuras favoritas y te avisamos si bajan de precio o vuelven a stock.
+            Tu wishlist está vacía. Dale estrella a las figuras que te gusten desde la tienda.
           </p>
           <a href="/tienda" className="btn btn-primary" style={{ textDecoration: 'none', display: 'inline-flex' }}>
             Explorar tienda
@@ -42,35 +66,15 @@ export default function WishlistPage() {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-          {wished.map(p => (
+          {items.map(p => (
             <ProductCard
-              key={p.id} product={p}
+              key={p.id}
+              product={p}
               wished={true}
               onView={p2 => router.push(`/tienda/${p2.id}`)}
-              onWish={p2 => removeFromWishlist(p2.id)}
+              onWish={removeFromWishlist}
             />
           ))}
-        </div>
-      )}
-
-      {/* Alert setup CTA */}
-      {wished.some(p => p.stock === 0) && (
-        <div style={{
-          marginTop: 24, padding: '18px 24px',
-          background: 'var(--accent-soft)', border: '1px solid var(--accent)',
-          borderRadius: 12, display: 'flex', alignItems: 'center', gap: 14,
-        }}>
-          <Icon name="bell" size={20} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', marginBottom: 2 }}>
-              Algunas figuras de tu wishlist están agotadas
-            </div>
-            <div style={{ fontSize: 13, color: 'var(--ink-2)' }}>
-              Activa alertas en{' '}
-              <a href="/alertas" style={{ color: 'var(--accent)', fontWeight: 500 }}>Alertas</a>{' '}
-              para que te avisemos cuando vuelvan a stock.
-            </div>
-          </div>
         </div>
       )}
     </div>

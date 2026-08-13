@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import Icon from '@/components/ui/Icon'
 import { useCart } from '@/components/cart/CartProvider'
+import { useAuth } from '@/components/auth/AuthProvider'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -19,10 +20,13 @@ const navItems = [
 
 export default function Header({ alertsCount = 0 }: Props) {
   const { count, openCart } = useCart()
+  const { user }            = useAuth()
   const router               = useRouter()
   const inputRef             = useRef<HTMLInputElement>(null)
-  const [query,  setQuery]   = useState('')
+  const [query,      setQuery]      = useState('')
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [mounted,    setMounted]    = useState(false)
+  useEffect(() => setMounted(true), [])
 
   /* ⌘K / Ctrl+K focuses search */
   useEffect(() => {
@@ -94,19 +98,19 @@ export default function Header({ alertsCount = 0 }: Props) {
         </div>
 
         {/* Icon row */}
-        <Link href="/perfil" aria-label="Mi cuenta" style={icon}>
+        <Link href={user ? '/perfil' : '/login'} aria-label="Mi cuenta" style={icon}>
           <Icon name="user" size={17} />
         </Link>
 
         <button aria-label="Alertas" style={{ ...icon, border:'none', cursor:'pointer', position:'relative' }}>
           <Icon name="bell" size={17} />
-          {alertsCount > 0 && <Badge>{alertsCount}</Badge>}
+          {mounted && alertsCount > 0 && <Badge>{alertsCount}</Badge>}
         </button>
 
         <button aria-label="Carrito" onClick={openCart}
           style={{ ...icon, border:'none', cursor:'pointer', position:'relative' }}>
           <Icon name="cart" size={17} />
-          {count > 0 && <Badge>{count}</Badge>}
+          {mounted && count > 0 && <Badge>{count}</Badge>}
         </button>
 
         {/* Hamburger — visible only on mobile via CSS */}

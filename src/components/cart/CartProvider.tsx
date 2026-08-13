@@ -1,8 +1,12 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback } from 'react'
-import CartDrawer from './CartDrawer'
+import { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import type { CartItem, Product } from '@/types'
+
+const CartDrawer = dynamic(() => import('./CartDrawer'), { ssr: false })
+
+const STORAGE_KEY = 'legod-cart'
 
 interface CartCtx {
   items:     CartItem[]
@@ -24,8 +28,22 @@ export function useCart() {
 }
 
 export default function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([])
-  const [open,  setOpen]  = useState(false)
+  const [items,   setItems]   = useState<CartItem[]>([])
+  const [open,    setOpen]    = useState(false)
+  const [hydrated, setHydrated] = useState(false)
+
+  // Load from localStorage after first client render to avoid hydration mismatch
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved) setItems(JSON.parse(saved))
+    } catch { /* ignore */ }
+    setHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (hydrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+  }, [items, hydrated])
 
   const openCart  = useCallback(() => setOpen(true),  [])
   const closeCart = useCallback(() => setOpen(false), [])
