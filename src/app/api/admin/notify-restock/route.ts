@@ -7,8 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const WHATSAPP = process.env.NEXT_PUBLIC_WHATSAPP ?? '5215512345678'
-const STORE    = process.env.NEXT_PUBLIC_STORE_URL ?? 'https://legod-store-2.vercel.app'
+const STORE = process.env.NEXT_PUBLIC_STORE_URL ?? 'https://legod-store-2.vercel.app'
 
 export async function POST(req: NextRequest) {
   const secret = req.headers.get('x-admin-secret')

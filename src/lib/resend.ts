@@ -1,6 +1,10 @@
 import { Resend } from 'resend'
 
-export const resend = new Resend(process.env.RESEND_API_KEY)
+let _resend: Resend | null = null
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY)
+  return _resend
+}
 
 const FROM = process.env.RESEND_FROM ?? 'LEGOD Jango\'s Store <onboarding@resend.dev>'
 const STORE = process.env.NEXT_PUBLIC_STORE_URL ?? 'https://legod-store-2.vercel.app'
@@ -9,7 +13,7 @@ export async function sendRestockEmail(to: string, name: string, product: {
   name: string; handle: string; price: number; imageUrl?: string
 }) {
   const url = `${STORE}/tienda/${product.handle}`
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to,
     subject: `¡${product.name} está de vuelta! 🔔`,
@@ -50,7 +54,7 @@ export async function sendNewArrivalEmail(to: string, name: string, products: {
     </a>`
   ).join('')
 
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to,
     subject: `Nuevas figuras en LEGOD 🧱`,
