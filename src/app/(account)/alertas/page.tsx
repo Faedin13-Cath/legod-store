@@ -1,140 +1,157 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Icon from '@/components/ui/Icon'
-import { products } from '@/lib/data'
+import { useAuth } from '@/components/auth/AuthProvider'
 
-const TYPE_ICON: Record<string, string> = {
-  restock:   'bell',
-  pricedrop: 'sale',
-  wishlist:  'star',
-}
+type Prefs = { restock: boolean; pricedrop: boolean; drop: boolean; whatsapp: string }
+
+const DEFAULT: Prefs = { restock: true, pricedrop: false, drop: true, whatsapp: '' }
+
+const OPTS = [
+  { key: 'restock'  , label: 'Restock de wishlist', desc: 'Cuando una figura de tu wishlist vuelva a stock' },
+  { key: 'pricedrop', label: 'Bajada de precio',     desc: 'Cuando baje el precio de algo en tu wishlist'   },
+  { key: 'drop'     , label: 'Nuevos ingresos',      desc: 'Cuando lleguen figuras nuevas a la tienda'      },
+] as const
 
 export default function AlertasPage() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [alerts, setAlerts] = useState<any[]>([])
+  const { user } = useAuth()
+  const [prefs,   setPrefs]   = useState<Prefs>(DEFAULT)
+  const [loading, setLoading] = useState(true)
+  const [saving,  setSaving]  = useState(false)
+  const [toast,   setToast]   = useState('')
 
-  function markRead(idx: number) {
-    setAlerts(prev => prev.map((a, i) => i === idx ? { ...a, read: true } : a))
+  useEffect(() => {
+    if (!user) { setLoading(false); return }
+    fetch('/api/alerts/prefs')
+      .then(r => r.json())
+      .then(d => {
+        setPrefs({ restock: d.restock, pricedrop: d.pricedrop, drop: d.drop, whatsapp: d.whatsapp ?? '' })
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [user])
+
+  async function save(next: Prefs) {
+    setPrefs(next)
+    setSaving(true)
+    try {
+      await fetch('/api/alerts/prefs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(next),
+      })
+      setToast('Preferencias guardadas ✓')
+      setTimeout(() => setToast(''), 2500)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  function markAllRead() {
-    setAlerts(prev => prev.map(a => ({ ...a, read: true })))
+  function toggle(key: keyof Prefs) {
+    if (key === 'whatsapp') return
+    save({ ...prefs, [key]: !prefs[key] })
   }
 
-  const unread = alerts.filter(a => !a.read).length
+  if (!user) return (
+    <div style={{ textAlign: 'center', padding: '48px 0' }}>
+      <p style={{ color: 'var(--ink-3)', marginBottom: 16 }}>Inicia sesión para gestionar tus alertas.</p>
+      <Link href="/login" className="btn btn-primary" style={{ textDecoration: 'none' }}>Iniciar sesión</Link>
+    </div>
+  )
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--ink)', margin: '0 0 4px' }}>Alertas</h1>
-          {unread > 0 && (
-            <span style={{
-              display: 'inline-block', fontSize: 11, fontWeight: 600,
-              background: 'var(--accent)', color: '#fff',
-              padding: '2px 10px', borderRadius: 999,
-            }}>
-              {unread} sin leer
-            </span>
-          )}
-        </div>
-        {unread > 0 && (
-          <button onClick={markAllRead} className="btn btn-secondary btn-sm">
-            Marcar todas como leídas
-          </button>
-        )}
-      </div>
+      <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--ink)', margin: '0 0 8px' }}>Alertas</h1>
+      <p style={{ fontSize: 13, color: 'var(--ink-3)', margin: '0 0 24px' }}>
+        Te avisamos por email cuando haya novedades en tu wishlist.
+      </p>
 
-      {alerts.length === 0 ? (
-        <div style={{
-          background: 'var(--paper)', border: '1px solid var(--line)',
-          borderRadius: 16, padding: '56px', textAlign: 'center',
-        }}>
-          <Icon name="bell" size={32} />
-          <p style={{ color: 'var(--ink-3)', marginTop: 12 }}>No tienes alertas aún. Te avisaremos cuando haya novedades en tu wishlist.</p>
+      {loading ? (
+        <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--ink-3)', fontSize: 14 }}>
+          Cargando preferencias…
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {alerts.map((alert, idx) => {
-            const product = products.find(p => p.id === alert.productId)
-            return (
-              <div
-                key={idx}
+        <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 16, padding: '20px 24px' }}>
+          <h2 style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 16px' }}>
+            Configurar alertas
+          </h2>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {OPTS.map(opt => (
+              <label key={opt.key} style={{
+                display: 'flex', alignItems: 'center', gap: 14,
+                padding: '12px 14px', borderRadius: 10, cursor: 'pointer',
+                border: `1px solid ${prefs[opt.key] ? 'var(--accent)' : 'var(--line)'}`,
+                background: prefs[opt.key] ? 'var(--accent-soft)' : 'transparent',
+                transition: 'all .15s',
+              }}>
+                <input
+                  type="checkbox"
+                  checked={prefs[opt.key]}
+                  onChange={() => toggle(opt.key)}
+                  disabled={saving}
+                  style={{ accentColor: 'var(--accent)', width: 16, height: 16, flexShrink: 0 }}
+                />
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink)' }}>{opt.label}</div>
+                  <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{opt.desc}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+
+          {/* WhatsApp number */}
+          <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--line)' }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ink)', marginBottom: 8 }}>
+              WhatsApp (opcional)
+            </label>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <input
+                type="tel"
+                placeholder="52 55 1234 5678"
+                value={prefs.whatsapp}
+                onChange={e => setPrefs(p => ({ ...p, whatsapp: e.target.value }))}
+                onBlur={() => save(prefs)}
                 style={{
-                  background: alert.read ? 'var(--paper)' : 'var(--accent-soft)',
-                  border: `1px solid ${alert.read ? 'var(--line)' : 'var(--accent)'}`,
-                  borderRadius: 12, padding: '14px 18px',
-                  display: 'flex', alignItems: 'flex-start', gap: 14,
-                  cursor: alert.read ? 'default' : 'pointer',
+                  flex: 1, padding: '10px 14px', borderRadius: 10,
+                  border: '1px solid var(--line)', background: 'var(--cream)',
+                  color: 'var(--ink)', fontSize: 14, outline: 'none',
                 }}
-                onClick={() => !alert.read && markRead(idx)}
-              >
-                {/* Icon */}
-                <div style={{
-                  width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                  background: alert.read ? 'var(--cream-2)' : 'var(--accent)',
-                  color: alert.read ? 'var(--ink-3)' : '#fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <Icon name={TYPE_ICON[alert.type] ?? 'bell'} size={15} />
-                </div>
+              />
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 6 }}>
+              Con tu número, Jango te puede escribir directo por WhatsApp.
+            </div>
+          </div>
 
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: alert.read ? 400 : 600, color: 'var(--ink)', marginBottom: 2 }}>
-                    {alert.message}
-                  </div>
-                  {product && (
-                    <Link href={`/tienda/${product.id}`} style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 500, textDecoration: 'none' }}>
-                      Ver {product.name} →
-                    </Link>
-                  )}
-                </div>
+          {toast && (
+            <div style={{
+              marginTop: 16, padding: '10px 14px', borderRadius: 10,
+              background: 'var(--accent-soft)', border: '1px solid var(--accent)',
+              color: 'var(--accent)', fontSize: 13, fontWeight: 500,
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <Icon name="check" size={15} /> {toast}
+            </div>
+          )}
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                  <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>{alert.at}</span>
-                  {!alert.read && (
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)' }} />
-                  )}
-                </div>
-              </div>
-            )
-          })}
+          <div style={{ marginTop: 16, fontSize: 12, color: 'var(--ink-3)', lineHeight: 1.5 }}>
+            Las notificaciones llegan por email a <strong>{user.email}</strong>.
+          </div>
         </div>
       )}
 
-      {/* Setup section */}
+      {/* Info empty state */}
       <div style={{
-        marginTop: 28, background: 'var(--paper)', border: '1px solid var(--line)',
-        borderRadius: 16, padding: '20px 24px',
+        marginTop: 20, padding: '14px 18px',
+        background: 'var(--cream)', border: '1px solid var(--line)',
+        borderRadius: 12, fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.6,
       }}>
-        <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 16px' }}>
-          Configurar alertas
-        </h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {[
-            { key: 'restock',   label: 'Restock de wishlist',      desc: 'Cuando una figura de tu wishlist vuelva a stock' },
-            { key: 'pricedrop', label: 'Bajada de precio',          desc: 'Cuando baje el precio de algo en tu wishlist' },
-            { key: 'drop',      label: 'Nuevos ingresos',           desc: 'Cuando lleguen figuras de nuevas a la tienda' },
-          ].map(opt => (
-            <label key={opt.key} style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '12px 14px', borderRadius: 10,
-              border: '1px solid var(--line)', cursor: 'pointer',
-            }}>
-              <input type="checkbox" defaultChecked style={{ accentColor: 'var(--accent)', width: 16, height: 16 }} />
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink)' }}>{opt.label}</div>
-                <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{opt.desc}</div>
-              </div>
-            </label>
-          ))}
-        </div>
-        <div style={{ marginTop: 14, fontSize: 12, color: 'var(--ink-3)', lineHeight: 1.5 }}>
-          Las notificaciones llegan por email. Para WhatsApp, configura tu número en{' '}
-          <Link href="/perfil" style={{ color: 'var(--accent)' }}>Mi perfil</Link>.
-        </div>
+        <strong>¿Cómo funcionan las alertas?</strong><br />
+        Cuando Jango marque una figura como <em>restock</em> o agregue nuevas figuras, recibirás un email automático.
+        Si guardas tu WhatsApp, Jango puede mandarte un mensaje directo desde su teléfono con un solo clic.
       </div>
     </div>
   )
