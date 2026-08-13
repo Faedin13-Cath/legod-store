@@ -33,15 +33,6 @@ export async function POST(req: NextRequest) {
   const itemNames = items.map(i => `${i.name}${i.qty > 1 ? ` x${i.qty}` : ''}`).join(', ')
 
   if (adminToken) {
-    const lineItems = items.map(i => ({
-      title:             `${i.name} — Liquidación (60%)`,
-      price:             (balance / items.reduce((s, x) => s + x.qty, 0)).toFixed(2),
-      quantity:          i.qty,
-      requires_shipping: false,
-      taxable:           false,
-    }))
-
-    // Single line item for the balance is cleaner
     const res = await adminFetch('/draft_orders.json', {
       method: 'POST',
       body: JSON.stringify({

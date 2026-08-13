@@ -105,7 +105,6 @@ function ApartadoCard({ ap, onRemove }: { ap: Apartado; onRemove: (id: string) =
   const supabase     = createClient()
   const pct          = Math.round((ap.deposit / ap.subtotal) * 100)
   const expired      = new Date(ap.deadline_at).getTime() < Date.now()
-  const itemNames    = ap.items.map(i => `${i.name}${i.qty > 1 ? ` x${i.qty}` : ''}`).join(', ')
   const [showEnvio,   setShowEnvio]   = useState(false)
   const [loadingSaldo, setLoadingSaldo] = useState(false)
 
