@@ -13,8 +13,6 @@ type Apartado = {
   id: string; items: ApartadoItem[]; subtotal: number; deposit: number
   balance: number; deadline_at: string; status: string; created_at: string
 }
-type ShippingInfo = { tipo: 'pickup' | 'envio'; nombre: string; direccion: string; ciudad: string; estado: string; cp: string }
-
 function useCountdown(deadline: string) {
   const [ms, setMs] = useState(() => new Date(deadline).getTime() - Date.now())
   useEffect(() => {
@@ -59,109 +57,23 @@ function CompletedCard({ ap }: { ap: Apartado }) {
   )
 }
 
-function ShippingForm({ onConfirm, onCancel, loading }: {
-  onConfirm: (s: ShippingInfo) => void
-  onCancel: () => void
-  loading: boolean
-}) {
-  const [tipo,      setTipo]      = useState<'pickup' | 'envio'>('pickup')
-  const [nombre,    setNombre]    = useState('')
-  const [direccion, setDireccion] = useState('')
-  const [ciudad,    setCiudad]    = useState('')
-  const [estado,    setEstado]    = useState('')
-  const [cp,        setCp]        = useState('')
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13,
-    border: '1px solid var(--line)', background: 'var(--cream)', color: 'var(--ink)', outline: 'none',
-  }
-
-  return (
-    <div style={{ marginTop: 12, padding: '16px', background: 'var(--cream)', borderRadius: 12, border: '1px solid var(--line)' }}>
-      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 12 }}>¿Cómo recibes tu figura?</div>
-
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-        {(['pickup', 'envio'] as const).map(t => (
-          <button key={t} onClick={() => setTipo(t)} style={{
-            flex: 1, padding: '8px', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 500,
-            border: `1px solid ${tipo === t ? 'var(--accent)' : 'var(--line)'}`,
-            background: tipo === t ? 'var(--accent-soft)' : 'transparent',
-            color: tipo === t ? 'var(--accent)' : 'var(--ink-2)',
-          }}>
-            {t === 'pickup' ? '🏪 Recoger en tienda' : '🚚 Envío a domicilio'}
-          </button>
-        ))}
-      </div>
-
-      {tipo === 'envio' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-          <input placeholder="Nombre completo" value={nombre} onChange={e => setNombre(e.target.value)} style={inputStyle} />
-          <input placeholder="Calle y número" value={direccion} onChange={e => setDireccion(e.target.value)} style={inputStyle} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <input placeholder="Ciudad" value={ciudad} onChange={e => setCiudad(e.target.value)} style={inputStyle} />
-            <input placeholder="CP" value={cp} onChange={e => setCp(e.target.value)} style={inputStyle} />
-          </div>
-          <input placeholder="Estado" value={estado} onChange={e => setEstado(e.target.value)} style={inputStyle} />
-        </div>
-      )}
-
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button
-          disabled={loading || (tipo === 'envio' && (!nombre || !direccion || !ciudad || !cp || !estado))}
-          onClick={() => onConfirm({ tipo, nombre, direccion, ciudad, estado, cp })}
-          className="btn btn-primary btn-sm"
-          style={{ flex: 1 }}
-        >
-          {loading ? 'Generando pago…' : 'Continuar al pago →'}
-        </button>
-        <button onClick={onCancel} className="btn btn-secondary btn-sm">Cancelar</button>
-      </div>
-    </div>
-  )
-}
-
 function ApartadoCard({ ap, onRemove }: { ap: Apartado; onRemove: (id: string) => void }) {
   const supabase = createClient()
   const pct      = Math.round((ap.deposit / ap.subtotal) * 100)
   const expired  = new Date(ap.deadline_at).getTime() < Date.now()
-  const [showShipping, setShowShipping] = useState(false)
-  const [loadingPago,  setLoadingPago]  = useState(false)
-
   const itemNames = ap.items.map(i => `${i.name}${i.qty > 1 ? ` x${i.qty}` : ''}`).join(', ')
 
-  function pagarAnticipo() {
-    const fecha = new Date(ap.deadline_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })
-    const msg = [
-      `¡Hola! Me gustaría pagar el anticipo de mi apartado:`,
-      ``, `📦 ${itemNames}`, ``,
-      `💰 Total: $${ap.subtotal.toLocaleString('es-MX')} MXN`,
-      `🏷️ Anticipo (40%): $${ap.deposit.toLocaleString('es-MX')} MXN`,
-      `📅 Fecha límite: ${fecha}`, ``,
-      `¿Me puedes enviar los datos de pago?`,
-    ].join('\n')
-    window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`, '_blank')
-  }
-
-  async function pagarSaldo(shipping: ShippingInfo) {
-    setLoadingPago(true)
-    try {
-      const res = await fetch('/api/checkout/liquidar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          apartadoId: ap.id,
-          items: ap.items.map(i => ({ name: i.name, qty: i.qty })),
-          balance: ap.balance,
-          subtotal: ap.subtotal,
-          shipping,
-        }),
-      })
-      const data = await res.json()
-      if (data.checkoutUrl) window.open(data.checkoutUrl, '_blank')
-    } finally {
-      setLoadingPago(false)
-      setShowShipping(false)
-    }
+  async function pagarAnticipo() {
+    const res = await fetch('/api/checkout/apartado', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: ap.items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+        subtotal: ap.subtotal,
+      }),
+    })
+    const data = await res.json()
+    if (data.checkoutUrl) window.open(data.checkoutUrl, '_blank')
   }
 
   async function cancelar() {
@@ -231,21 +143,10 @@ function ApartadoCard({ ap, onRemove }: { ap: Apartado; onRemove: (id: string) =
                 <button onClick={pagarAnticipo} className="btn btn-primary btn-sm">
                   Pagar anticipo ${ap.deposit.toLocaleString('es-MX')} MXN →
                 </button>
-                <button onClick={() => setShowShipping(s => !s)} className="btn btn-secondary btn-sm">
-                  Pagar saldo ${ap.balance.toLocaleString('es-MX')} MXN →
-                </button>
                 <button onClick={cancelar} className="btn btn-secondary btn-sm" style={{ color: 'var(--ink-3)' }}>
                   Cancelar
                 </button>
               </div>
-
-              {showShipping && (
-                <ShippingForm
-                  loading={loadingPago}
-                  onConfirm={pagarSaldo}
-                  onCancel={() => setShowShipping(false)}
-                />
-              )}
             </>
           )}
         </div>
