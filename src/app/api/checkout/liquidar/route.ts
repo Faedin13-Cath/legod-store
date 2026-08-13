@@ -15,15 +15,12 @@ async function adminFetch(path: string, options: RequestInit = {}) {
   })
 }
 
-type ShippingInfo = { tipo: 'pickup' | 'envio'; nombre: string; direccion: string; ciudad: string; estado: string; cp: string }
-
 export async function POST(req: NextRequest) {
-  const { apartadoId, items, balance, subtotal, shipping } = await req.json() as {
+  const { apartadoId, items, balance, subtotal } = await req.json() as {
     apartadoId: string
     items: { name: string; qty: number }[]
     balance: number
     subtotal: number
-    shipping?: ShippingInfo
   }
 
   if (!apartadoId || !balance) {
@@ -41,7 +38,7 @@ export async function POST(req: NextRequest) {
             title:             `Liquidación apartado — ${itemNames}`,
             price:             balance.toFixed(2),
             quantity:          1,
-            requires_shipping: false,
+            requires_shipping: true,
             taxable:           false,
           }],
           note: [
@@ -49,9 +46,6 @@ export async function POST(req: NextRequest) {
             `Figuras: ${itemNames}`,
             `Total original: $${subtotal.toLocaleString('es-MX')} MXN`,
             `Saldo a pagar: $${balance.toLocaleString('es-MX')} MXN`,
-            shipping?.tipo === 'envio'
-              ? `\nEnvío a: ${shipping.nombre}, ${shipping.direccion}, ${shipping.ciudad} ${shipping.cp}, ${shipping.estado}`
-              : '\nEntrega: Recoger en tienda',
           ].join('\n'),
           tags: 'apartado,liquidacion',
           note_attributes: [

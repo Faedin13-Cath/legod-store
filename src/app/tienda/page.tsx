@@ -110,7 +110,7 @@ function TiendaContent() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       {/* Page header */}
-      <div style={{
+      <div className="sec" style={{
         maxWidth: 1280, margin: '0 auto',
         padding: '32px 32px 0',
         display: 'flex', alignItems: 'baseline', gap: 12,
@@ -123,7 +123,7 @@ function TiendaContent() {
 
       {/* Filter bar */}
       <div style={{
-        position: 'sticky', top: 68, zIndex: 50,
+        position: 'sticky', top: 56, zIndex: 50,
         background: 'rgba(245,243,239,0.92)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
@@ -263,7 +263,7 @@ function TiendaContent() {
       </div>
 
       {/* Product grid */}
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 32px 80px' }}>
+      <div className="sec" style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 32px 80px' }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0', color: 'var(--ink-3)', fontSize: 15 }}>
             Cargando productos…

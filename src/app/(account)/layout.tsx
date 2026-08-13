@@ -35,14 +35,14 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
-      <div style={{
+      <div className="account-layout" style={{
         maxWidth: 1280, margin: '0 auto',
         display: 'grid', gridTemplateColumns: '240px 1fr',
         gap: 32, padding: '40px 32px 80px',
         alignItems: 'start',
       }}>
         {/* Sidebar */}
-        <aside style={{ position: 'sticky', top: 100 }}>
+        <aside className="account-sidebar-el" style={{ position: 'sticky', top: 100 }}>
           {/* Avatar + name */}
           <div style={{
             background: 'var(--paper)', border: '1px solid var(--line)',
