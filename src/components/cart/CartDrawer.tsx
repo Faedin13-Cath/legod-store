@@ -28,12 +28,22 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
   const [loading,        setLoading]       = useState(false)
   const [loadingApt,     setLoadingApt]    = useState(false)
   const [infoOpen,       setInfoOpen]      = useState(false)
+  const [userBalance,    setUserBalance]   = useState(0)
+  const [useBalance,     setUseBalance]    = useState(false)
   const infoRef          = useRef<HTMLDivElement>(null)
 
   const subtotal = items.reduce((s, it) => s + it.price * it.qty, 0)
   const count    = items.reduce((s, it) => s + it.qty, 0)
   const deposit  = Math.round(subtotal * 0.40)
   const balance  = subtotal - deposit
+
+  /* ── load user balance when cart opens ── */
+  useEffect(() => {
+    if (!user || !open) return
+    fetch('/api/balance')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setUserBalance(d.balance) })
+  }, [user, open])
 
   /* ── close info popup on outside click ── */
   useEffect(() => {
@@ -64,10 +74,15 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
   async function goToCheckout() {
     setLoading(true)
     try {
+      const applied  = useBalance ? Math.min(userBalance, subtotal) : 0
+      const payload  = applied > 0
+        ? { items: items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })), useBalance: true, balanceToUse: applied, userId: user!.id }
+        : { items: items.map(i => ({ id: i.id, qty: i.qty })) }
+
       const res  = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: items.map(i => ({ id: i.id, qty: i.qty })) }),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
       if (data.checkoutUrl) {
@@ -243,15 +258,65 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
           <div style={{ padding: '20px 24px', borderTop: '1px solid var(--line)' }}>
 
             {/* Subtotal */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
-              <span style={{ fontSize: 14, color: 'var(--ink-2)' }}>
-                Subtotal ({count} {count === 1 ? 'artículo' : 'artículos'})
-              </span>
-              <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)' }}>
-                ${subtotal.toLocaleString('es-MX')}
-                <small style={{ fontSize: 13, fontWeight: 400, color: 'var(--ink-3)', marginLeft: 3 }}>MXN</small>
-              </span>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: useBalance && userBalance > 0 ? 4 : 0 }}>
+                <span style={{ fontSize: 14, color: 'var(--ink-2)' }}>
+                  Subtotal ({count} {count === 1 ? 'artículo' : 'artículos'})
+                </span>
+                <span style={{ fontSize: useBalance && userBalance > 0 ? 15 : 22, fontWeight: 700, color: useBalance && userBalance > 0 ? 'var(--ink-3)' : 'var(--ink)', textDecoration: useBalance && userBalance > 0 ? 'line-through' : 'none' }}>
+                  ${subtotal.toLocaleString('es-MX')}
+                  <small style={{ fontSize: 12, fontWeight: 400, color: 'var(--ink-3)', marginLeft: 3 }}>MXN</small>
+                </span>
+              </div>
+              {useBalance && userBalance > 0 && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, color: 'var(--accent)' }}>Saldo aplicado</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>
+                      −${Math.min(userBalance, subtotal).toLocaleString('es-MX')} MXN
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>Total a pagar</span>
+                    <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--ink)' }}>
+                      ${Math.max(0, subtotal - Math.min(userBalance, subtotal)).toLocaleString('es-MX')}
+                      <small style={{ fontSize: 13, fontWeight: 400, color: 'var(--ink-3)', marginLeft: 3 }}>MXN</small>
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
+
+            {/* Use balance toggle */}
+            {user && userBalance > 0 && (
+              <button
+                onClick={() => setUseBalance(v => !v)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '9px 13px', borderRadius: 10, marginBottom: 10,
+                  background: useBalance ? 'var(--accent-soft)' : 'var(--cream)',
+                  border: `1px solid ${useBalance ? 'var(--accent)' : 'var(--line)'}`,
+                  cursor: 'pointer', transition: 'all .12s',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                    background: useBalance ? 'var(--accent)' : 'var(--paper)',
+                    border: `2px solid ${useBalance ? 'var(--accent)' : 'var(--line)'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {useBalance && <Icon name="check" size={9} color="#fff" />}
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: useBalance ? 'var(--accent)' : 'var(--ink-2)' }}>
+                    Usar mi saldo
+                  </span>
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 700, color: useBalance ? 'var(--accent)' : 'var(--ink-3)' }}>
+                  ${userBalance.toLocaleString('es-MX')} disponibles
+                </span>
+              </button>
+            )}
 
             {/* Full payment button */}
             <button

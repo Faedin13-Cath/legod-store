@@ -26,7 +26,16 @@ export default function Header({ alertsCount = 0 }: Props) {
   const [query,      setQuery]      = useState('')
   const [mobileOpen, setMobileOpen] = useState(false)
   const [mounted,    setMounted]    = useState(false)
+  const [saldo,      setSaldo]      = useState<number | null>(null)
+
   useEffect(() => setMounted(true), [])
+
+  useEffect(() => {
+    if (!user) { setSaldo(null); return }
+    fetch('/api/balance')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setSaldo(d.balance) })
+  }, [user])
 
   /* ⌘K / Ctrl+K focuses search */
   useEffect(() => {
@@ -98,6 +107,20 @@ export default function Header({ alertsCount = 0 }: Props) {
         </div>
 
         {/* Icon row */}
+        {mounted && user && saldo !== null && saldo > 0 && (
+          <Link href="/saldo" style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '0 11px', height: 38, borderRadius: 8,
+            background: 'var(--accent-soft)', border: '1px solid var(--accent)',
+            textDecoration: 'none', fontSize: 13, fontWeight: 700,
+            color: 'var(--accent)', flexShrink: 0,
+            transition: 'background .12s',
+          }} className="nav-desktop" aria-label="Mi saldo">
+            <Icon name="gift-card" size={13} />
+            ${saldo.toLocaleString('es-MX')}
+          </Link>
+        )}
+
         <Link href={user ? '/perfil' : '/login'} aria-label="Mi cuenta" style={icon}>
           <Icon name="user" size={17} />
         </Link>

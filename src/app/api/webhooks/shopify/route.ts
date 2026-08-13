@@ -144,6 +144,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
   }
 
+  if (attr('tipo') === 'compra') {
+    const balanceUsed = parseInt(attr('balance_used') ?? '0', 10)
+    const userId      = attr('user_id')
+    if (balanceUsed > 0 && userId) {
+      const { data: prof } = await supabase.from('profiles').select('balance').eq('id', userId).single()
+      const newBalance = Math.max(0, (prof?.balance ?? 0) - balanceUsed)
+      await supabase.from('profiles').update({ balance: newBalance }).eq('id', userId)
+      await supabase.from('balance_transactions').insert({
+        user_id:      userId,
+        type:         'spent',
+        amount:       balanceUsed,
+        description:  `Descuento en compra — Orden #${orderNum ?? orderId}`,
+        reference_id: orderId,
+      })
+    }
+    return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
+  }
+
   if (attr('tipo') === 'topup') {
     const amount = parseInt(attr('amount') ?? '0', 10)
     const userId = attr('user_id')

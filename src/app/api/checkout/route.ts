@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const domain   = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN!
-const token    = process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_TOKEN!
-const endpoint = `https://${domain}/api/2024-01/graphql.json`
+const domain     = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN!
+const token      = process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_TOKEN!
+const adminToken = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN
+const endpoint   = `https://${domain}/api/2024-01/graphql.json`
 
 async function gql(query: string) {
   const res = await fetch(endpoint, {
@@ -17,8 +18,67 @@ async function gql(query: string) {
   return res.json()
 }
 
+async function checkoutWithBalance(
+  items: { id: string; name: string; price: number; qty: number }[],
+  balanceToUse: number,
+  userId: string,
+) {
+  if (!adminToken) return NextResponse.json({ error: 'Sin configuración de pago' }, { status: 500 })
+
+  const subtotal       = items.reduce((s, i) => s + i.price * i.qty, 0)
+  const applied        = Math.min(balanceToUse, subtotal)
+
+  const res = await fetch(`https://${domain}/admin/api/2024-01/draft_orders.json`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Shopify-Access-Token': adminToken },
+    body: JSON.stringify({
+      draft_order: {
+        line_items: items.map(i => ({
+          title:             i.name,
+          price:             i.price.toFixed(2),
+          quantity:          i.qty,
+          requires_shipping: true,
+          taxable:           false,
+        })),
+        applied_discount: {
+          description: 'Saldo LEGOD',
+          value_type:  'fixed_amount',
+          value:        applied.toFixed(2),
+          amount:       applied.toFixed(2),
+          title:        'Saldo LEGOD',
+        },
+        note: `Compra con saldo LEGOD — Descuento: $${applied.toLocaleString('es-MX')} MXN`,
+        tags: 'saldo,compra',
+        note_attributes: [
+          { name: 'tipo',         value: 'compra' },
+          { name: 'balance_used', value: String(applied) },
+          { name: 'user_id',      value: userId },
+        ],
+      },
+    }),
+  })
+
+  if (!res.ok) {
+    console.error('[checkout balance] Draft order error:', await res.text())
+    return NextResponse.json({ error: 'Error creando orden' }, { status: 500 })
+  }
+
+  const data       = await res.json()
+  const invoiceUrl = data?.draft_order?.invoice_url
+  if (!invoiceUrl) return NextResponse.json({ error: 'No se obtuvo URL de pago' }, { status: 500 })
+
+  return NextResponse.json({ checkoutUrl: invoiceUrl })
+}
+
 export async function POST(req: NextRequest) {
-  const { items }: { items: { id: string; qty: number }[] } = await req.json()
+  const body = await req.json()
+
+  // Balance checkout path → Admin API Draft Order with discount
+  if (body.useBalance && body.balanceToUse > 0 && body.userId) {
+    return checkoutWithBalance(body.items, body.balanceToUse, body.userId)
+  }
+
+  const { items }: { items: { id: string; qty: number }[] } = body
 
   // 1. Resolve variant IDs from Shopify using product handle
   const lines: string[] = []
