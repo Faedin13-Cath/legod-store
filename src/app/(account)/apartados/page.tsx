@@ -57,70 +57,24 @@ function CompletedCard({ ap }: { ap: Apartado }) {
   )
 }
 
-type ShippingInfo = { tipo: 'pickup' | 'envio'; nombre: string; direccion: string; ciudad: string; estado: string; cp: string }
-
-function ShippingForm({ onConfirm, onCancel, loading }: {
-  onConfirm: (s: ShippingInfo) => void; onCancel: () => void; loading: boolean
-}) {
-  const [tipo,      setTipo]      = useState<'pickup' | 'envio'>('pickup')
-  const [nombre,    setNombre]    = useState('')
-  const [direccion, setDireccion] = useState('')
-  const [ciudad,    setCiudad]    = useState('')
-  const [estado,    setEstado]    = useState('')
-  const [cp,        setCp]        = useState('')
-  const inp: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--line)', background: 'var(--cream)', color: 'var(--ink)', outline: 'none' }
-  const canSubmit = tipo === 'pickup' || (!!nombre && !!direccion && !!ciudad && !!cp && !!estado)
-  return (
-    <div style={{ marginTop: 12, padding: 16, background: 'var(--cream)', borderRadius: 12, border: '1px solid var(--line)' }}>
-      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 12 }}>¿Cómo recibes tu figura?</div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-        {(['pickup', 'envio'] as const).map(t => (
-          <button key={t} onClick={() => setTipo(t)} style={{ flex: 1, padding: 8, borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 500, border: `1px solid ${tipo === t ? 'var(--accent)' : 'var(--line)'}`, background: tipo === t ? 'var(--accent-soft)' : 'transparent', color: tipo === t ? 'var(--accent)' : 'var(--ink-2)' }}>
-            {t === 'pickup' ? '🏪 Recoger en tienda' : '🚚 Envío a domicilio'}
-          </button>
-        ))}
-      </div>
-      {tipo === 'envio' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-          <input placeholder="Nombre completo" value={nombre} onChange={e => setNombre(e.target.value)} style={inp} />
-          <input placeholder="Calle y número" value={direccion} onChange={e => setDireccion(e.target.value)} style={inp} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <input placeholder="Ciudad" value={ciudad} onChange={e => setCiudad(e.target.value)} style={inp} />
-            <input placeholder="CP" value={cp} onChange={e => setCp(e.target.value)} style={inp} />
-          </div>
-          <input placeholder="Estado" value={estado} onChange={e => setEstado(e.target.value)} style={inp} />
-        </div>
-      )}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button disabled={loading || !canSubmit} onClick={() => onConfirm({ tipo, nombre, direccion, ciudad, estado, cp })} className="btn btn-primary btn-sm" style={{ flex: 1 }}>
-          {loading ? 'Generando pago…' : 'Continuar al pago →'}
-        </button>
-        <button onClick={onCancel} className="btn btn-secondary btn-sm">Cancelar</button>
-      </div>
-    </div>
-  )
-}
-
 function ApartadoCard({ ap, onRemove }: { ap: Apartado; onRemove: (id: string) => void }) {
-  const supabase     = createClient()
-  const pct          = Math.round((ap.deposit / ap.subtotal) * 100)
-  const expired      = new Date(ap.deadline_at).getTime() < Date.now()
-  const [showEnvio,   setShowEnvio]   = useState(false)
+  const supabase      = createClient()
+  const pct           = Math.round((ap.deposit / ap.subtotal) * 100)
+  const expired       = new Date(ap.deadline_at).getTime() < Date.now()
   const [loadingSaldo, setLoadingSaldo] = useState(false)
 
-  async function pagarSaldo(shipping: ShippingInfo) {
+  async function pagarSaldo() {
     setLoadingSaldo(true)
     try {
       const res = await fetch('/api/checkout/liquidar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apartadoId: ap.id, items: ap.items.map(i => ({ name: i.name, qty: i.qty })), balance: ap.balance, subtotal: ap.subtotal, shipping }),
+        body: JSON.stringify({ apartadoId: ap.id, items: ap.items.map(i => ({ name: i.name, qty: i.qty })), balance: ap.balance, subtotal: ap.subtotal }),
       })
       const data = await res.json()
-      if (data.checkoutUrl) window.open(data.checkoutUrl, '_blank')
+      if (data.checkoutUrl) window.location.href = data.checkoutUrl
     } finally {
       setLoadingSaldo(false)
-      setShowEnvio(false)
     }
   }
 
@@ -188,16 +142,13 @@ function ApartadoCard({ ap, onRemove }: { ap: Apartado; onRemove: (id: string) =
           ) : (
             <>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button onClick={() => setShowEnvio(s => !s)} className="btn btn-primary btn-sm">
-                  Pagar saldo ${ap.balance.toLocaleString('es-MX')} MXN →
+                <button onClick={pagarSaldo} disabled={loadingSaldo} className="btn btn-primary btn-sm">
+                  {loadingSaldo ? 'Generando pago…' : `Pagar saldo $${ap.balance.toLocaleString('es-MX')} MXN →`}
                 </button>
                 <button onClick={cancelar} className="btn btn-secondary btn-sm" style={{ color: 'var(--ink-3)' }}>
                   Cancelar
                 </button>
               </div>
-              {showEnvio && (
-                <ShippingForm loading={loadingSaldo} onConfirm={pagarSaldo} onCancel={() => setShowEnvio(false)} />
-              )}
             </>
           )}
         </div>
