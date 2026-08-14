@@ -59,9 +59,22 @@ function CompletedCard({ ap }: { ap: Apartado }) {
 
 function ApartadoCard({ ap, onRemove }: { ap: Apartado; onRemove: (id: string) => void }) {
   const supabase      = createClient()
+  const { user }      = useAuth()
   const pct           = Math.round((ap.deposit / ap.subtotal) * 100)
   const expired       = new Date(ap.deadline_at).getTime() < Date.now()
   const [loadingSaldo, setLoadingSaldo] = useState(false)
+  const [userBalance,  setUserBalance]  = useState(0)
+  const [useBalance,   setUseBalance]   = useState(false)
+
+  useEffect(() => {
+    if (!user) return
+    fetch('/api/balance')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setUserBalance(d.balance) })
+  }, [user])
+
+  const saldoApplied = useBalance ? Math.min(userBalance, ap.balance) : 0
+  const totalAPagar  = Math.max(0, ap.balance - saldoApplied)
 
   async function pagarSaldo() {
     setLoadingSaldo(true)
@@ -69,7 +82,15 @@ function ApartadoCard({ ap, onRemove }: { ap: Apartado; onRemove: (id: string) =
       const res = await fetch('/api/checkout/liquidar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apartadoId: ap.id, items: ap.items.map(i => ({ name: i.name, qty: i.qty })), balance: ap.balance, subtotal: ap.subtotal }),
+        body: JSON.stringify({
+          apartadoId:   ap.id,
+          items:        ap.items.map(i => ({ name: i.name, qty: i.qty })),
+          balance:      ap.balance,
+          subtotal:     ap.subtotal,
+          useBalance:   useBalance && saldoApplied > 0,
+          balanceToUse: saldoApplied,
+          userId:       user?.id,
+        }),
       })
       const data = await res.json()
       if (data.checkoutUrl) window.location.href = data.checkoutUrl
@@ -141,9 +162,41 @@ function ApartadoCard({ ap, onRemove }: { ap: Apartado; onRemove: (id: string) =
             </div>
           ) : (
             <>
+              {userBalance > 0 && (
+                <button onClick={() => setUseBalance(v => !v)} style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '8px 12px', borderRadius: 8, marginBottom: 8,
+                  background: useBalance ? 'var(--accent-soft)' : 'var(--cream)',
+                  border: `1px solid ${useBalance ? 'var(--accent)' : 'var(--line)'}`,
+                  cursor: 'pointer', transition: 'all .12s',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <div style={{
+                      width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                      background: useBalance ? 'var(--accent)' : 'var(--paper)',
+                      border: `2px solid ${useBalance ? 'var(--accent)' : 'var(--line)'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {useBalance && <Icon name="check" size={8} color="#fff" />}
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: useBalance ? 'var(--accent)' : 'var(--ink-2)' }}>
+                      Usar mi saldo
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: useBalance ? 'var(--accent)' : 'var(--ink-3)' }}>
+                    −${Math.min(userBalance, ap.balance).toLocaleString('es-MX')} MXN
+                  </span>
+                </button>
+              )}
+              {useBalance && saldoApplied > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--ink-2)', marginBottom: 8, padding: '0 2px' }}>
+                  <span>Total a pagar</span>
+                  <strong style={{ color: 'var(--ink)' }}>${totalAPagar.toLocaleString('es-MX')} MXN</strong>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button onClick={pagarSaldo} disabled={loadingSaldo} className="btn btn-primary btn-sm">
-                  {loadingSaldo ? 'Generando pago…' : `Pagar saldo $${ap.balance.toLocaleString('es-MX')} MXN →`}
+                  {loadingSaldo ? 'Generando pago…' : `Pagar $${(useBalance ? totalAPagar : ap.balance).toLocaleString('es-MX')} MXN →`}
                 </button>
                 <button onClick={cancelar} className="btn btn-secondary btn-sm" style={{ color: 'var(--ink-3)' }}>
                   Cancelar

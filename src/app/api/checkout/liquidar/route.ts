@@ -16,44 +16,65 @@ async function adminFetch(path: string, options: RequestInit = {}) {
 }
 
 export async function POST(req: NextRequest) {
-  const { apartadoId, items, balance, subtotal } = await req.json() as {
-    apartadoId: string
-    items: { name: string; qty: number }[]
-    balance: number
-    subtotal: number
+  const { apartadoId, items, balance, subtotal, useBalance, balanceToUse, userId } = await req.json() as {
+    apartadoId:    string
+    items:         { name: string; qty: number }[]
+    balance:       number
+    subtotal:      number
+    useBalance?:   boolean
+    balanceToUse?: number
+    userId?:       string
   }
 
   if (!apartadoId || !balance) {
     return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
   }
 
-  const itemNames = items.map(i => `${i.name}${i.qty > 1 ? ` x${i.qty}` : ''}`).join(', ')
+  const itemNames  = items.map(i => `${i.name}${i.qty > 1 ? ` x${i.qty}` : ''}`).join(', ')
+  const applied    = (useBalance && balanceToUse && balanceToUse > 0) ? Math.min(balanceToUse, balance) : 0
 
   if (adminToken) {
+    const noteAttrs: { name: string; value: string }[] = [
+      { name: 'tipo',        value: 'liquidacion' },
+      { name: 'apartado_id', value: apartadoId },
+    ]
+    if (applied > 0 && userId) {
+      noteAttrs.push({ name: 'balance_used', value: String(applied) })
+      noteAttrs.push({ name: 'user_id',      value: userId })
+    }
+
+    const draftOrder: Record<string, unknown> = {
+      line_items: [{
+        title:             `Liquidación apartado — ${itemNames}`,
+        price:             balance.toFixed(2),
+        quantity:          1,
+        requires_shipping: true,
+        taxable:           false,
+      }],
+      note: [
+        'LIQUIDACIÓN DE APARTADO',
+        `Figuras: ${itemNames}`,
+        `Total original: $${subtotal.toLocaleString('es-MX')} MXN`,
+        `Saldo a pagar: $${balance.toLocaleString('es-MX')} MXN`,
+        ...(applied > 0 ? [`Descuento saldo: $${applied.toLocaleString('es-MX')} MXN`] : []),
+      ].join('\n'),
+      tags:            'apartado,liquidacion',
+      note_attributes: noteAttrs,
+    }
+
+    if (applied > 0) {
+      draftOrder.applied_discount = {
+        description: 'Saldo LEGOD',
+        value_type:  'fixed_amount',
+        value:        applied.toFixed(2),
+        amount:       applied.toFixed(2),
+        title:        'Saldo LEGOD',
+      }
+    }
+
     const res = await adminFetch('/draft_orders.json', {
       method: 'POST',
-      body: JSON.stringify({
-        draft_order: {
-          line_items: [{
-            title:             `Liquidación apartado — ${itemNames}`,
-            price:             balance.toFixed(2),
-            quantity:          1,
-            requires_shipping: true,
-            taxable:           false,
-          }],
-          note: [
-            'LIQUIDACIÓN DE APARTADO',
-            `Figuras: ${itemNames}`,
-            `Total original: $${subtotal.toLocaleString('es-MX')} MXN`,
-            `Saldo a pagar: $${balance.toLocaleString('es-MX')} MXN`,
-          ].join('\n'),
-          tags: 'apartado,liquidacion',
-          note_attributes: [
-            { name: 'tipo',        value: 'liquidacion' },
-            { name: 'apartado_id', value: apartadoId },
-          ],
-        },
-      }),
+      body: JSON.stringify({ draft_order: draftOrder }),
     })
 
     if (res.ok) {

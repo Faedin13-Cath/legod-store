@@ -134,15 +134,29 @@ export async function POST(req: NextRequest) {
   const attrs = order.note_attributes ?? []
   const attr  = (key: string) => attrs.find(a => a.name === key)?.value
 
-  /* ── Liquidación: mark apartado as completed ── */
+  /* ── Liquidación: mark apartado as completed + deduct balance if used ── */
   if (attr('tipo') === 'liquidacion') {
-    const apartadoId = attr('apartado_id')
+    const apartadoId  = attr('apartado_id')
+    const balanceUsed = parseInt(attr('balance_used') ?? '0', 10)
+    const userId      = attr('user_id')
+
     if (apartadoId) {
-      await supabase
-        .from('apartados')
-        .update({ status: 'completed' })
-        .eq('id', apartadoId)
+      await supabase.from('apartados').update({ status: 'completed' }).eq('id', apartadoId)
     }
+
+    if (balanceUsed > 0 && userId) {
+      const { data: prof } = await supabase.from('profiles').select('balance').eq('id', userId).single()
+      const newBalance = Math.max(0, (prof?.balance ?? 0) - balanceUsed)
+      await supabase.from('profiles').update({ balance: newBalance }).eq('id', userId)
+      await supabase.from('balance_transactions').insert({
+        user_id:      userId,
+        type:         'spent',
+        amount:       balanceUsed,
+        description:  `Descuento en liquidación — Orden #${orderNum ?? orderId}`,
+        reference_id: orderId,
+      })
+    }
+
     return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
   }
 
