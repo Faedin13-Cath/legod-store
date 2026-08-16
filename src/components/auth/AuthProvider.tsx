@@ -15,6 +15,8 @@ export type Profile = {
   points_total: number
   points_next_reward: number
   wishlist: string[]
+  tier?: string | null
+  balance: number
 }
 
 type AuthCtx = {

@@ -23,27 +23,20 @@ function deadlineLabel(total: number) {
 
 export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty }: Props) {
   const drawerRef       = useRef<HTMLDivElement>(null)
-  const { user }        = useAuth()
-  const router          = useRouter()
-  const [loading,        setLoading]       = useState(false)
-  const [loadingApt,     setLoadingApt]    = useState(false)
-  const [infoOpen,       setInfoOpen]      = useState(false)
-  const [userBalance,    setUserBalance]   = useState(0)
-  const [useBalance,     setUseBalance]    = useState(false)
+  const { user, profile } = useAuth()
+  const router            = useRouter()
+  const [loading,        setLoading]    = useState(false)
+  const [loadingApt,     setLoadingApt] = useState(false)
+  const [infoOpen,       setInfoOpen]   = useState(false)
+  const [useBalance,     setUseBalance] = useState(false)
   const infoRef          = useRef<HTMLDivElement>(null)
+
+  const userBalance = profile?.balance ?? 0
 
   const subtotal = items.reduce((s, it) => s + it.price * it.qty, 0)
   const count    = items.reduce((s, it) => s + it.qty, 0)
   const deposit  = Math.round(subtotal * 0.40)
   const balance  = subtotal - deposit
-
-  /* ── load user balance when cart opens ── */
-  useEffect(() => {
-    if (!user || !open) return
-    fetch('/api/balance')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) setUserBalance(d.balance) })
-  }, [user, open])
 
   /* ── close info popup on outside click ── */
   useEffect(() => {
@@ -77,7 +70,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
       const applied  = useBalance ? Math.min(userBalance, subtotal) : 0
       const payload  = applied > 0
         ? { items: items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })), useBalance: true, balanceToUse: applied, userId: user!.id }
-        : { items: items.map(i => ({ id: i.id, qty: i.qty })) }
+        : { items: items.map(i => ({ id: i.id, qty: i.qty })), ...(user?.email ? { userEmail: user.email } : {}) }
 
       const res  = await fetch('/api/checkout', {
         method: 'POST',

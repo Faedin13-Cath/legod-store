@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
@@ -59,20 +60,14 @@ function CompletedCard({ ap }: { ap: Apartado }) {
 
 function ApartadoCard({ ap, onRemove }: { ap: Apartado; onRemove: (id: string) => void }) {
   const supabase      = createClient()
-  const { user }      = useAuth()
+  const { user, profile } = useAuth()
+  const router        = useRouter()
   const pct           = Math.round((ap.deposit / ap.subtotal) * 100)
   const expired       = new Date(ap.deadline_at).getTime() < Date.now()
   const [loadingSaldo, setLoadingSaldo] = useState(false)
-  const [userBalance,  setUserBalance]  = useState(0)
   const [useBalance,   setUseBalance]   = useState(false)
 
-  useEffect(() => {
-    if (!user) return
-    fetch('/api/balance')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) setUserBalance(d.balance) })
-  }, [user])
-
+  const userBalance  = profile?.balance ?? 0
   const saldoApplied = useBalance ? Math.min(userBalance, ap.balance) : 0
   const totalAPagar  = Math.max(0, ap.balance - saldoApplied)
 
@@ -93,7 +88,13 @@ function ApartadoCard({ ap, onRemove }: { ap: Apartado; onRemove: (id: string) =
         }),
       })
       const data = await res.json()
-      if (data.checkoutUrl) window.location.href = data.checkoutUrl
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl
+      } else if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl
+      } else {
+        alert(data.error ?? 'Error al procesar el pago')
+      }
     } finally {
       setLoadingSaldo(false)
     }

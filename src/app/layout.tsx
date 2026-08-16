@@ -6,8 +6,8 @@ import CartProvider from '@/components/cart/CartProvider'
 import { AuthProvider } from '@/components/auth/AuthProvider'
 
 export const metadata: Metadata = {
-  title: 'LEGOD — Minifiguras LEGO · Jango\'s Store',
-  description: 'Minifiguras LEGO, sets sellados, segunda mano y customs. Apartados, gift cards y envíos a todo México.',
+  title: 'Jango\'s Store — Minifiguras LEGO',
+  description: 'Minifiguras LEGO, sets sellados, segunda mano y customs. Apartados, gift cards y envíos a todo México e internacionales a cotizar.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

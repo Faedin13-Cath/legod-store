@@ -3,24 +3,32 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import Dragon from '@/components/ui/Dragon'
 import Icon from '@/components/ui/Icon'
 import ProductCard from '@/components/product/ProductCard'
 import Reveal from '@/components/ui/Reveal'
 import { useCart } from '@/components/cart/CartProvider'
-import { products, cats } from '@/lib/data'
+import { getProducts, shopifyToProduct } from '@/lib/shopify'
+import { cats } from '@/lib/data'
+import type { Product } from '@/types'
 import type React from 'react'
 
-const nuevos  = products.filter(p => p.tags.includes('nuevo')).slice(0, 7)
-const restock = products.filter(p => p.tags.includes('restock')).slice(0, 7)
-const sets    = products.filter(p => p.type === 'set-sealed').slice(0, 3)
-
-const TICKER = 'Star Wars · Marvel · DC · Harry Potter · Stranger Things · Deportes · Castle · Custom · '
+const TICKER = 'Star Wars · Marvel · DC · Harry Potter · Stranger Things · Deportes · Castle · Pixar · Custom · '
 
 export default function HomePage() {
-  const router       = useRouter()
-  const { addItem }  = useCart()
-  const nav          = (p2: typeof products[0]) => router.push(`/tienda/${p2.id}`)
+  const router      = useRouter()
+  const { addItem } = useCart()
+  const [allProducts, setAllProducts] = useState<Product[]>([])
+
+  useEffect(() => {
+    getProducts().then(raw => setAllProducts(raw.map(shopifyToProduct))).catch(() => {})
+  }, [])
+
+  const nav     = (p2: Product) => router.push(`/tienda/${p2.id}`)
+  const nuevos  = allProducts.filter(p => p.tags.includes('nuevo')).slice(0, 7)
+  const restock = allProducts.filter(p => p.tags.includes('restock')).slice(0, 7)
+  const sets    = allProducts.filter(p => p.type === 'set-sealed').slice(0, 3)
 
   return (
     <>
@@ -46,7 +54,7 @@ export default function HomePage() {
               {/* Live-dot eyebrow */}
               <div className="anim-fade-right d-0 hero-eyebrow" style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'6px 14px', borderRadius:999, background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.14)', marginBottom:28 }}>
                 <div style={{ width:6, height:6, borderRadius:'50%', background:'#F5C84A', animation:'pulse 2s ease-in-out infinite' }} />
-                <span style={{ fontSize:11, fontWeight:600, letterSpacing:'0.12em', textTransform:'uppercase', color:'rgba(255,255,255,0.7)' }}>CDMX · Envíos a todo México</span>
+                <span style={{ fontSize:11, fontWeight:600, letterSpacing:'0.12em', textTransform:'uppercase', color:'rgba(255,255,255,0.7)' }}>CDMX · Envíos a todo México e internacionales a cotizar</span>
               </div>
 
               {/* Mega headline */}
@@ -89,18 +97,18 @@ export default function HomePage() {
             {/* ── Right: floating image ── */}
             <div className="hero-img-col" style={{ position:'relative', height:580 }}>
               {/* Main image card */}
-              <div className="anim-scale-in d-2" style={{ position:'absolute', inset:0, borderRadius:32, overflow:'hidden', boxShadow:'0 48px 96px -24px rgba(0,0,0,0.7)' }}>
+              <div className="anim-scale-in d-2" style={{ position:'absolute', inset:0, borderRadius:32, overflow:'hidden', boxShadow:'0 48px 96px -24px rgba(0,0,0,0.7)', background:'#fff' }}>
                 <div className="anim-float" style={{ position:'absolute', inset:0 }}>
-                  <Image src="/assets/posters/social-cr7.png" alt="CR7 Minifig" fill style={{ objectFit:'cover', objectPosition:'center top' }} sizes="45vw" priority />
+                  <Image src="/assets/posters/slinkydog.jpg" alt="Slinky Dog Minifig" fill style={{ objectFit:'contain', objectPosition:'center 30%' }} sizes="45vw" priority />
                 </div>
                 <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, transparent 55%, rgba(15,18,64,0.55) 100%)' }} />
               </div>
 
-              {/* Glass badge — most sold */}
+              {/* Glass badge — promo */}
               <div className="anim-fade-up d-5" style={{ position:'absolute', bottom:28, left:-36, background:'rgba(15,18,64,0.72)', backdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.18)', borderRadius:20, padding:'14px 18px', zIndex:2, minWidth:184 }}>
-                <div style={{ fontSize:11, color:'rgba(255,255,255,0.55)', fontWeight:600, marginBottom:5, letterSpacing:'0.04em' }}>🔥 Más vendido esta semana</div>
-                <div style={{ fontSize:15, fontWeight:700, color:'#fff', marginBottom:3 }}>CR7 Portugal #7</div>
-                <div style={{ fontSize:20, fontWeight:800, color:'#F5C84A', letterSpacing:'-0.02em' }}>$220 MXN</div>
+                <div style={{ fontSize:11, color:'rgba(255,255,255,0.55)', fontWeight:600, marginBottom:5, letterSpacing:'0.04em' }}>🔥 Promo activa</div>
+                <div style={{ fontSize:15, fontWeight:700, color:'#fff', marginBottom:3 }}>Slinky Dog · Toy Story</div>
+                <div style={{ fontSize:20, fontWeight:800, color:'#F5C84A', letterSpacing:'-0.02em' }}>$750 MXN</div>
               </div>
 
               {/* Gold star badge */}
@@ -134,9 +142,23 @@ export default function HomePage() {
             <Link href="/promos" className="more-link" style={moreLink}>ver todas →</Link>
           </Head>
         </Reveal>
-        <div className="promos-grid" style={{ display:'grid', gridTemplateColumns:'1.6fr 1fr 1fr', gap:16 }}>
-          <Reveal delay={0}   animation="scale-in"><PromoTile href="/promos"     img="/assets/posters/social-bancarrota.png" pill="pill gold"   pillLabel="10% OFF"      title="estamos en bancarrota" desc="Aplica únicamente en nuevos pedidos del 3-4 de mayo." priority /></Reveal>
-          <Reveal delay={80}  animation="scale-in"><PromoTile href="/promos"     img="/assets/posters/social-maythe4th.png" pill="pill violet" pillLabel="Star Wars Day" title="may the 4th"            desc="Bundle de 4 figuras Star Wars con descuento." /></Reveal>
+        <div className="promos-grid" style={{ display:'grid', gridTemplateColumns:'1.6fr 1fr', gap:16 }}>
+          <Reveal delay={0} animation="scale-in">
+            <Link href="/tienda/slinky-dog" className="promo-tile" style={{ borderRadius:28, overflow:'hidden', position:'relative', display:'flex', flexDirection:'column', justifyContent:'space-between', minHeight:200, textDecoration:'none', background:'linear-gradient(160deg,#1A1266,#2D1869)', padding:24 }}>
+              <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight:16, overflow:'hidden' }}>
+                <Image src="/assets/posters/slinkydog.jpg" alt="Slinky Dog" width={180} height={180} style={{ objectFit:'contain', opacity:0.9 }} />
+              </div>
+              <span className="pill danger" style={{ alignSelf:'flex-start', position:'relative', zIndex:1 }}>−17% OFF</span>
+              <div style={{ position:'relative', zIndex:1 }}>
+                <h3 style={{ fontSize:26, lineHeight:1.0, textTransform:'lowercase', color:'#fff', margin:'0 0 4px', fontWeight:700 }}>slinky dog</h3>
+                <p style={{ fontSize:13, color:'rgba(255,255,255,0.75)', margin:'0 0 6px' }}>Toy Story · Edición especial</p>
+                <div style={{ display:'flex', alignItems:'baseline', gap:8 }}>
+                  <span style={{ fontSize:22, fontWeight:800, color:'#F5C84A' }}>$750</span>
+                  <span style={{ fontSize:14, color:'rgba(255,255,255,0.45)', textDecoration:'line-through' }}>$900</span>
+                </div>
+              </div>
+            </Link>
+          </Reveal>
           <Reveal delay={160} animation="scale-in">
             <Link href="/gift-cards" className="promo-tile" style={{ borderRadius:28, overflow:'hidden', position:'relative', display:'flex', flexDirection:'column', justifyContent:'space-between', minHeight:200, textDecoration:'none', background:'linear-gradient(160deg, #5526AD, #2A2F7F)', padding:24 }}>
               <Dragon style={{ position:'absolute', right:'-20%', bottom:'-30%', width:'80%', opacity:0.10, color:'#fff' }} />
@@ -159,7 +181,7 @@ export default function HomePage() {
           <div className="h-scroll-wrap">
             <div className="h-scroll" style={{ gap:12 }}>
               {cats.map(c => {
-                const count = products.filter(p => p.cat === c.id).length
+                const count = allProducts.filter(p => p.cat === c.id).length
                 return (
                   <Link key={c.id} href={`/tienda?cat=${c.id}`} className="cat-card" style={{ flexShrink:0, width:134, borderRadius:20, padding:'18px 16px', textDecoration:'none', background:'var(--paper)', border:'1px solid var(--line)', display:'flex', flexDirection:'column', gap:10 }}>
                     <span style={{ fontSize:34, lineHeight:1, display:'block' }}>{c.emoji}</span>
@@ -246,6 +268,65 @@ export default function HomePage() {
       </Sec>
 
       {/* ═══════════════════════════════════════════════════════
+          RESEÑAS
+      ═══════════════════════════════════════════════════════ */}
+      <Sec>
+        <Reveal>
+          <Head eyebrow="Lo que dicen" title="clientes satisfechos" />
+        </Reveal>
+        <Reveal animation="fade-up">
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+            {/* Review card con foto */}
+            <div style={{ background:'var(--paper)', border:'1px solid var(--line)', borderRadius:24, overflow:'hidden', display:'grid', gridTemplateColumns:'200px 1fr' }}>
+              <div style={{ position:'relative', minHeight:200 }}>
+                <Image src="/assets/clientes/review1.jpg" alt="Cliente satisfecho" fill style={{ objectFit:'cover' }} />
+              </div>
+              <div style={{ padding:'28px 24px', display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
+                <div>
+                  <div style={{ display:'flex', gap:3, marginBottom:14 }}>
+                    {[1,2,3,4,5].map(i => (
+                      <span key={i} style={{ color:'#F5C84A', fontSize:18 }}>★</span>
+                    ))}
+                  </div>
+                  <p style={{ fontSize:15, color:'var(--ink)', lineHeight:1.65, margin:'0 0 16px', fontStyle:'italic' }}>
+                    &ldquo;Muy contento con la atención y el seguimiento al comprar cada figura, accesibles y siempre con buena comunicación, a día de hoy sigo comprándoles figuras 👌🏻&rdquo;
+                  </p>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <div style={{ width:36, height:36, borderRadius:'50%', background:'var(--accent-soft)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, fontWeight:700, color:'var(--accent)' }}>C</div>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:600, color:'var(--ink)' }}>Cliente verificado</div>
+                    <div style={{ fontSize:11, color:'var(--ink-3)' }}>Comprador recurrente</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats de confianza */}
+            <div style={{ display:'grid', gridTemplateRows:'1fr 1fr', gap:20 }}>
+              <div style={{ background:'linear-gradient(135deg,#5526AD,#2A2F7F)', borderRadius:24, padding:'28px 32px', display:'flex', flexDirection:'column', justifyContent:'center', position:'relative', overflow:'hidden' }}>
+                <Dragon style={{ position:'absolute', right:'-10%', bottom:'-20%', width:'50%', opacity:0.08, color:'#fff' }} />
+                <div style={{ fontSize:52, fontWeight:900, color:'#F5C84A', letterSpacing:'-0.04em', lineHeight:1 }}>4.9</div>
+                <div style={{ fontSize:14, color:'rgba(255,255,255,0.7)', marginTop:6 }}>Calificación promedio · 320+ reseñas</div>
+              </div>
+              <div style={{ background:'var(--paper)', border:'1px solid var(--line)', borderRadius:24, padding:'28px 32px', display:'flex', gap:32, alignItems:'center' }}>
+                {[
+                  { v:'1.2k+', label:'figuras vendidas' },
+                  { v:'98%',   label:'clientes felices' },
+                  { v:'<24h',  label:'tiempo de respuesta' },
+                ].map(s => (
+                  <div key={s.label}>
+                    <div style={{ fontSize:26, fontWeight:800, color:'var(--ink)', letterSpacing:'-0.03em' }}>{s.v}</div>
+                    <div style={{ fontSize:11, color:'var(--ink-3)', fontWeight:500, marginTop:3, textTransform:'uppercase', letterSpacing:'0.06em' }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Reveal>
+      </Sec>
+
+      {/* ═══════════════════════════════════════════════════════
           BENEFICIOS
       ═══════════════════════════════════════════════════════ */}
       <Sec>
@@ -285,7 +366,7 @@ export default function HomePage() {
                 <input type="email" placeholder="tu@correo.com" style={{ flex:1, border:'none', outline:'none', fontSize:15, color:'var(--ink)', background:'transparent', fontFamily:'inherit' }} />
                 <button type="submit" className="btn btn-primary btn-sm">suscribir</button>
               </form>
-              <p style={{ fontSize:11, color:'var(--ink-3)', marginTop:8, letterSpacing:'0.06em' }}>Al suscribirte aceptas recibir comunicaciones de LEGOD.</p>
+              <p style={{ fontSize:11, color:'var(--ink-3)', marginTop:8, letterSpacing:'0.06em' }}>Al suscribirte aceptas recibir comunicaciones de Jango&apos;s Store.</p>
             </div>
           </div>
         </Reveal>
@@ -316,19 +397,6 @@ function Head({ eyebrow, title, children }: { eyebrow: string; title: string; ch
       </div>
       {children}
     </div>
-  )
-}
-
-function PromoTile({ href, img, pill, pillLabel, title, desc, priority }: { href: string; img: string; pill: string; pillLabel: string; title: string; desc: string; priority?: boolean }) {
-  return (
-    <Link href={href} className="promo-tile" style={{ borderRadius:28, overflow:'hidden', position:'relative', display:'block', minHeight:200, textDecoration:'none' }}>
-      <Image src={img} alt={title} fill style={{ objectFit:'cover' }} sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 40vw" priority={priority} />
-      <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(15,18,60,0.65) 100%)', display:'flex', flexDirection:'column', justifyContent:'flex-end', padding:20 }}>
-        <span className={pill} style={{ alignSelf:'flex-start', marginBottom:'auto', marginTop:12 }}>{pillLabel}</span>
-        <h3 style={{ margin:'8px 0 4px', fontSize:22, fontWeight:700, color:'#fff', textTransform:'lowercase', lineHeight:1.05 }}>{title}</h3>
-        <p style={{ margin:0, fontSize:13, color:'rgba(255,255,255,0.85)', lineHeight:1.4 }}>{desc}</p>
-      </div>
-    </Link>
   )
 }
 

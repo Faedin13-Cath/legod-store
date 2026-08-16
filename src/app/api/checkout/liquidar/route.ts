@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const domain     = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN!
 const adminToken = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN
@@ -33,6 +34,46 @@ export async function POST(req: NextRequest) {
   const itemNames  = items.map(i => `${i.name}${i.qty > 1 ? ` x${i.qty}` : ''}`).join(', ')
   const applied    = (useBalance && balanceToUse && balanceToUse > 0) ? Math.min(balanceToUse, balance) : 0
 
+  // Full saldo coverage — bypass Shopify entirely (avoids $0 orders that may not fire webhooks)
+  if (applied >= balance && userId) {
+    const supabase = createAdminClient()
+    const { data: prof } = await supabase.from('profiles').select('balance, points_total').eq('id', userId).single()
+    const currentBalance = prof?.balance ?? 0
+
+    if (applied > currentBalance) {
+      return NextResponse.json({ error: 'Saldo insuficiente' }, { status: 400 })
+    }
+
+    await supabase.from('apartados').update({ status: 'completed' }).eq('id', apartadoId)
+
+    const newBalance = Math.max(0, currentBalance - applied)
+    await supabase.from('profiles').update({ balance: newBalance }).eq('id', userId)
+    await supabase.from('balance_transactions').insert({
+      user_id:     userId,
+      type:        'spent',
+      amount:      applied,
+      description: `Liquidación apartado — ${itemNames}`,
+    })
+
+    const currentPts = prof?.points_total ?? 0
+    const earnRate   = currentPts >= 10000 ? 1 : currentPts >= 2500 ? 1 / 1.5 : 0.5
+    const ptsEarned  = Math.floor(balance * earnRate)
+    if (ptsEarned > 0) {
+      const newTotal  = currentPts + ptsEarned
+      const nextReward = [500, 1500, 4000, 8000].find(t => t > newTotal) ?? 0
+      await supabase.from('points_history').insert({
+        user_id:     userId,
+        points:      ptsEarned,
+        type:        'purchase',
+        description: `Liquidación — ${itemNames}`,
+        order_id:    `apartado_${apartadoId}`,
+      })
+      await supabase.from('profiles').update({ points_total: newTotal, points_next_reward: nextReward }).eq('id', userId)
+    }
+
+    return NextResponse.json({ redirectUrl: '/apartados' })
+  }
+
   if (adminToken) {
     const noteAttrs: { name: string; value: string }[] = [
       { name: 'tipo',        value: 'liquidacion' },
@@ -60,15 +101,16 @@ export async function POST(req: NextRequest) {
       ].join('\n'),
       tags:            'apartado,liquidacion',
       note_attributes: noteAttrs,
+      redirect_url:    'https://legod-store-2.vercel.app/apartados',
     }
 
     if (applied > 0) {
       draftOrder.applied_discount = {
-        description: 'Saldo LEGOD',
+        description: 'Saldo Jango\'s Store',
         value_type:  'fixed_amount',
         value:        applied.toFixed(2),
         amount:       applied.toFixed(2),
-        title:        'Saldo LEGOD',
+        title:        'Saldo Jango\'s Store',
       }
     }
 

@@ -79,7 +79,7 @@ export default function LoginPage() {
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
             <Image src="/assets/logo/legod-logo-violet.png" alt="LEGOD" width={40} height={40} style={{ borderRadius: '50%' }} />
             <div style={{ textAlign: 'left' }}>
-              <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--ink)' }}>legod</div>
+              <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--ink)' }}>Jango&apos;s Store</div>
               <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>Jango&apos;s Store</div>
             </div>
           </Link>

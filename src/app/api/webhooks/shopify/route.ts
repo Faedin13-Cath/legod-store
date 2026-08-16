@@ -76,11 +76,10 @@ export async function POST(req: NextRequest) {
   }
   try { order = JSON.parse(body) } catch { return NextResponse.json({ error: 'bad json' }, { status: 400 }) }
 
-  const email       = order.email
-  const totalPrice  = parseFloat(order.total_price ?? '0')
-  const pointsToAdd = Math.floor(totalPrice)
-  const orderId     = String(order.id ?? '')
-  const orderNum    = order.order_number
+  const email      = order.email
+  const totalPrice = parseFloat(order.total_price ?? '0')
+  const orderId    = String(order.id ?? '')
+  const orderNum   = order.order_number
 
   if (!email) {
     return NextResponse.json({ ok: true, skipped: 'no email' })
@@ -88,18 +87,24 @@ export async function POST(req: NextRequest) {
 
   const supabase = createAdminClient()
 
-  // Find user by email in auth.users
-  const { data: { users }, error: userErr } = await supabase.auth.admin.listUsers()
-  if (userErr) return NextResponse.json({ error: userErr.message }, { status: 500 })
+  // Find user by email — direct lookup instead of listing all users
+  const { data: profileMatch } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', email.toLowerCase())
+    .maybeSingle()
 
-  const authUser = users.find(u => u.email?.toLowerCase() === email.toLowerCase())
-  if (!authUser) {
-    // Customer not registered — skip silently
+  // Fallback: balance checkouts embed user_id in note_attributes
+  const noteUserId = (order.note_attributes ?? []).find(a => a.name === 'user_id')?.value
+  const resolvedId = profileMatch?.id ?? noteUserId
+
+  if (!resolvedId) {
     return NextResponse.json({ ok: true, skipped: 'user not found' })
   }
 
+  const authUser = { id: resolvedId }
+
   // Check for duplicate (same order already processed)
-  // Always insert into points_history (even 0 pts) so this check works for $0 orders too
   const { data: existing } = await supabase
     .from('points_history')
     .select('id')
@@ -108,7 +113,30 @@ export async function POST(req: NextRequest) {
 
   if (existing) return NextResponse.json({ ok: true, skipped: 'already processed' })
 
-  // Always record in points_history for idempotency; only award actual points when > 0
+  // Fetch profile to determine tier and earn rate
+  const { data: userProfile } = await supabase
+    .from('profiles')
+    .select('points_total')
+    .eq('id', authUser.id)
+    .single()
+
+  // Parse note_attributes early — needed for points calculation
+  const attrs = order.note_attributes ?? []
+  const attr  = (key: string) => attrs.find(a => a.name === key)?.value
+
+  const currentPts = userProfile?.points_total ?? 0
+  // Tier-based earn rate: Padawan 1pt/$2, Caballero Jedi 1pt/$1.5, Maestro Jedi 1pt/$1
+  const earnRate   = currentPts >= 10000 ? 1 : currentPts >= 2500 ? 1 / 1.5 : 0.5
+  // For balance purchases, Shopify total_price is reduced by the discount — add it back so points reflect full product value
+  const balanceDiscount = attr('tipo') === 'compra' ? parseFloat(attr('balance_used') ?? '0') : 0
+  const pointsBase  = totalPrice + balanceDiscount
+  const pointsToAdd = Math.floor(pointsBase * earnRate)
+
+  const REWARD_THRESHOLDS = [500, 1500, 4000, 8000]
+  const newTotal     = currentPts + pointsToAdd
+  const nextReward   = REWARD_THRESHOLDS.find(t => t > newTotal) ?? 0
+
+  // Always record for idempotency; only update profile when points > 0
   await supabase.from('points_history').insert({
     user_id:     authUser.id,
     points:      pointsToAdd,
@@ -118,21 +146,28 @@ export async function POST(req: NextRequest) {
   })
 
   if (pointsToAdd > 0) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('points_total')
-      .eq('id', authUser.id)
-      .single()
-
     await supabase
       .from('profiles')
-      .update({ points_total: (profile?.points_total ?? 0) + pointsToAdd })
+      .update({ points_total: newTotal, points_next_reward: nextReward })
       .eq('id', authUser.id)
   }
 
+  // Save order to Supabase for "Mis pedidos"
+  const fulfillment = (order as { fulfillments?: { tracking_number?: string; tracking_company?: string }[] }).fulfillments?.[0]
+  await supabase.from('orders').upsert({
+    user_id:            authUser.id,
+    shopify_order_id:   orderId,
+    order_number:       String(orderNum ?? orderId),
+    total_price:        totalPrice,
+    financial_status:   'paid',
+    fulfillment_status: fulfillment ? 'fulfilled' : 'unfulfilled',
+    tracking_number:    fulfillment?.tracking_number ?? null,
+    carrier:            fulfillment?.tracking_company ?? null,
+    line_items:         order.line_items ?? [],
+    created_at:         order.created_at ?? new Date().toISOString(),
+  }, { onConflict: 'shopify_order_id' })
+
   /* ── Apartado: create record if this is a deposit order ── */
-  const attrs = order.note_attributes ?? []
-  const attr  = (key: string) => attrs.find(a => a.name === key)?.value
 
   /* ── Liquidación: mark apartado as completed + deduct balance if used ── */
   if (attr('tipo') === 'liquidacion') {
@@ -161,20 +196,32 @@ export async function POST(req: NextRequest) {
   }
 
   if (attr('tipo') === 'compra') {
-    const balanceUsed = parseInt(attr('balance_used') ?? '0', 10)
-    const userId      = attr('user_id')
-    if (balanceUsed > 0 && userId) {
-      const { data: prof } = await supabase.from('profiles').select('balance').eq('id', userId).single()
-      const newBalance = Math.max(0, (prof?.balance ?? 0) - balanceUsed)
-      await supabase.from('profiles').update({ balance: newBalance }).eq('id', userId)
-      await supabase.from('balance_transactions').insert({
-        user_id:      userId,
-        type:         'spent',
-        amount:       balanceUsed,
-        description:  `Descuento en compra — Orden #${orderNum ?? orderId}`,
-        reference_id: orderId,
-      })
+    const balanceUsed = parseFloat(attr('balance_used') ?? '0')
+    const uid         = attr('user_id')
+
+    if (balanceUsed > 0 && uid) {
+      // Find the matching hold (most recent for this user + amount)
+      const { data: hold } = await supabase
+        .from('balance_transactions')
+        .select('id, amount')
+        .eq('user_id', uid)
+        .eq('type', 'hold')
+        .eq('amount', balanceUsed)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (hold) {
+        const { data: userProf } = await supabase.from('profiles').select('balance').eq('id', uid).single()
+        const newBalance = Math.max(0, (userProf?.balance ?? 0) - hold.amount)
+        await supabase.from('profiles').update({ balance: newBalance }).eq('id', uid)
+        await supabase
+          .from('balance_transactions')
+          .update({ type: 'spent', description: `Saldo aplicado — Orden #${orderNum ?? orderId}`, reference_id: orderId })
+          .eq('id', hold.id)
+      }
     }
+
     return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
   }
 

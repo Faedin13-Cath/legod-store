@@ -8,6 +8,7 @@ export const cats: Category[] = [
   { id: 'stranger', label: 'Stranger Things', emoji: '◉' },
   { id: 'castle',   label: 'Castle',          emoji: '♜' },
   { id: 'sports',   label: 'Deportes',        emoji: '⚽' },
+  { id: 'pixar',    label: 'Pixar',           emoji: '🎬' },
   { id: 'custom',   label: 'Custom',          emoji: '✦' },
 ]
 
@@ -81,6 +82,6 @@ export const faqs = [
   ]},
   { sec:'Envíos', items:[
     { q:'¿Cuánto cuesta el envío de minifiguras?', a:'Correos México $75, Estafeta $150, FedEx $250.' },
-    { q:'¿Y los sets sellados?', a:'Por tamaño y peso los sets sellados van a cotización individual. Te respondemos en menos de 24h.' },
+    { q:'¿Y los sets sellados?', a:'Por tamaño y peso los sets sellados van a cotización individual. Envíos internacionales también disponibles a cotizar. Te respondemos en menos de 24h.' },
   ]},
 ]

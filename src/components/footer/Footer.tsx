@@ -10,25 +10,60 @@ export default function Footer() {
       color: 'var(--ink-2)',
       marginTop: 80,
     }}>
-      <div style={{
-        maxWidth: 1280, margin: '0 auto',
-        display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr',
-        gap: 48, padding: '56px 32px 40px',
-        borderBottom: '1px solid var(--line)',
-      }}>
+      <style>{`
+        .footer-grid {
+          max-width: 1280px;
+          margin: 0 auto;
+          display: grid;
+          grid-template-columns: 1.5fr 1fr 1fr 1fr;
+          gap: 48px;
+          padding: 56px 32px 40px;
+          border-bottom: 1px solid var(--line);
+        }
+        .footer-bottom {
+          max-width: 1280px;
+          margin: 0 auto;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 32px;
+          font-size: 12px;
+          color: var(--ink-3);
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        @media (max-width: 768px) {
+          .footer-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 32px 24px;
+            padding: 40px 20px 32px;
+          }
+          .footer-brand {
+            grid-column: 1 / -1;
+          }
+          .footer-bottom {
+            padding: 16px 20px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+          }
+        }
+      `}</style>
+
+      <div className="footer-grid">
         {/* Brand */}
-        <div>
+        <div className="footer-brand">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
             <Image src="/assets/logo/legod-logo-violet.png" alt="LEGOD" width={40} height={40} style={{ borderRadius: '50%' }} />
             <div>
-              <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--ink)' }}>legod</div>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>Jango&apos;s Store</div>
+              <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--ink)' }}>Jango&apos;s Store</div>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>Minifiguras LEGO</div>
             </div>
           </div>
-          <p style={{ fontSize: 14, lineHeight: 1.65, color: 'var(--ink-2)', maxWidth: 320, margin: 0 }}>
-            Minifiguras LEGO, sets sellados, segunda mano y customs. Apartados, gift cards y envíos a todo México.
+          <p style={{ fontSize: 14, lineHeight: 1.65, color: 'var(--ink-2)', maxWidth: 320, margin: '0 0 16px' }}>
+            Minifiguras LEGO, sets sellados, segunda mano y customs. Apartados, gift cards y envíos a todo México e internacionales a cotizar.
           </p>
-          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
             <a href="#" style={socialBtn}><Icon name="chat" size={15} /></a>
             <a href="#" style={socialBtn}><Icon name="whatsapp" size={15} /></a>
           </div>
@@ -71,13 +106,8 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Bottom bar */}
-      <div style={{
-        maxWidth: 1280, margin: '0 auto',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '20px 32px', fontSize: 12, color: 'var(--ink-3)',
-      }}>
-        <div>© 2026 LEGOD · Jango&apos;s Store · CDMX, México</div>
+      <div className="footer-bottom">
+        <div>© 2026 Jango&apos;s Store · CDMX, México</div>
         <div>LEGO® es marca registrada de The LEGO Group. No afiliado.</div>
       </div>
     </footer>
@@ -91,7 +121,7 @@ const colHead: React.CSSProperties = {
 }
 const ulStyle: React.CSSProperties = {
   listStyle: 'none', padding: 0, margin: 0,
-  display: 'flex', flexDirection: 'column', gap: 8,
+  display: 'flex', flexDirection: 'column', gap: 10,
 }
 const linkStyle: React.CSSProperties = {
   fontSize: 14, fontWeight: 400, color: 'var(--ink-2)', textDecoration: 'none',
