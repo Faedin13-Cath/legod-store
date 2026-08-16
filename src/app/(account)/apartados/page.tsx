@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
@@ -61,7 +60,6 @@ function CompletedCard({ ap }: { ap: Apartado }) {
 function ApartadoCard({ ap, onRemove }: { ap: Apartado; onRemove: (id: string) => void }) {
   const supabase      = createClient()
   const { user, profile } = useAuth()
-  const router        = useRouter()
   const pct           = Math.round((ap.deposit / ap.subtotal) * 100)
   const expired       = new Date(ap.deadline_at).getTime() < Date.now()
   const [loadingSaldo, setLoadingSaldo] = useState(false)
