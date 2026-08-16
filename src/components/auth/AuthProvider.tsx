@@ -13,6 +13,8 @@ export type Profile = {
   whatsapp: string | null
   profile_public: string
   points_total: number
+  /** Puntos acumulados de por vida — determinan el nivel y nunca bajan al canjear. */
+  points_lifetime: number
   points_next_reward: number
   wishlist: string[]
   tier?: string | null

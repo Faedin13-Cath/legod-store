@@ -5,49 +5,7 @@ import Link from 'next/link'
 import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
-
-const TIERS = [
-  {
-    id:        'padawan',
-    label:     'Padawan',
-    emoji:     '⭐',
-    min:       0,
-    max:       2499,
-    color:     '#A0896C',
-    bg:        '#A0896C14',
-    earnLabel: '1 pto × cada $2 MXN',
-    benefits:  ['1 punto por cada $2 MXN', 'Acceso a preventas', 'Historial de compras'],
-  },
-  {
-    id:        'jedi',
-    label:     'Caballero Jedi',
-    emoji:     '💙',
-    min:       2500,
-    max:       9999,
-    color:     '#3B82F6',
-    bg:        '#3B82F614',
-    earnLabel: '1 pto × cada $1.50 MXN',
-    benefits:  ['1 punto por cada $1.50 MXN', 'Acceso prioritario a drops', 'Todo lo de Padawan'],
-  },
-  {
-    id:        'maestro',
-    label:     'Maestro Jedi',
-    emoji:     '🔮',
-    min:       10000,
-    max:       Infinity,
-    color:     '#7C3AED',
-    bg:        '#7C3AED14',
-    earnLabel: '1 pto × cada $1 MXN',
-    benefits:  ['1 punto por cada $1 MXN', 'Preventa exclusiva', 'Todo lo de Caballero Jedi'],
-  },
-]
-
-const REWARDS = [
-  { pts: 500,  saldo: 50,  label: '$50 MXN en saldo',                    sublabel: 'Se acredita a tu cartera al instante' },
-  { pts: 1500, saldo: 150, label: '$150 MXN en saldo',                   sublabel: 'Se acredita a tu cartera al instante' },
-  { pts: 4000, saldo: 400, label: '$400 MXN en saldo',                   sublabel: 'Se acredita a tu cartera al instante' },
-  { pts: 8000, saldo: 800, label: '$800 MXN en saldo + figura sorpresa', sublabel: 'Acredito a cartera + enviamos una figura de regalo' },
-]
+import { TIERS, REWARDS, getTier, tierProgress } from '@/lib/loyalty'
 
 const TYPE_LABEL: Record<string, { label: string; color: string; sign: string }> = {
   purchase: { label: 'Compra',            color: 'var(--success)', sign: '+' },
@@ -60,25 +18,15 @@ const TYPE_LABEL: Record<string, { label: string; color: string; sign: string }>
 
 type HistoryItem = { id: string; points: number; type: string; description: string; created_at: string }
 
-function getTier(pts: number) {
-  return TIERS.findLast(t => pts >= t.min) ?? TIERS[0]
-}
-
-function getProgress(pts: number) {
-  const tier = getTier(pts)
-  const next = TIERS.find(t => t.min > pts)
-  if (!next) return { pct: 100, remaining: 0, next: null }
-  const range = next.min - tier.min
-  const done  = pts - tier.min
-  return { pct: Math.round((done / range) * 100), remaining: next.min - pts, next }
-}
-
 export default function LealtadPage() {
   const { profile, user } = useAuth()
-  const [pts, setPts] = useState(profile?.points_total ?? 0)
+  // pts = puntos canjeables (bajan al canjear).
+  // lifetime = puntos de por vida, determinan el nivel y nunca bajan.
+  const [pts,      setPts]      = useState(profile?.points_total ?? 0)
+  const [lifetime, setLifetime] = useState(profile?.points_lifetime ?? profile?.points_total ?? 0)
 
-  const tier                              = getTier(pts)
-  const { pct, remaining, next: nextTier } = getProgress(pts)
+  const tier                               = getTier(lifetime)
+  const { pct, remaining, next: nextTier } = tierProgress(lifetime)
 
   const [history,    setHistory]    = useState<HistoryItem[]>([])
   const [loadHist,   setLoadHist]   = useState(true)
@@ -88,7 +36,8 @@ export default function LealtadPage() {
 
   useEffect(() => {
     if (profile?.points_total !== undefined) setPts(profile.points_total)
-  }, [profile?.points_total])
+    if (profile?.points_lifetime !== undefined) setLifetime(profile.points_lifetime)
+  }, [profile?.points_total, profile?.points_lifetime])
 
   useEffect(() => {
     if (!user) { setLoadHist(false); return }
@@ -102,14 +51,15 @@ export default function LealtadPage() {
       .then(({ data }) => { setHistory(data ?? []); setLoadHist(false) })
   }, [user])
 
-  async function redeemReward(r: typeof REWARDS[0]) {
+  async function redeemReward(r: (typeof REWARDS)[number]) {
     setRedeeming(r.pts)
     setRedeemErr(null)
     try {
+      // Solo mandamos QUÉ recompensa; el servidor decide el saldo.
       const res  = await fetch('/api/loyalty/redeem', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ pts: r.pts, saldo: r.saldo, label: r.label }),
+        body:    JSON.stringify({ pts: r.pts }),
       })
       const data = await res.json()
       if (!res.ok) { setRedeemErr(data.error ?? 'Error al canjear'); return }
@@ -163,7 +113,14 @@ export default function LealtadPage() {
             <div style={{ fontSize: 56, fontWeight: 800, color: 'var(--ink)', lineHeight: 1, letterSpacing: '-0.03em' }}>
               {pts.toLocaleString('es-MX')}
             </div>
-            <div style={{ fontSize: 13, color: 'var(--ink-3)', marginTop: 4 }}>puntos acumulados</div>
+            <div style={{ fontSize: 13, color: 'var(--ink-3)', marginTop: 4 }}>
+              puntos canjeables
+              {lifetime > pts && (
+                <span style={{ color: 'var(--ink-4)' }}>
+                  {' · '}{lifetime.toLocaleString('es-MX')} de por vida
+                </span>
+              )}
+            </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
             <div style={{
@@ -359,10 +316,8 @@ export default function LealtadPage() {
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {[
-            { emoji: '🛍️', label: 'Comprar en tienda',     sub: 'Según tu nivel: $1–$2 MXN = 1 pto' },
-            { emoji: '🤝', label: 'Vender tu colección',   sub: '+200 puntos bonus' },
-            { emoji: '👋', label: 'Primera compra',        sub: '+100 puntos de bienvenida' },
-            { emoji: '👥', label: 'Referir a un amigo',    sub: '+150 puntos cuando compre' },
+            { emoji: '🛍️', label: 'Comprar en tienda', sub: 'Según tu nivel: $3–$5 MXN = 1 pto' },
+            { emoji: '👋', label: 'Primera compra',    sub: '+100 puntos de bienvenida' },
           ].map(item => (
             <div key={item.label} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <div style={{

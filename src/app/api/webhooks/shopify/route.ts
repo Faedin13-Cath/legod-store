@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { awardPurchasePoints } from '@/lib/loyalty'
 
 const domain     = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN!
 const adminToken = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN
@@ -113,43 +114,35 @@ export async function POST(req: NextRequest) {
 
   if (existing) return NextResponse.json({ ok: true, skipped: 'already processed' })
 
-  // Fetch profile to determine tier and earn rate
-  const { data: userProfile } = await supabase
-    .from('profiles')
-    .select('points_total')
-    .eq('id', authUser.id)
-    .single()
-
   // Parse note_attributes early — needed for points calculation
   const attrs = order.note_attributes ?? []
   const attr  = (key: string) => attrs.find(a => a.name === key)?.value
+  const tipo  = attr('tipo')
 
-  const currentPts = userProfile?.points_total ?? 0
-  // Tier-based earn rate: Padawan 1pt/$2, Caballero Jedi 1pt/$1.5, Maestro Jedi 1pt/$1
-  const earnRate   = currentPts >= 10000 ? 1 : currentPts >= 2500 ? 1 / 1.5 : 0.5
-  // For balance purchases, Shopify total_price is reduced by the discount — add it back so points reflect full product value
-  const balanceDiscount = attr('tipo') === 'compra' ? parseFloat(attr('balance_used') ?? '0') : 0
-  const pointsBase  = totalPrice + balanceDiscount
-  const pointsToAdd = Math.floor(pointsBase * earnRate)
+  // Recargar saldo o comprar una gift card NO otorga puntos: los puntos se
+  // ganan al gastar ese saldo. Contarlos aquí sería pagar dos veces.
+  const earnsPoints = tipo !== 'topup' && tipo !== 'gift'
 
-  const REWARD_THRESHOLDS = [500, 1500, 4000, 8000]
-  const newTotal     = currentPts + pointsToAdd
-  const nextReward   = REWARD_THRESHOLDS.find(t => t > newTotal) ?? 0
+  // En compras con saldo, Shopify reporta el total ya descontado — hay que
+  // sumar el descuento de vuelta para que los puntos reflejen el precio real.
+  const balanceDiscount = tipo === 'compra' ? parseFloat(attr('balance_used') ?? '0') : 0
+  const pointsBase      = totalPrice + balanceDiscount
 
-  // Always record for idempotency; only update profile when points > 0
-  await supabase.from('points_history').insert({
-    user_id:     authUser.id,
-    points:      pointsToAdd,
-    type:        'purchase',
-    description: `Pedido #${orderNum ?? orderId}`,
-    order_id:    orderId,
-  })
-
-  if (pointsToAdd > 0) {
-    await supabase
-      .from('profiles')
-      .update({ points_total: newTotal, points_next_reward: nextReward })
-      .eq('id', authUser.id)
+  let pointsToAdd = 0
+  if (earnsPoints) {
+    const res = await awardPurchasePoints(supabase, {
+      userId:      authUser.id,
+      amount:      pointsBase,
+      description: `Pedido #${orderNum ?? orderId}`,
+      orderId,
+    })
+    pointsToAdd = res.total
+  } else {
+    // Sin puntos, pero dejamos la marca de idempotencia
+    await supabase.from('points_history').insert({
+      user_id: authUser.id, points: 0, type: 'purchase',
+      description: `Pedido #${orderNum ?? orderId}`, order_id: orderId,
+    })
   }
 
   // Save order to Supabase for "Mis pedidos"

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { nextReward } from '@/lib/loyalty'
 
 const NAV = [
   { href: '/perfil',    icon: 'user',    label: 'Mi perfil' },
@@ -23,8 +24,11 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
   const displayName = profile?.name || 'Usuario'
   const displayHandle = profile?.handle || 'usuario'
   const pts  = profile?.points_total ?? 0
-  const next = profile?.points_next_reward ?? 1500
-  const pct  = Math.min(100, Math.round((pts / next) * 100))
+  // next = 0 significa que ya pasó todos los umbrales — sin él, la barra
+  // dividía entre cero y mostraba "12,000 / 0 pts" y puntos negativos.
+  const next = profile?.points_next_reward ?? nextReward(pts)
+  const maxed = next <= 0
+  const pct  = maxed ? 100 : Math.min(100, Math.round((pts / next) * 100))
 
   if (loading) {
     return (
@@ -62,13 +66,17 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
 
             {/* Points bar */}
             <div style={{ fontSize: 11, color: 'var(--ink-3)', marginBottom: 5 }}>
-              {pts.toLocaleString('es-MX')} / {next.toLocaleString('es-MX')} pts
+              {maxed
+                ? `${pts.toLocaleString('es-MX')} pts`
+                : `${pts.toLocaleString('es-MX')} / ${next.toLocaleString('es-MX')} pts`}
             </div>
             <div style={{ height: 4, borderRadius: 99, background: 'var(--line)', overflow: 'hidden' }}>
               <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent)', borderRadius: 99, transition: 'width .4s' }} />
             </div>
             <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 4 }}>
-              {next - pts} pts para tu próxima recompensa
+              {maxed
+                ? '¡Listo para canjear la recompensa máxima!'
+                : `${(next - pts).toLocaleString('es-MX')} pts para tu próxima recompensa`}
             </div>
           </div>
 

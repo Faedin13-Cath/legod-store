@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { cookies } from 'next/headers'
+import { findReward, nextReward } from '@/lib/loyalty'
+import { notifyOwner } from '@/lib/resend'
 
 function makeSupabase() {
   const cookieStore = cookies()
@@ -24,39 +26,67 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { pts, saldo, label } = await req.json() as { pts: number; saldo: number; label: string }
-  if (!pts || !saldo) return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 })
+  const { pts } = await req.json() as { pts: number }
+
+  // El cliente solo elige QUÉ recompensa. El saldo y la etiqueta salen de la
+  // tabla del servidor — nunca del navegador.
+  const reward = findReward(pts)
+  if (!reward) {
+    return NextResponse.json({ error: 'Recompensa no válida' }, { status: 400 })
+  }
 
   const admin = createAdminClient()
 
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('points_total, balance')
-    .eq('id', user.id)
-    .single()
+  // Canje atómico: la función descuenta solo si alcanzan los puntos,
+  // así dos clics simultáneos no pueden canjear dos veces.
+  const { data: result, error } = await admin.rpc('redeem_points', {
+    p_user_id: user.id,
+    p_pts:     reward.pts,
+    p_saldo:   reward.saldo,
+    p_label:   reward.label,
+    p_ship:    reward.ship,
+  })
 
-  if ((profile?.points_total ?? 0) < pts) {
-    return NextResponse.json({ error: 'No tienes suficientes puntos' }, { status: 400 })
+  if (error) {
+    console.error('[redeem] rpc error:', error)
+    return NextResponse.json({ error: 'Error al canjear' }, { status: 500 })
   }
 
-  const newPoints  = (profile?.points_total ?? 0) - pts
-  const newBalance = (profile?.balance      ?? 0) + saldo
+  if (!result?.ok) {
+    const msg = result?.error === 'insufficient'
+      ? 'No tienes suficientes puntos'
+      : 'Canje no válido'
+    return NextResponse.json({ error: msg }, { status: 400 })
+  }
 
-  await admin.from('profiles').update({ points_total: newPoints, balance: newBalance }).eq('id', user.id)
+  // El nivel no cambia al canjear (depende de points_lifetime), pero la
+  // próxima recompensa alcanzable sí.
+  await admin
+    .from('profiles')
+    .update({ points_next_reward: nextReward(result.points_total) })
+    .eq('id', user.id)
 
-  await admin.from('points_history').insert({
-    user_id:     user.id,
-    points:      pts,
-    type:        'redeem',
-    description: `Canje: ${label}`,
+  // Recompensa con envío físico: hay que avisarle a la tienda.
+  if (reward.ship) {
+    const { data: prof } = await admin
+      .from('profiles').select('name, email, whatsapp').eq('id', user.id).single()
+
+    await notifyOwner(
+      `🎁 Canje con envío — ${reward.label}`,
+      [
+        `<strong>${prof?.name ?? 'Cliente'}</strong> canjeó ${reward.pts.toLocaleString('es-MX')} puntos.`,
+        `Recompensa: <strong>${reward.label}</strong>`,
+        `Email: ${prof?.email ?? user.email ?? '—'}`,
+        `WhatsApp: ${prof?.whatsapp ?? '—'}`,
+        '',
+        'Hay que contactarlo para enviarle la figura sorpresa.',
+      ].join('<br>'),
+    )
+  }
+
+  return NextResponse.json({
+    ok:         true,
+    newPoints:  result.points_total,
+    newBalance: result.balance,
   })
-
-  await admin.from('balance_transactions').insert({
-    user_id:     user.id,
-    type:        'topup',
-    amount:      saldo,
-    description: `Canje de puntos: ${label}`,
-  })
-
-  return NextResponse.json({ ok: true, newPoints, newBalance })
 }

@@ -9,6 +9,30 @@ function getResend() {
 const FROM = process.env.RESEND_FROM ?? 'LEGOD Jango\'s Store <onboarding@resend.dev>'
 const STORE = process.env.NEXT_PUBLIC_STORE_URL ?? 'https://legod-store-2.vercel.app'
 
+const OWNER = process.env.OWNER_EMAIL
+
+/**
+ * Avisa a la tienda de algo que requiere acción manual.
+ * Si RESEND_API_KEY u OWNER_EMAIL no están configurados, deja el aviso en los
+ * logs de Vercel en vez de reventar la petición del cliente.
+ */
+export async function notifyOwner(subject: string, html: string) {
+  if (!process.env.RESEND_API_KEY || !OWNER) {
+    console.warn(`[notifyOwner] email no configurado — aviso no enviado: ${subject}\n${html.replace(/<br>/g, '\n')}`)
+    return
+  }
+  try {
+    await getResend().emails.send({
+      from: FROM,
+      to:   OWNER,
+      subject,
+      html: `<div style="font-family:sans-serif;max-width:520px;padding:24px">${html}</div>`,
+    })
+  } catch (e) {
+    console.error('[notifyOwner] fallo al enviar:', e)
+  }
+}
+
 export async function sendRestockEmail(to: string, name: string, product: {
   name: string; handle: string; price: number; imageUrl?: string
 }) {

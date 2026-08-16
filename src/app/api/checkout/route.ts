@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { awardPurchasePoints } from '@/lib/loyalty'
 
 const domain     = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN!
 const token      = process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_TOKEN!
@@ -40,7 +41,7 @@ async function checkoutWithBalance(
     .eq('type', 'hold')
     .lt('created_at', twoHoursAgo)
 
-  const { data: prof } = await supabase.from('profiles').select('balance, points_total').eq('id', userId).single()
+  const { data: prof } = await supabase.from('profiles').select('balance').eq('id', userId).single()
   const currentBalance = prof?.balance ?? 0
 
   const { data: holds } = await supabase
@@ -106,20 +107,13 @@ async function checkoutWithBalance(
       description: 'Compra con saldo', reference_id: shopifyOrderId,
     })
 
-    // 4. Add points + insert points_history with real order ID (prevents webhook double-processing)
-    const currentPts = prof?.points_total ?? 0
-    const earnRate   = currentPts >= 10000 ? 1 : currentPts >= 2500 ? 1 / 1.5 : 0.5
-    const ptsEarned  = Math.floor(subtotal * earnRate)
-    if (ptsEarned > 0) {
-      const newTotal   = currentPts + ptsEarned
-      const nextReward = [500, 1500, 4000, 8000].find(t => t > newTotal) ?? 0
-      await supabase.from('points_history').insert({
-        user_id: userId, points: ptsEarned, type: 'purchase',
-        description: `Compra con saldo — ${items.map(i => i.name).join(', ')}`,
-        order_id: shopifyOrderId,
-      })
-      await supabase.from('profiles').update({ points_total: newTotal, points_next_reward: nextReward }).eq('id', userId)
-    }
+    // 4. Add points with real order ID (prevents webhook double-processing)
+    await awardPurchasePoints(supabase, {
+      userId,
+      amount:      subtotal,
+      description: `Compra con saldo — ${items.map(i => i.name).join(', ')}`,
+      orderId:     shopifyOrderId,
+    })
 
     // 5. Save order in Supabase for "Mis pedidos"
     await supabase.from('orders').upsert({
