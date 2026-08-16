@@ -56,29 +56,57 @@ async function checkoutWithBalance(
     return NextResponse.json({ error: 'Saldo insuficiente' }, { status: 400 })
   }
 
-  // Full saldo coverage — bypass Shopify ($0 draft orders don't reliably fire orders/paid webhook)
+  // Full saldo coverage — create + auto-complete Shopify order (visible in Admin) without customer checkout
   if (applied >= subtotal) {
+    // 1. Create draft order
+    const draftRes = await fetch(`https://${domain}/admin/api/2024-01/draft_orders.json`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Shopify-Access-Token': adminToken },
+      body: JSON.stringify({
+        draft_order: {
+          line_items: items.map(i => ({
+            title: i.name, price: i.price.toFixed(2), quantity: i.qty,
+            requires_shipping: true, taxable: false,
+          })),
+          applied_discount: {
+            description: 'Saldo Jango\'s Store', value_type: 'fixed_amount',
+            value: applied.toFixed(2), amount: applied.toFixed(2), title: 'Saldo Jango\'s Store',
+          },
+          note: `Compra con saldo completo — $${applied.toLocaleString('es-MX')} MXN`,
+          tags: 'saldo,compra',
+          note_attributes: [
+            { name: 'tipo',         value: 'compra' },
+            { name: 'balance_used', value: String(applied) },
+            { name: 'user_id',      value: userId },
+          ],
+        },
+      }),
+    })
+    if (!draftRes.ok) {
+      console.error('[checkout saldo completo] draft error:', await draftRes.text())
+      return NextResponse.json({ error: 'Error creando orden' }, { status: 500 })
+    }
+    const draftData = await draftRes.json()
+    const draftId   = draftData?.draft_order?.id
+    if (!draftId) return NextResponse.json({ error: 'No se obtuvo ID del draft' }, { status: 500 })
+
+    // 2. Complete it → creates real Shopify order marked as paid (visible in Admin)
+    const completeRes  = await fetch(`https://${domain}/admin/api/2024-01/draft_orders/${draftId}/complete.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Shopify-Access-Token': adminToken },
+    })
+    const completeData  = await completeRes.json()
+    const shopifyOrderId = String(completeData?.draft_order?.order_id ?? draftId)
+
+    // 3. Deduct balance
     const newBalance = Math.max(0, currentBalance - applied)
     await supabase.from('profiles').update({ balance: newBalance }).eq('id', userId)
     await supabase.from('balance_transactions').insert({
-      user_id:     userId,
-      type:        'spent',
-      amount:      applied,
-      description: 'Compra con saldo',
+      user_id: userId, type: 'spent', amount: applied,
+      description: 'Compra con saldo', reference_id: shopifyOrderId,
     })
 
-    const syntheticId  = `saldo_${Date.now()}_${userId.slice(0, 8)}`
-    await supabase.from('orders').upsert({
-      user_id:            userId,
-      shopify_order_id:   syntheticId,
-      order_number:       syntheticId,
-      total_price:        subtotal,
-      financial_status:   'paid',
-      fulfillment_status: 'unfulfilled',
-      line_items:         items.map(i => ({ title: i.name, quantity: i.qty, price: String(i.price) })),
-      created_at:         new Date().toISOString(),
-    }, { onConflict: 'shopify_order_id' })
-
+    // 4. Add points + insert points_history with real order ID (prevents webhook double-processing)
     const currentPts = prof?.points_total ?? 0
     const earnRate   = currentPts >= 10000 ? 1 : currentPts >= 2500 ? 1 / 1.5 : 0.5
     const ptsEarned  = Math.floor(subtotal * earnRate)
@@ -86,14 +114,20 @@ async function checkoutWithBalance(
       const newTotal   = currentPts + ptsEarned
       const nextReward = [500, 1500, 4000, 8000].find(t => t > newTotal) ?? 0
       await supabase.from('points_history').insert({
-        user_id:     userId,
-        points:      ptsEarned,
-        type:        'purchase',
+        user_id: userId, points: ptsEarned, type: 'purchase',
         description: `Compra con saldo — ${items.map(i => i.name).join(', ')}`,
-        order_id:    syntheticId,
+        order_id: shopifyOrderId,
       })
       await supabase.from('profiles').update({ points_total: newTotal, points_next_reward: nextReward }).eq('id', userId)
     }
+
+    // 5. Save order in Supabase for "Mis pedidos"
+    await supabase.from('orders').upsert({
+      user_id: userId, shopify_order_id: shopifyOrderId, order_number: shopifyOrderId,
+      total_price: subtotal, financial_status: 'paid', fulfillment_status: 'unfulfilled',
+      line_items: items.map(i => ({ title: i.name, quantity: i.qty, price: String(i.price) })),
+      created_at: new Date().toISOString(),
+    }, { onConflict: 'shopify_order_id' })
 
     return NextResponse.json({ redirectUrl: '/pedidos' })
   }
