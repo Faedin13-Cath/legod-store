@@ -78,10 +78,12 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
         body: JSON.stringify(payload),
       })
       const data = await res.json()
-      if (data.checkoutUrl) {
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl
+      } else if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl
       } else {
-        alert('No se pudo conectar con Shopify. Verifica que el producto esté agregado en tu tienda.')
+        alert(data.error ?? 'No se pudo conectar con Shopify. Verifica que el producto esté agregado en tu tienda.')
         setLoading(false)
       }
     } catch {
