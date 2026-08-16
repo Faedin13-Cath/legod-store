@@ -55,23 +55,36 @@ export async function POST(req: NextRequest) {
       description: `Liquidación apartado — ${itemNames}`,
     })
 
+    // Save to orders table so it appears in "Mis pedidos"
+    const syntheticId = `liquidacion_${apartadoId}`
+    await supabase.from('orders').upsert({
+      user_id:            userId,
+      shopify_order_id:   syntheticId,
+      order_number:       syntheticId,
+      total_price:        subtotal,
+      financial_status:   'paid',
+      fulfillment_status: 'unfulfilled',
+      line_items:         items.map(i => ({ title: i.name, quantity: i.qty, price: String(subtotal / items.reduce((s, x) => s + x.qty, 0)) })),
+      created_at:         new Date().toISOString(),
+    }, { onConflict: 'shopify_order_id' })
+
     const currentPts = prof?.points_total ?? 0
     const earnRate   = currentPts >= 10000 ? 1 : currentPts >= 2500 ? 1 / 1.5 : 0.5
     const ptsEarned  = Math.floor(balance * earnRate)
     if (ptsEarned > 0) {
-      const newTotal  = currentPts + ptsEarned
+      const newTotal   = currentPts + ptsEarned
       const nextReward = [500, 1500, 4000, 8000].find(t => t > newTotal) ?? 0
       await supabase.from('points_history').insert({
         user_id:     userId,
         points:      ptsEarned,
         type:        'purchase',
         description: `Liquidación — ${itemNames}`,
-        order_id:    `apartado_${apartadoId}`,
+        order_id:    syntheticId,
       })
       await supabase.from('profiles').update({ points_total: newTotal, points_next_reward: nextReward }).eq('id', userId)
     }
 
-    return NextResponse.json({ redirectUrl: '/apartados' })
+    return NextResponse.json({ redirectUrl: '/pedidos' })
   }
 
   if (adminToken) {
