@@ -69,10 +69,14 @@ function TiendaContent() {
     if (typeTab !== 'all')  list = list.filter(p => p.type === typeTab)
     if (catFilter)          list = list.filter(p => p.cat  === catFilter)
     if (stateFilter)        list = list.filter(p => p.state === stateFilter)
-    if (search.trim())      list = list.filter(p =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.tag.toLowerCase().includes(search.toLowerCase())
-    )
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      list = list.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.tag.toLowerCase().includes(q)  ||
+        (p.blId && p.blId.startsWith(q))
+      )
+    }
 
     if (sort === 'precio-asc')  list.sort((a, b) => a.price - b.price)
     if (sort === 'precio-desc') list.sort((a, b) => b.price - a.price)
@@ -170,7 +174,7 @@ function TiendaContent() {
                     transition: 'all .12s',
                   }}
                 >
-                  <span style={{ fontSize: 11 }}>{c.emoji}</span>
+                  <Icon name={c.icon} size={14} />
                   {c.label}
                 </button>
               ))}

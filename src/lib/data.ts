@@ -1,16 +1,16 @@
 import type { Product, Category, User } from '@/types'
 
 export const cats: Category[] = [
-  { id: 'starwars', label: 'Star Wars',       emoji: '⚔' },
-  { id: 'marvel',   label: 'Marvel',          emoji: '◆' },
-  { id: 'dc',       label: 'DC',              emoji: '◐' },
-  { id: 'harry',    label: 'Harry Potter',    emoji: '⚡' },
-  { id: 'stranger', label: 'Stranger Things', emoji: '◉' },
-  { id: 'castle',   label: 'Castle',          emoji: '♜' },
-  { id: 'sports',   label: 'Deportes',        emoji: '⚽' },
-  { id: 'pixar',    label: 'Pixar',           emoji: '🎬' },
-  { id: 'series',   label: 'Series',          emoji: '📺' },
-  { id: 'custom',   label: 'Custom',          emoji: '✦' },
+  { id: 'starwars', label: 'Star Wars',       emoji: '⚔', icon: 'cat-starwars' },
+  { id: 'marvel',   label: 'Marvel',          emoji: '◆', icon: 'cat-marvel' },
+  { id: 'dc',       label: 'DC',              emoji: '◐', icon: 'cat-dc' },
+  { id: 'harry',    label: 'Harry Potter',    emoji: '⚡', icon: 'cat-harry' },
+  { id: 'stranger', label: 'Stranger Things', emoji: '◉', icon: 'cat-stranger' },
+  { id: 'castle',   label: 'Castle',          emoji: '♜', icon: 'cat-castle' },
+  { id: 'sports',   label: 'Deportes',        emoji: '⚽', icon: 'cat-sports' },
+  { id: 'pixar',    label: 'Pixar',           emoji: '🎬', icon: 'cat-pixar' },
+  { id: 'series',   label: 'Series',          emoji: '📺', icon: 'cat-series' },
+  { id: 'custom',   label: 'Custom',          emoji: '✦', icon: 'cat-custom' },
 ]
 
 export const products: Product[] = [

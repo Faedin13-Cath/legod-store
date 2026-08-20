@@ -111,9 +111,9 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
 
       {/* PDP layout */}
       <div className="pdp-grid" style={{
-        maxWidth: 1280, margin: '0 auto',
-        display: 'grid', gridTemplateColumns: '1fr 1fr',
-        gap: 64, padding: '32px 32px 80px', alignItems: 'start',
+        maxWidth: 1040, margin: '0 auto',
+        display: 'grid', gridTemplateColumns: 'minmax(0, 420px) 1fr',
+        gap: 48, padding: '32px 32px 80px', alignItems: 'start',
       }}>
         {/* Left: image */}
         <div>
@@ -121,7 +121,7 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
             borderRadius: 24, overflow: 'hidden',
             background: '#fff',
             border: '1px solid var(--line)',
-            aspectRatio: '3/4',
+            aspectRatio: '1/1',
             position: 'relative',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>

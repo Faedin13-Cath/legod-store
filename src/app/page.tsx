@@ -184,7 +184,7 @@ export default function HomePage() {
                 const count = allProducts.filter(p => p.cat === c.id).length
                 return (
                   <Link key={c.id} href={`/tienda?cat=${c.id}`} className="cat-card" style={{ flexShrink:0, width:134, borderRadius:20, padding:'18px 16px', textDecoration:'none', background:'var(--paper)', border:'1px solid var(--line)', display:'flex', flexDirection:'column', gap:10 }}>
-                    <span style={{ fontSize:34, lineHeight:1, display:'block' }}>{c.emoji}</span>
+                    <span style={{ width:44, height:44, borderRadius:12, background:'var(--accent-soft)', color:'var(--accent)', display:'flex', alignItems:'center', justifyContent:'center' }}><Icon name={c.icon} size={24} /></span>
                     <div>
                       <div style={{ fontSize:14, fontWeight:600, color:'var(--ink)', lineHeight:1.2 }}>{c.label}</div>
                       <div style={{ fontSize:11, color:'var(--ink-3)', marginTop:3 }}>{count} figuras</div>
@@ -350,27 +350,6 @@ export default function HomePage() {
         </div>
       </Sec>
 
-      {/* ═══════════════════════════════════════════════════════
-          NEWSLETTER
-      ═══════════════════════════════════════════════════════ */}
-      <Sec top={0} bottom={80}>
-        <Reveal animation="scale-in">
-          <div className="newsletter-inner" style={{ background:'var(--accent-soft)', border:'1px solid #D3C8EC', borderRadius:28, padding:'48px 56px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:48, alignItems:'center', position:'relative', overflow:'hidden' }}>
-            <Dragon style={{ position:'absolute', right:'-15%', top:'-30%', width:'60%', opacity:0.05, color:'var(--accent)' }} />
-            <div>
-              <h2 style={{ fontSize:36, fontWeight:700, color:'var(--ink)', textTransform:'lowercase', letterSpacing:'-0.025em', margin:'0 0 12px' }}>entérate del próximo drop</h2>
-              <p style={{ fontSize:16, color:'var(--ink-2)', margin:0, lineHeight:1.55 }}>Recibes alertas de nuevos ingresos, restocks y promos. Sin spam, palabra.</p>
-            </div>
-            <div>
-              <form className="newsletter-form" style={{ display:'flex', gap:0, background:'var(--paper)', border:'1px solid var(--line)', borderRadius:999, padding:'4px 4px 4px 16px', alignItems:'center' }}>
-                <input type="email" placeholder="tu@correo.com" style={{ flex:1, border:'none', outline:'none', fontSize:15, color:'var(--ink)', background:'transparent', fontFamily:'inherit' }} />
-                <button type="submit" className="btn btn-primary btn-sm">suscribir</button>
-              </form>
-              <p style={{ fontSize:11, color:'var(--ink-3)', marginTop:8, letterSpacing:'0.06em' }}>Al suscribirte aceptas recibir comunicaciones de Jango&apos;s Store.</p>
-            </div>
-          </div>
-        </Reveal>
-      </Sec>
     </>
   )
 }
