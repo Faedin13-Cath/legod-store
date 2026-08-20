@@ -1,4 +1,4 @@
-export type ProductCat = 'starwars' | 'marvel' | 'dc' | 'harry' | 'stranger' | 'castle' | 'sports' | 'custom'
+export type ProductCat = 'starwars' | 'marvel' | 'dc' | 'harry' | 'stranger' | 'castle' | 'sports' | 'custom' | 'pixar' | 'series'
 export type ProductType = 'minifig' | 'set-sealed' | 'set-used'
 export type ProductState = 'perfect' | 'new' | 'crack' | 'no-acc' | 'incomplete'
 export type ProductRarity = 'comun' | 'rara' | 'limitada' | 'unica'
@@ -19,6 +19,7 @@ export interface Product {
   fig?: { c1: string; c2: string }
   tags: ProductTag[]
   desc: string
+  blId?: string
 }
 
 export interface CartItem extends Product {
