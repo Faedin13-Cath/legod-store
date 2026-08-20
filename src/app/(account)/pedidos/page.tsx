@@ -52,7 +52,19 @@ export default function PedidosPage() {
 
   if (!orders.length) return (
     <div>
-      <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--ink)', margin: '0 0 24px' }}>Mis pedidos</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, margin: '0 0 24px', flexWrap: 'wrap' }}>
+        <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--ink)', margin: 0 }}>Mis pedidos</h1>
+        {isOwner && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <a href="/api/admin/estafeta?scope=pending" className="btn btn-primary btn-sm" style={{ textDecoration: 'none' }}>
+              <Icon name="truck" size={14} /> Envíos pendientes (Estafeta)
+            </a>
+            <a href="/api/admin/estafeta?scope=all" className="btn btn-secondary btn-sm" style={{ textDecoration: 'none' }}>
+              Todos
+            </a>
+          </div>
+        )}
+      </div>
       <div style={{
         background: 'var(--paper)', border: '1px solid var(--line)',
         borderRadius: 16, padding: 56, textAlign: 'center',
