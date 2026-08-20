@@ -147,6 +147,20 @@ export async function POST(req: NextRequest) {
 
   // Save order to Supabase for "Mis pedidos"
   const fulfillment = (order as { fulfillments?: { tracking_number?: string; tracking_company?: string }[] }).fulfillments?.[0]
+
+  // Snapshot de la dirección de Shopify → formato Estafeta para el export
+  const sa = (order as { shipping_address?: {
+    name?: string; first_name?: string; last_name?: string; phone?: string
+    address1?: string; address2?: string; city?: string; province?: string; zip?: string
+  } }).shipping_address
+  const shipping = sa ? {
+    name:   sa.name ?? [sa.first_name, sa.last_name].filter(Boolean).join(' '),
+    phone:  sa.phone ?? '',
+    street: sa.address1 ?? '', numExt: '', numInt: '',
+    colonia: sa.address2 ?? '', city: sa.city ?? '',
+    state:  sa.province ?? '', zip: sa.zip ?? '', ref: '',
+  } : null
+
   await supabase.from('orders').upsert({
     user_id:            authUser.id,
     shopify_order_id:   orderId,
@@ -157,6 +171,7 @@ export async function POST(req: NextRequest) {
     tracking_number:    fulfillment?.tracking_number ?? null,
     carrier:            fulfillment?.tracking_company ?? null,
     line_items:         order.line_items ?? [],
+    ...(shipping ? { shipping } : {}),
     created_at:         order.created_at ?? new Date().toISOString(),
   }, { onConflict: 'shopify_order_id' })
 
@@ -297,6 +312,20 @@ export async function POST(req: NextRequest) {
         balance,
         deadline_at: deadline.toISOString(),
         status:     'active',
+      })
+    }
+
+    // Saldo parcial usado en el anticipo → descontarlo ahora
+    const aptBalanceUsed = parseFloat(attr('balance_used') ?? '0')
+    const aptUserId      = attr('user_id')
+    if (aptBalanceUsed > 0 && aptUserId) {
+      const { data: prof } = await supabase.from('profiles').select('balance').eq('id', aptUserId).single()
+      const newBalance = Math.max(0, (prof?.balance ?? 0) - aptBalanceUsed)
+      await supabase.from('profiles').update({ balance: newBalance }).eq('id', aptUserId)
+      await supabase.from('balance_transactions').insert({
+        user_id: aptUserId, type: 'spent', amount: aptBalanceUsed,
+        description: `Saldo en anticipo de apartado — Orden #${orderNum ?? orderId}`,
+        reference_id: orderId,
       })
     }
 

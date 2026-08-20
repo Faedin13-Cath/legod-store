@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Icon from '@/components/ui/Icon'
+import { useAuth } from '@/components/auth/AuthProvider'
+
+const OWNER_EMAIL = 'faedin@hotmail.com'
 
 type LineItem = { title: string; quantity: number; price: string }
 type Order = {
@@ -31,6 +34,8 @@ const FULFIL: Record<string, { label: string; color: string; icon: string }> = {
 }
 
 export default function PedidosPage() {
+  const { user } = useAuth()
+  const isOwner  = (user?.email ?? '').toLowerCase() === OWNER_EMAIL
   const [orders,  setOrders]  = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -63,7 +68,19 @@ export default function PedidosPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--ink)', margin: '0 0 24px' }}>Mis pedidos</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, margin: '0 0 24px', flexWrap: 'wrap' }}>
+        <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--ink)', margin: 0 }}>Mis pedidos</h1>
+        {isOwner && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <a href="/api/admin/estafeta?scope=pending" className="btn btn-primary btn-sm" style={{ textDecoration: 'none' }}>
+              <Icon name="truck" size={14} /> Envíos pendientes (Estafeta)
+            </a>
+            <a href="/api/admin/estafeta?scope=all" className="btn btn-secondary btn-sm" style={{ textDecoration: 'none' }}>
+              Todos
+            </a>
+          </div>
+        )}
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {orders.map(o => {
           const ful      = FULFIL[o.fulfillment_status] ?? FULFIL.unfulfilled

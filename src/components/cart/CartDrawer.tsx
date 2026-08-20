@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
+import SaldoConfirmModal, { type ShippingData } from '@/components/cart/SaldoConfirmModal'
 import type { CartItem } from '@/types'
 
 interface Props {
@@ -29,6 +30,8 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
   const [loadingApt,     setLoadingApt] = useState(false)
   const [infoOpen,       setInfoOpen]   = useState(false)
   const [useBalance,     setUseBalance] = useState(false)
+  const [confirmOpen,    setConfirmOpen] = useState(false)
+  const [aptConfirmOpen, setAptConfirmOpen] = useState(false)
   const infoRef          = useRef<HTMLDivElement>(null)
 
   const userBalance = profile?.balance ?? 0
@@ -64,12 +67,26 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
     return () => { document.body.style.overflow = '' }
   }, [open])
 
-  async function goToCheckout() {
+  const applied   = useBalance ? Math.min(userBalance, subtotal) : 0
+  const fullSaldo = applied > 0 && applied >= subtotal
+
+  // Clic en "Pagar completo": si usa saldo, pide confirmación (y dirección si
+  // el saldo cubre todo). Sin saldo, va directo al checkout de Shopify.
+  function handlePay() {
+    if (applied > 0) { setConfirmOpen(true); return }
+    goToCheckout()
+  }
+
+  async function goToCheckout(shipping?: ShippingData) {
     setLoading(true)
     try {
-      const applied  = useBalance ? Math.min(userBalance, subtotal) : 0
       const payload  = applied > 0
-        ? { items: items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })), useBalance: true, balanceToUse: applied, userId: user!.id }
+        ? {
+            items: items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+            useBalance: true, balanceToUse: applied, userId: user!.id,
+            ...(user?.email ? { userEmail: user.email } : {}),
+            ...(shipping ? { shipping } : {}),
+          }
         : { items: items.map(i => ({ id: i.id, qty: i.qty })), ...(user?.email ? { userEmail: user.email } : {}) }
 
       const res  = await fetch('/api/checkout', {
@@ -85,15 +102,25 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
       } else {
         alert(data.error ?? 'No se pudo conectar con Shopify. Verifica que el producto esté agregado en tu tienda.')
         setLoading(false)
+        setConfirmOpen(false)
       }
     } catch {
       alert('Error al procesar el checkout.')
       setLoading(false)
+      setConfirmOpen(false)
     }
   }
 
-  async function goToApartado() {
+  // Saldo aplicable al anticipo del 40%
+  const aptApplied  = useBalance ? Math.min(userBalance, deposit) : 0
+
+  function handleApartado() {
     if (!user) { router.push('/login'); onClose(); return }
+    if (aptApplied > 0) { setAptConfirmOpen(true); return }
+    goToApartado()
+  }
+
+  async function goToApartado() {
     setLoadingApt(true)
     try {
       const res  = await fetch('/api/checkout/apartado', {
@@ -102,9 +129,17 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
         body: JSON.stringify({
           items:    items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
           subtotal,
+          ...(aptApplied > 0 ? { useBalance: true, balanceToUse: aptApplied, userId: user!.id } : {}),
         }),
       })
       const data = await res.json()
+
+      // Anticipo cubierto con saldo → apartado creado sin pasar por Shopify
+      if (data.redirectUrl) {
+        onClose()
+        window.location.href = data.redirectUrl
+        return
+      }
 
       if (!data.checkoutUrl) {
         throw new Error('No se pudo crear el apartado')
@@ -123,6 +158,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
     } catch {
       alert('Error al procesar el apartado. Inténtalo de nuevo.')
       setLoadingApt(false)
+      setAptConfirmOpen(false)
     }
   }
 
@@ -336,7 +372,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
 
             {/* Full payment button */}
             <button
-              onClick={goToCheckout}
+              onClick={handlePay}
               disabled={loading || loadingApt}
               className="btn btn-primary"
               style={{ width: '100%', justifyContent: 'center', fontSize: 15, height: 48, opacity: (loading || loadingApt) ? 0.7 : 1, marginBottom: 8 }}
@@ -348,7 +384,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
             <div style={{ position: 'relative', marginBottom: 8 }} ref={infoRef}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <button
-                  onClick={goToApartado}
+                  onClick={handleApartado}
                   disabled={loading || loadingApt}
                   style={{
                     flex: 1, height: 44, borderRadius: 10,
@@ -455,6 +491,30 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
           </div>
         )}
       </div>
+
+      {/* Confirmación al pagar con saldo (+ dirección si cubre todo) */}
+      <SaldoConfirmModal
+        open={confirmOpen}
+        title="Pagar con saldo"
+        amount={applied}
+        total={subtotal}
+        needShipping={fullSaldo}
+        loading={loading}
+        onCancel={() => !loading && setConfirmOpen(false)}
+        onConfirm={(shipping) => goToCheckout(shipping)}
+      />
+
+      {/* Confirmación al apartar con saldo (el anticipo no se envía todavía) */}
+      <SaldoConfirmModal
+        open={aptConfirmOpen}
+        title="Apartar con saldo"
+        amount={aptApplied}
+        total={deposit}
+        needShipping={false}
+        loading={loadingApt}
+        onCancel={() => !loadingApt && setAptConfirmOpen(false)}
+        onConfirm={() => goToApartado()}
+      />
     </>
   )
 }

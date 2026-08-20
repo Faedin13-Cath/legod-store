@@ -17,8 +17,26 @@ async function adminFetch(path: string, options: RequestInit = {}) {
   })
 }
 
+type Shipping = {
+  name: string; phone: string
+  street: string; numExt?: string; numInt?: string
+  colonia?: string; city: string; state: string; zip: string; ref?: string
+}
+
+function toShopifyAddress(s: Shipping) {
+  const [first, ...rest] = s.name.trim().split(/\s+/)
+  const address1 = [s.street, s.numExt].filter(Boolean).join(' ')
+    + (s.numInt ? ` Int. ${s.numInt}` : '')
+  return {
+    first_name: first, last_name: rest.join(' ') || first,
+    address1, address2: s.colonia ?? '',
+    city: s.city, province: s.state, zip: s.zip,
+    country: 'Mexico', phone: s.phone,
+  }
+}
+
 export async function POST(req: NextRequest) {
-  const { apartadoId, items, balance, subtotal, useBalance, balanceToUse, userId } = await req.json() as {
+  const { apartadoId, items, balance, subtotal, useBalance, balanceToUse, userId, shipping, userEmail } = await req.json() as {
     apartadoId:    string
     items:         { name: string; qty: number }[]
     balance:       number
@@ -26,6 +44,8 @@ export async function POST(req: NextRequest) {
     useBalance?:   boolean
     balanceToUse?: number
     userId?:       string
+    shipping?:     Shipping
+    userEmail?:    string
   }
 
   if (!apartadoId || !balance) {
@@ -35,14 +55,66 @@ export async function POST(req: NextRequest) {
   const itemNames  = items.map(i => `${i.name}${i.qty > 1 ? ` x${i.qty}` : ''}`).join(', ')
   const applied    = (useBalance && balanceToUse && balanceToUse > 0) ? Math.min(balanceToUse, balance) : 0
 
-  // Full saldo coverage — bypass Shopify entirely (avoids $0 orders that may not fire webhooks)
+  // Full saldo coverage — create + complete a Shopify order so it appears in
+  // Admin (with customer + shipping), then settle balance/points here.
   if (applied >= balance && userId) {
+    if (!shipping || !shipping.name || !shipping.street || !shipping.numExt || !shipping.city || !shipping.state || !shipping.zip) {
+      return NextResponse.json({ error: 'Falta la dirección de envío', needShipping: true }, { status: 400 })
+    }
+
     const supabase = createAdminClient()
     const { data: prof } = await supabase.from('profiles').select('balance').eq('id', userId).single()
     const currentBalance = prof?.balance ?? 0
 
     if (applied > currentBalance) {
       return NextResponse.json({ error: 'Saldo insuficiente' }, { status: 400 })
+    }
+
+    // Guardar dirección en el perfil
+    await supabase.from('profiles').update({
+      ship_name: shipping.name, ship_phone: shipping.phone, ship_street: shipping.street,
+      ship_num_ext: shipping.numExt ?? null, ship_num_int: shipping.numInt ?? null,
+      ship_colonia: shipping.colonia ?? null, ship_city: shipping.city,
+      ship_state: shipping.state, ship_zip: shipping.zip, ship_ref: shipping.ref ?? null,
+    }).eq('id', userId)
+
+    // Orden real en Shopify (liquidación pagada con saldo)
+    let shopifyOrderId = `liquidacion_${apartadoId}`
+    if (adminToken) {
+      const draftRes = await adminFetch('/draft_orders.json', {
+        method: 'POST',
+        body: JSON.stringify({
+          draft_order: {
+            line_items: items.map(i => ({
+              title: i.name, price: (balance / items.reduce((s, x) => s + x.qty, 0)).toFixed(2),
+              quantity: i.qty, requires_shipping: true, taxable: false,
+            })),
+            applied_discount: {
+              description: 'Saldo Jango\'s Store', value_type: 'fixed_amount',
+              value: balance.toFixed(2), amount: balance.toFixed(2), title: 'Saldo Jango\'s Store',
+            },
+            ...(userEmail ? { email: userEmail } : {}),
+            shipping_address: toShopifyAddress(shipping),
+            note: `Liquidación de apartado con saldo — ${itemNames}`,
+            tags: 'apartado,liquidacion,saldo',
+            note_attributes: [
+              { name: 'tipo',        value: 'liquidacion_saldo' },
+              { name: 'apartado_id', value: apartadoId },
+              { name: 'user_id',     value: userId },
+            ],
+          },
+        }),
+      })
+      if (draftRes.ok) {
+        const draftId = (await draftRes.json())?.draft_order?.id
+        if (draftId) {
+          const completeRes = await adminFetch(`/draft_orders/${draftId}/complete.json`, { method: 'PUT' })
+          const orderId = (await completeRes.json())?.draft_order?.order_id
+          if (orderId) shopifyOrderId = String(orderId)
+        }
+      } else {
+        console.error('[liquidar saldo] draft error:', await draftRes.text())
+      }
     }
 
     await supabase.from('apartados').update({ status: 'completed' }).eq('id', apartadoId)
@@ -54,18 +126,19 @@ export async function POST(req: NextRequest) {
       type:        'spent',
       amount:      applied,
       description: `Liquidación apartado — ${itemNames}`,
+      reference_id: shopifyOrderId,
     })
 
     // Save to orders table so it appears in "Mis pedidos"
-    const syntheticId = `liquidacion_${apartadoId}`
     await supabase.from('orders').upsert({
       user_id:            userId,
-      shopify_order_id:   syntheticId,
-      order_number:       syntheticId,
+      shopify_order_id:   shopifyOrderId,
+      order_number:       shopifyOrderId,
       total_price:        subtotal,
       financial_status:   'paid',
       fulfillment_status: 'unfulfilled',
       line_items:         items.map(i => ({ title: i.name, quantity: i.qty, price: String(subtotal / items.reduce((s, x) => s + x.qty, 0)) })),
+      shipping,
       created_at:         new Date().toISOString(),
     }, { onConflict: 'shopify_order_id' })
 
@@ -73,7 +146,7 @@ export async function POST(req: NextRequest) {
       userId,
       amount:      balance,
       description: `Liquidación — ${itemNames}`,
-      orderId:     syntheticId,
+      orderId:     shopifyOrderId,
     })
 
     return NextResponse.json({ redirectUrl: '/pedidos' })

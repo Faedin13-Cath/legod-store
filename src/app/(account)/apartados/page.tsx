@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
+import SaldoConfirmModal, { type ShippingData } from '@/components/cart/SaldoConfirmModal'
 
 const WHATSAPP = process.env.NEXT_PUBLIC_WHATSAPP ?? '5215512345678'
 
@@ -64,12 +65,21 @@ function ApartadoCard({ ap, onRemove }: { ap: Apartado; onRemove: (id: string) =
   const expired       = new Date(ap.deadline_at).getTime() < Date.now()
   const [loadingSaldo, setLoadingSaldo] = useState(false)
   const [useBalance,   setUseBalance]   = useState(false)
+  const [confirmOpen,  setConfirmOpen]  = useState(false)
 
   const userBalance  = profile?.balance ?? 0
   const saldoApplied = useBalance ? Math.min(userBalance, ap.balance) : 0
   const totalAPagar  = Math.max(0, ap.balance - saldoApplied)
+  const fullSaldo    = saldoApplied > 0 && totalAPagar === 0
 
-  async function pagarSaldo() {
+  // Con saldo → confirmar (y pedir dirección si cubre todo, porque esa orden
+  // se crea directo en Shopify). Sin saldo → directo al checkout.
+  function handlePagar() {
+    if (saldoApplied > 0) { setConfirmOpen(true); return }
+    pagarSaldo()
+  }
+
+  async function pagarSaldo(shipping?: ShippingData) {
     setLoadingSaldo(true)
     try {
       const res = await fetch('/api/checkout/liquidar', {
@@ -83,6 +93,8 @@ function ApartadoCard({ ap, onRemove }: { ap: Apartado; onRemove: (id: string) =
           useBalance:   useBalance && saldoApplied > 0,
           balanceToUse: saldoApplied,
           userId:       user?.id,
+          ...(user?.email ? { userEmail: user.email } : {}),
+          ...(shipping ? { shipping } : {}),
         }),
       })
       const data = await res.json()
@@ -92,6 +104,7 @@ function ApartadoCard({ ap, onRemove }: { ap: Apartado; onRemove: (id: string) =
         window.location.href = data.checkoutUrl
       } else {
         alert(data.error ?? 'Error al procesar el pago')
+        setConfirmOpen(false)
       }
     } finally {
       setLoadingSaldo(false)
@@ -105,6 +118,7 @@ function ApartadoCard({ ap, onRemove }: { ap: Apartado; onRemove: (id: string) =
   }
 
   return (
+    <>
     <div style={{
       background: 'var(--paper)',
       border: `1px solid ${expired ? '#F2BFBF' : 'var(--line)'}`,
@@ -194,7 +208,7 @@ function ApartadoCard({ ap, onRemove }: { ap: Apartado; onRemove: (id: string) =
                 </div>
               )}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button onClick={pagarSaldo} disabled={loadingSaldo} className="btn btn-primary btn-sm">
+                <button onClick={handlePagar} disabled={loadingSaldo} className="btn btn-primary btn-sm">
                   {loadingSaldo ? 'Generando pago…' : `Pagar $${(useBalance ? totalAPagar : ap.balance).toLocaleString('es-MX')} MXN →`}
                 </button>
                 <button onClick={cancelar} className="btn btn-secondary btn-sm" style={{ color: 'var(--ink-3)' }}>
@@ -206,6 +220,18 @@ function ApartadoCard({ ap, onRemove }: { ap: Apartado; onRemove: (id: string) =
         </div>
       </div>
     </div>
+
+    <SaldoConfirmModal
+      open={confirmOpen}
+      title="Liquidar con saldo"
+      amount={saldoApplied}
+      total={ap.balance}
+      needShipping={fullSaldo}
+      loading={loadingSaldo}
+      onCancel={() => !loadingSaldo && setConfirmOpen(false)}
+      onConfirm={(shipping) => pagarSaldo(shipping)}
+    />
+    </>
   )
 }
 

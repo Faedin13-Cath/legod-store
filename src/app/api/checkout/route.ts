@@ -20,10 +20,37 @@ async function gql(query: string) {
   return res.json()
 }
 
+type Shipping = {
+  name: string; phone: string
+  street: string; numExt?: string; numInt?: string
+  colonia?: string; city: string; state: string; zip: string; ref?: string
+}
+
+/** Convierte nuestra dirección al formato que espera Shopify. */
+function toShopifyAddress(s: Shipping, email?: string) {
+  const [first, ...rest] = s.name.trim().split(/\s+/)
+  const address1 = [s.street, s.numExt].filter(Boolean).join(' ')
+    + (s.numInt ? ` Int. ${s.numInt}` : '')
+  return {
+    first_name: first,
+    last_name:  rest.join(' ') || first,
+    address1,
+    address2:   s.colonia ?? '',
+    city:       s.city,
+    province:   s.state,
+    zip:        s.zip,
+    country:    'Mexico',
+    phone:      s.phone,
+    ...(email ? { email } : {}),
+  }
+}
+
 async function checkoutWithBalance(
   items: { id: string; name: string; price: number; qty: number }[],
   balanceToUse: number,
   userId: string,
+  shipping?: Shipping,
+  email?: string,
 ) {
   if (!adminToken) return NextResponse.json({ error: 'Sin configuración de pago' }, { status: 500 })
 
@@ -59,6 +86,20 @@ async function checkoutWithBalance(
 
   // Full saldo coverage — create + auto-complete Shopify order (visible in Admin) without customer checkout
   if (applied >= subtotal) {
+    // La orden se crea directo en Shopify (bypass del checkout del cliente),
+    // así que la dirección de envío tiene que venir de nuestro formulario.
+    if (!shipping || !shipping.name || !shipping.street || !shipping.numExt || !shipping.city || !shipping.state || !shipping.zip) {
+      return NextResponse.json({ error: 'Falta la dirección de envío', needShipping: true }, { status: 400 })
+    }
+
+    // Guardar la dirección en el perfil para no volver a pedirla
+    await supabase.from('profiles').update({
+      ship_name: shipping.name, ship_phone: shipping.phone, ship_street: shipping.street,
+      ship_num_ext: shipping.numExt ?? null, ship_num_int: shipping.numInt ?? null,
+      ship_colonia: shipping.colonia ?? null, ship_city: shipping.city,
+      ship_state: shipping.state, ship_zip: shipping.zip, ship_ref: shipping.ref ?? null,
+    }).eq('id', userId)
+
     // 1. Create draft order
     const draftRes = await fetch(`https://${domain}/admin/api/2024-01/draft_orders.json`, {
       method: 'POST',
@@ -73,6 +114,9 @@ async function checkoutWithBalance(
             description: 'Saldo Jango\'s Store', value_type: 'fixed_amount',
             value: applied.toFixed(2), amount: applied.toFixed(2), title: 'Saldo Jango\'s Store',
           },
+          // Cliente + dirección → la orden deja de salir como "Sin cliente"
+          ...(email ? { email } : {}),
+          shipping_address: toShopifyAddress(shipping),
           note: `Compra con saldo completo — $${applied.toLocaleString('es-MX')} MXN`,
           tags: 'saldo,compra',
           note_attributes: [
@@ -120,7 +164,7 @@ async function checkoutWithBalance(
       user_id: userId, shopify_order_id: shopifyOrderId, order_number: shopifyOrderId,
       total_price: subtotal, financial_status: 'paid', fulfillment_status: 'unfulfilled',
       line_items: items.map(i => ({ title: i.name, quantity: i.qty, price: String(i.price) })),
-      created_at: new Date().toISOString(),
+      shipping, created_at: new Date().toISOString(),
     }, { onConflict: 'shopify_order_id' })
 
     return NextResponse.json({ redirectUrl: '/pedidos' })
@@ -186,7 +230,7 @@ export async function POST(req: NextRequest) {
 
   // Balance checkout path → Admin API Draft Order with discount
   if (body.useBalance && body.balanceToUse > 0 && body.userId) {
-    return checkoutWithBalance(body.items, body.balanceToUse, body.userId)
+    return checkoutWithBalance(body.items, body.balanceToUse, body.userId, body.shipping, body.userEmail)
   }
 
   const { items, userEmail }: { items: { id: string; qty: number }[]; userEmail?: string } = body

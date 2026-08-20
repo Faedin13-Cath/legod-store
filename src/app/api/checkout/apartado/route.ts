@@ -25,7 +25,10 @@ async function adminFetch(path: string, options: RequestInit = {}) {
 }
 
 export async function POST(req: NextRequest) {
-  const { items, subtotal }: { items: CartLine[]; subtotal: number } = await req.json()
+  const { items, subtotal, useBalance, balanceToUse, userId } = await req.json() as {
+    items: CartLine[]; subtotal: number
+    useBalance?: boolean; balanceToUse?: number; userId?: string
+  }
 
   if (!items?.length || !subtotal) {
     return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
@@ -34,6 +37,44 @@ export async function POST(req: NextRequest) {
   const deposit = Math.round(subtotal * DEPOSIT_PCT)
   const balance = subtotal - deposit
   const plazo   = deadlineLabel(subtotal)
+
+  const applied = (useBalance && balanceToUse && balanceToUse > 0 && userId)
+    ? Math.min(balanceToUse, deposit)
+    : 0
+
+  /* ── Anticipo cubierto 100% con saldo → registrar apartado directo ──
+     El anticipo con saldo genera una orden de $0 que Shopify no dispara de
+     forma confiable, así que creamos el apartado y descontamos aquí. */
+  if (applied >= deposit && userId) {
+    const { createAdminClient } = await import('@/lib/supabase/admin')
+    const supabase = createAdminClient()
+
+    const { data: prof } = await supabase.from('profiles').select('balance').eq('id', userId).single()
+    const currentBalance = prof?.balance ?? 0
+    if (applied > currentBalance) {
+      return NextResponse.json({ error: 'Saldo insuficiente' }, { status: 400 })
+    }
+
+    const deadline = new Date()
+    deadline.setDate(deadline.getDate() + (plazo.includes('semana') ? 7 : plazo.includes('mes') ? 30 : 15))
+
+    await supabase.from('apartados').insert({
+      user_id:     userId,
+      items:       items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+      subtotal, deposit, balance,
+      deadline_at: deadline.toISOString(),
+      status:      'active',
+    })
+
+    const newBalance = Math.max(0, currentBalance - applied)
+    await supabase.from('profiles').update({ balance: newBalance }).eq('id', userId)
+    await supabase.from('balance_transactions').insert({
+      user_id: userId, type: 'spent', amount: applied,
+      description: `Anticipo de apartado con saldo — ${items.map(i => i.name).join(', ')}`,
+    })
+
+    return NextResponse.json({ redirectUrl: '/apartados' })
+  }
 
   /* ── Draft Order via Admin API (clean checkout, no "AHORRO TOTAL") ── */
   if (adminToken) {
@@ -57,23 +98,34 @@ export async function POST(req: NextRequest) {
       `Plazo: ${plazo}`,
     ].join('\n')
 
+    const draftOrder: Record<string, unknown> = {
+      line_items: lineItems,
+      note,
+      tags: 'apartado',
+      note_attributes: [
+        { name: 'tipo',              value: 'apartado' },
+        { name: 'subtotal_original', value: String(subtotal) },
+        { name: 'anticipo_monto',    value: String(deposit) },
+        { name: 'saldo_pendiente',   value: String(balance) },
+        { name: 'plazo_liquidar',    value: plazo },
+        { name: 'original_items',    value: originalItemsJson },
+        ...(applied > 0 && userId
+          ? [{ name: 'balance_used', value: String(applied) }, { name: 'user_id', value: userId }]
+          : []),
+      ],
+    }
+
+    // Saldo parcial: descuenta del anticipo; el webhook deduce el saldo al pagar.
+    if (applied > 0) {
+      draftOrder.applied_discount = {
+        description: 'Saldo Jango\'s Store', value_type: 'fixed_amount',
+        value: applied.toFixed(2), amount: applied.toFixed(2), title: 'Saldo Jango\'s Store',
+      }
+    }
+
     const res = await adminFetch('/draft_orders.json', {
       method: 'POST',
-      body: JSON.stringify({
-        draft_order: {
-          line_items: lineItems,
-          note,
-          tags: 'apartado',
-          note_attributes: [
-            { name: 'tipo',              value: 'apartado' },
-            { name: 'subtotal_original', value: String(subtotal) },
-            { name: 'anticipo_monto',    value: String(deposit) },
-            { name: 'saldo_pendiente',   value: String(balance) },
-            { name: 'plazo_liquidar',    value: plazo },
-            { name: 'original_items',    value: originalItemsJson },
-          ],
-        },
-      }),
+      body: JSON.stringify({ draft_order: draftOrder }),
     })
 
     if (res.ok) {

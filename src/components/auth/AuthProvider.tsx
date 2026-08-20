@@ -19,6 +19,16 @@ export type Profile = {
   wishlist: string[]
   tier?: string | null
   balance: number
+  ship_name?:    string | null
+  ship_phone?:   string | null
+  ship_street?:  string | null
+  ship_num_ext?: string | null
+  ship_num_int?: string | null
+  ship_colonia?: string | null
+  ship_city?:    string | null
+  ship_state?:   string | null
+  ship_zip?:     string | null
+  ship_ref?:     string | null
 }
 
 type AuthCtx = {
