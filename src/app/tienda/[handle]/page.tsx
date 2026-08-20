@@ -36,6 +36,7 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
   const [wished,   setWished]   = useState(false)
   const [added,    setAdded]    = useState(false)
   const [apartado, setApartado] = useState(false)
+  const [realStock, setRealStock] = useState<number | null>(null)
 
   useEffect(() => {
     getProductByHandle(handle)
@@ -43,6 +44,10 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
         if (!p) { setProduct(null); return }
         const converted = shopifyToProduct(p)
         setProduct(converted)
+        fetch(`/api/product-stock?handle=${handle}`)
+          .then(r => r.json())
+          .then(d => setRealStock(d.stock ?? null))
+          .catch(() => {})
         return getProducts()
       })
       .then(all => {
@@ -74,7 +79,8 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
     )
   }
 
-  const out = product.stock === 0
+  const stock = realStock ?? product.stock
+  const out = stock === 0
   const rarity = RARITY_LABEL[product.rarity]
 
   function handleAdd() {
@@ -113,7 +119,7 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
         <div>
           <div style={{
             borderRadius: 24, overflow: 'hidden',
-            background: 'radial-gradient(circle at 30% 20%, var(--accent-soft) 0%, transparent 60%), var(--paper-soft)',
+            background: '#fff',
             border: '1px solid var(--line)',
             aspectRatio: '3/4',
             position: 'relative',
@@ -202,7 +208,7 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: out ? 'var(--danger)' : 'var(--success)' }}>
               <Icon name={out ? 'close' : 'check'} size={14} />
-              {out ? 'Agotado' : `${product.stock} en stock`}
+              {out ? 'Agotado' : stock > 5 ? '+5 en stock' : `${stock} en stock`}
             </div>
           </div>
 
@@ -233,12 +239,12 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
                   ><Icon name="minus" size={14} /></button>
                   <span style={{ width: 36, textAlign: 'center', fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{qty}</span>
                   <button
-                    onClick={() => setQty(q => Math.min(product.stock, q + 1))}
-                    disabled={qty >= product.stock}
+                    onClick={() => setQty(q => Math.min(stock, q + 1))}
+                    disabled={qty >= stock}
                     style={{
                       width: 38, height: 44, background: 'none', border: 'none',
                       cursor: qty >= product.stock ? 'not-allowed' : 'pointer',
-                      color: qty >= product.stock ? 'var(--ink-4)' : 'var(--ink)',
+                      color: qty >= stock ? 'var(--ink-4)' : 'var(--ink)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   ><Icon name="plus" size={14} /></button>
@@ -269,7 +275,7 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
                 ) : (
                   <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                     <Icon name="clock" size={15} />
-                    Apartar con 30% — ${Math.round(product.price * 0.3).toLocaleString('es-MX')} MXN
+                    Apartar con 40% — ${Math.round(product.price * 0.4).toLocaleString('es-MX')} MXN
                   </span>
                 )}
               </button>
@@ -296,9 +302,9 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
           }}>
             {[
               { icon: 'truck',   text: 'Envío a todo México' },
-              { icon: 'shield',  text: 'Pago seguro MercadoPago' },
+              { icon: 'shield',  text: 'Pago seguro' },
               { icon: 'clock',   text: 'Apartado 7 días' },
-              { icon: 'sparkle', text: '10% off en tu primera compra' },
+              { icon: 'sparkle', text: 'Puntos por cada compra' },
             ].map(b => (
               <div key={b.text} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--ink-2)' }}>
                 <span style={{ color: 'var(--accent)', flexShrink: 0 }}><Icon name={b.icon as never} size={14} /></span>

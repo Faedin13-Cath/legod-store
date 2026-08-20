@@ -70,7 +70,7 @@ export default function HomePage() {
               </h1>
 
               <p className="anim-fade-up d-2 hero-desc" style={{ fontSize:17, color:'rgba(255,255,255,0.55)', lineHeight:1.65, maxWidth:400, margin:'0 0 36px' }}>
-                Star Wars, Marvel, sports y más. Nuevos ingresos cada semana. Apartas con 30% y liquidas en 7 días.
+                Star Wars, Marvel, sports y más. Nuevos ingresos cada semana. Apartas con 40% y liquidas en 7 días.
               </p>
 
               {/* CTAs */}
@@ -333,12 +333,12 @@ export default function HomePage() {
         <div className="benefits-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:16 }}>
           {[
             { icon:'truck',   title:'envíos seguros',  desc:'Burbuja + caja rígida. Correos, Estafeta o FedEx.' },
-            { icon:'clock',   title:'apartado 30%',    desc:'Te apartamos la figura 7 días sin enganche.' },
+            { icon:'clock',   title:'apartado 40%',    desc:'Aparta con 40% de anticipo y liquida en 7 días.' },
             { icon:'shield',  title:'compra segura',   desc:'MercadoPago, Stripe o transferencia. Garantía 7 días.' },
             { icon:'sparkle', title:'10% off primera', desc:'Con el cupón BIENVENIDA en tu primer pedido.' },
           ].map((b, i) => (
-            <Reveal key={b.icon} delay={i * 80} animation="fade-up">
-              <div style={{ background:'var(--paper)', border:'1px solid var(--line)', borderRadius:20, padding:'24px 20px', display:'flex', flexDirection:'column', gap:10 }}>
+            <Reveal key={b.icon} delay={i * 80} animation="fade-up" style={{ height:'100%' }}>
+              <div style={{ height:'100%', background:'var(--paper)', border:'1px solid var(--line)', borderRadius:20, padding:'24px 20px', display:'flex', flexDirection:'column', gap:10 }}>
                 <div style={{ width:40, height:40, borderRadius:12, background:'var(--accent-soft)', color:'var(--accent)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                   <Icon name={b.icon} size={18} />
                 </div>
