@@ -174,7 +174,7 @@ function TiendaContent() {
                     transition: 'all .12s',
                   }}
                 >
-                  <Icon name={c.icon} size={14} />
+                  <Icon name={c.icon} size={16} />
                   {c.label}
                 </button>
               ))}

@@ -111,17 +111,17 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
 
       {/* PDP layout */}
       <div className="pdp-grid" style={{
-        maxWidth: 900, margin: '0 auto',
-        display: 'grid', gridTemplateColumns: '320px 1fr',
-        gap: 40, padding: '32px 32px 80px', alignItems: 'start',
+        maxWidth: 960, margin: '0 auto',
+        display: 'grid', gridTemplateColumns: '360px 1fr',
+        gap: 40, padding: '32px 32px 80px', alignItems: 'stretch',
       }}>
         {/* Left: image */}
-        <div>
+        <div style={{ height: '100%' }}>
           <div style={{
             borderRadius: 24, overflow: 'hidden',
             background: '#fff',
             border: '1px solid var(--line)',
-            aspectRatio: '1/1',
+            height: '100%', minHeight: 420,
             position: 'relative',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
