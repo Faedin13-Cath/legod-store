@@ -111,9 +111,9 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
 
       {/* PDP layout */}
       <div className="pdp-grid" style={{
-        maxWidth: 1040, margin: '0 auto',
-        display: 'grid', gridTemplateColumns: 'minmax(0, 420px) 1fr',
-        gap: 48, padding: '32px 32px 80px', alignItems: 'start',
+        maxWidth: 900, margin: '0 auto',
+        display: 'grid', gridTemplateColumns: '320px 1fr',
+        gap: 40, padding: '32px 32px 80px', alignItems: 'start',
       }}>
         {/* Left: image */}
         <div>
