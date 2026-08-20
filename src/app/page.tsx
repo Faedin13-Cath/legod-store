@@ -278,9 +278,8 @@ export default function HomePage() {
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
             {/* Review card con foto */}
             <div style={{ background:'var(--paper)', border:'1px solid var(--line)', borderRadius:24, overflow:'hidden', display:'grid', gridTemplateColumns:'200px 1fr' }}>
-              <div style={{ position:'relative', minHeight:200, background:'linear-gradient(150deg,#2D1869 0%,#4B2F9E 100%)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <span style={{ fontSize:96, lineHeight:1, color:'rgba(255,255,255,0.16)', fontFamily:'Georgia, serif', fontWeight:800 }}>&ldquo;</span>
-                <span style={{ position:'absolute', bottom:16, left:0, right:0, textAlign:'center', fontSize:11, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:'rgba(255,255,255,0.55)' }}>Jango&apos;s Store</span>
+              <div style={{ position:'relative', minHeight:200 }}>
+                <Image src="/assets/clientes/review1.jpg" alt="Colección de minifiguras — Edgar Jesús Silva Hernández" fill style={{ objectFit:'cover' }} />
               </div>
               <div style={{ padding:'28px 24px', display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
                 <div>
@@ -294,10 +293,10 @@ export default function HomePage() {
                   </p>
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                  <div style={{ width:36, height:36, borderRadius:'50%', background:'var(--accent-soft)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, fontWeight:700, color:'var(--accent)' }}>C</div>
+                  <div style={{ width:36, height:36, borderRadius:'50%', background:'var(--accent-soft)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, fontWeight:700, color:'var(--accent)' }}>E</div>
                   <div>
-                    <div style={{ fontSize:13, fontWeight:600, color:'var(--ink)' }}>Cliente verificado</div>
-                    <div style={{ fontSize:11, color:'var(--ink-3)' }}>Comprador recurrente</div>
+                    <div style={{ fontSize:13, fontWeight:600, color:'var(--ink)' }}>Edgar Jesús Silva Hernández</div>
+                    <div style={{ fontSize:11, color:'var(--ink-3)' }}>Cliente verificado · Comprador recurrente</div>
                   </div>
                 </div>
               </div>
