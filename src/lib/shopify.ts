@@ -13,7 +13,12 @@ async function shopifyFetch<T>(query: string, variables?: Record<string, unknown
     cache: 'no-store',
   })
   const json = await res.json()
-  if (json.errors) throw new Error(json.errors[0].message)
+  if (json.errors) {
+    // Tolera errores parciales (p.ej. quantityAvailable requiere el scope
+    // unauthenticated_read_product_inventory) mientras haya data de vuelta.
+    if (!json.data) throw new Error(json.errors[0].message)
+    console.warn('[shopify] errores parciales:', json.errors.map((e: { message: string }) => e.message).join('; '))
+  }
   return json.data as T
 }
 
@@ -27,7 +32,7 @@ export interface ShopifyProduct {
   images: { edges: { node: { url: string; altText: string | null } }[] }
   tags: string[]
   availableForSale: boolean
-  variants: { edges: { node: { id: string; title: string; price: { amount: string } } }[] }
+  variants: { edges: { node: { id: string; title: string; price: { amount: string }; quantityAvailable: number | null } }[] }
 }
 
 /* ── Queries ─────────────────────────────────────────────────── */
@@ -35,7 +40,7 @@ const PRODUCT_FIELDS = `
   id handle title description availableForSale tags
   priceRange { minVariantPrice { amount } }
   images(first: 3) { edges { node { url altText } } }
-  variants(first: 5) { edges { node { id title price { amount } } } }
+  variants(first: 5) { edges { node { id title price { amount } quantityAvailable } } }
 `
 
 export async function getProducts(): Promise<ShopifyProduct[]> {
@@ -57,12 +62,13 @@ export async function getProductByHandle(handle: string): Promise<ShopifyProduct
 /* ── Adapter: ShopifyProduct → local Product ─────────────────── */
 import type { Product, ProductCat, ProductType, ProductTag } from '@/types'
 
-const CAT_TAGS = ['starwars','marvel','dc','harry','stranger','castle','sports','custom']
+const CAT_TAGS = ['starwars','marvel','dc','harry','stranger','castle','sports','pixar','custom']
 const PRODUCT_TAGS = ['nuevo','restock','oferta','edicion-limitada','sellado','usado','agotado','popular','limitada','custom','promo']
+const BL_ID_RE = /^[a-z]{2,4}\d{3,}/i   // sh0276, sw0123, hp001, etc.
 const CAT_LABELS: Record<string, string> = {
   starwars: 'Star Wars', marvel: 'Marvel', dc: 'DC Comics',
   harry: 'Harry Potter', stranger: 'Stranger Things',
-  sports: 'Deportes', castle: 'Castle', custom: 'Custom',
+  sports: 'Deportes', castle: 'Castle', pixar: 'Pixar', custom: 'Custom',
 }
 
 export function shopifyToProduct(p: ShopifyProduct): Product {
@@ -71,6 +77,7 @@ export function shopifyToProduct(p: ShopifyProduct): Product {
                           : p.tags.includes('set-used')   ? 'set-used'
                           : 'minifig'
   const productTags = p.tags.filter(t => PRODUCT_TAGS.includes(t)) as ProductTag[]
+  const blId = p.tags.find(t => BL_ID_RE.test(t))?.toLowerCase()
 
   return {
     id:     p.handle,
@@ -80,12 +87,19 @@ export function shopifyToProduct(p: ShopifyProduct): Product {
     type,
     tag:    CAT_LABELS[cat] ?? 'Minifigura',
     price:  Math.round(parseFloat(p.priceRange.minVariantPrice.amount)),
-    stock:  p.availableForSale ? 1 : 0,
+    // Inventario real de Shopify (suma de variantes). Si el token aún no tiene
+    // el scope de inventario, quantityAvailable llega null → cae al comportamiento
+    // anterior (1 si está disponible).
+    stock:  (() => {
+      const qty = p.variants.edges.reduce((s, e) => s + (e.node.quantityAvailable ?? 0), 0)
+      return qty > 0 ? qty : (p.availableForSale ? 1 : 0)
+    })(),
     state:  'new',
     rarity: 'comun',
     photo:  p.images.edges[0]?.node.url,
     tags:   productTags,
     desc:   p.description,
+    blId,
   }
 }
 
