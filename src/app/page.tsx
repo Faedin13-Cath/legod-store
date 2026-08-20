@@ -278,8 +278,9 @@ export default function HomePage() {
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
             {/* Review card con foto */}
             <div style={{ background:'var(--paper)', border:'1px solid var(--line)', borderRadius:24, overflow:'hidden', display:'grid', gridTemplateColumns:'200px 1fr' }}>
-              <div style={{ position:'relative', minHeight:200 }}>
-                <Image src="/assets/clientes/review1.jpg" alt="Cliente satisfecho" fill style={{ objectFit:'cover' }} />
+              <div style={{ position:'relative', minHeight:200, background:'linear-gradient(150deg,#2D1869 0%,#4B2F9E 100%)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <span style={{ fontSize:96, lineHeight:1, color:'rgba(255,255,255,0.16)', fontFamily:'Georgia, serif', fontWeight:800 }}>&ldquo;</span>
+                <span style={{ position:'absolute', bottom:16, left:0, right:0, textAlign:'center', fontSize:11, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:'rgba(255,255,255,0.55)' }}>Jango&apos;s Store</span>
               </div>
               <div style={{ padding:'28px 24px', display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
                 <div>

@@ -17,12 +17,18 @@ const NAV = [
   { href: '/saldo',     icon: 'gift-card', label: 'Saldo' },
 ]
 
+const OWNER_EMAIL = 'faedin@hotmail.com'
+
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname()
   const { profile, loading, signOut } = useAuth()
 
   const displayName = profile?.name || 'Usuario'
   const displayHandle = profile?.handle || 'usuario'
+  const isOwner = (profile?.email ?? '').toLowerCase() === OWNER_EMAIL
+  const navItems = isOwner
+    ? [...NAV, { href: '/admin', icon: 'settings', label: 'Administración' }]
+    : NAV
   const pts  = profile?.points_total ?? 0
   // next = 0 significa que ya pasó todos los umbrales — sin él, la barra
   // dividía entre cero y mostraba "12,000 / 0 pts" y puntos negativos.
@@ -85,7 +91,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
             background: 'var(--paper)', border: '1px solid var(--line)',
             borderRadius: 16, overflow: 'hidden',
           }}>
-            {NAV.map(item => {
+            {navItems.map(item => {
               const active = path === item.href || path.startsWith(item.href + '/')
               return (
                 <Link
