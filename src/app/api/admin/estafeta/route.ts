@@ -44,14 +44,18 @@ export async function GET(req: NextRequest) {
 
   let query = admin
     .from('orders')
-    .select('shipping, line_items, total_price, order_number, user_id, fulfillment_status')
+    .select('shipping, line_items, total_price, order_number, user_id, fulfillment_status, carrier')
     .not('shipping', 'is', null)
     .order('created_at', { ascending: false })
 
   if (scope === 'pending') query = query.neq('fulfillment_status', 'fulfilled')
 
   const { data: orders } = await query
-  const rows = orders ?? []
+  // Solo las órdenes que eligieron Estafeta (o sin paquetería definida → default)
+  const rows = (orders ?? []).filter(o => {
+    const c = (o.carrier ?? (o.shipping as { carrier?: string })?.carrier ?? '').toLowerCase()
+    return c === '' || c.includes('estafeta')
+  })
 
   // Emails por usuario (para email_destinatario)
   const emailBy: Record<string, string> = {}

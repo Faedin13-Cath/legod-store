@@ -23,7 +23,7 @@ async function gql(query: string) {
 type Shipping = {
   name: string; phone: string
   street: string; numExt?: string; numInt?: string
-  colonia?: string; city: string; state: string; zip: string; ref?: string
+  colonia?: string; city: string; state: string; zip: string; ref?: string; carrier?: string
 }
 
 /** Convierte nuestra dirección al formato que espera Shopify. */
@@ -164,7 +164,7 @@ async function checkoutWithBalance(
       user_id: userId, shopify_order_id: shopifyOrderId, order_number: shopifyOrderId,
       total_price: subtotal, financial_status: 'paid', fulfillment_status: 'unfulfilled',
       line_items: items.map(i => ({ title: i.name, quantity: i.qty, price: String(i.price) })),
-      shipping, created_at: new Date().toISOString(),
+      shipping, carrier: shipping.carrier ?? null, created_at: new Date().toISOString(),
     }, { onConflict: 'shopify_order_id' })
 
     return NextResponse.json({ redirectUrl: '/pedidos' })

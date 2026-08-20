@@ -8,7 +8,11 @@ export type ShippingData = {
   name: string; phone: string
   street: string; numExt: string; numInt: string
   colonia: string; city: string; state: string; zip: string; ref: string
+  carrier: string
 }
+
+// Paqueterías disponibles. El precio no cambia para minifiguras (envío plano).
+export const CARRIERS = ['Estafeta', 'Correos de México', 'FedEx'] as const
 
 type Props = {
   open:        boolean
@@ -53,6 +57,7 @@ export default function SaldoConfirmModal({ open, title, amount, total, needShip
   const [state,   setState]   = useState(profile?.ship_state   ?? '')
   const [zip,     setZip]     = useState(profile?.ship_zip     ?? '')
   const [ref,     setRef]     = useState(profile?.ship_ref     ?? '')
+  const [carrier, setCarrier] = useState<string>(CARRIERS[0])
 
   if (!open) return null
 
@@ -60,7 +65,7 @@ export default function SaldoConfirmModal({ open, title, amount, total, needShip
 
   function confirm() {
     if (missing) return
-    onConfirm(needShipping ? { name, phone, street, numExt, numInt, colonia, city, state, zip, ref } : undefined)
+    onConfirm(needShipping ? { name, phone, street, numExt, numInt, colonia, city, state, zip, ref, carrier } : undefined)
   }
 
   return (
@@ -107,6 +112,36 @@ export default function SaldoConfirmModal({ open, title, amount, total, needShip
               {field('Ciudad / municipio', city, setCity, { required: true, half: true })}
               {field('Estado', state, setState, { required: true, half: true })}
               {field('Referencia (entre calles, color de casa…)', ref, setRef, {})}
+            </div>
+
+            {/* Paquetería */}
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '4px 0 8px' }}>
+              Paquetería
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+              {CARRIERS.map(c => {
+                const on = carrier === c
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setCarrier(c)}
+                    style={{
+                      flex: 1, padding: '10px 8px', borderRadius: 10, cursor: 'pointer',
+                      fontSize: 12, fontWeight: on ? 700 : 500, lineHeight: 1.2,
+                      background: on ? 'var(--accent-soft)' : 'var(--paper)',
+                      border: `1.5px solid ${on ? 'var(--accent)' : 'var(--line)'}`,
+                      color: on ? 'var(--accent)' : 'var(--ink-2)',
+                      transition: 'all .12s',
+                    }}
+                  >
+                    {c}
+                  </button>
+                )
+              })}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--ink-4)', marginBottom: 16 }}>
+              Envío incluido — el precio no cambia según la paquetería.
             </div>
           </>
         )}

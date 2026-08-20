@@ -20,7 +20,7 @@ async function adminFetch(path: string, options: RequestInit = {}) {
 type Shipping = {
   name: string; phone: string
   street: string; numExt?: string; numInt?: string
-  colonia?: string; city: string; state: string; zip: string; ref?: string
+  colonia?: string; city: string; state: string; zip: string; ref?: string; carrier?: string
 }
 
 function toShopifyAddress(s: Shipping) {
@@ -139,6 +139,7 @@ export async function POST(req: NextRequest) {
       fulfillment_status: 'unfulfilled',
       line_items:         items.map(i => ({ title: i.name, quantity: i.qty, price: String(subtotal / items.reduce((s, x) => s + x.qty, 0)) })),
       shipping,
+      carrier:            shipping.carrier ?? null,
       created_at:         new Date().toISOString(),
     }, { onConflict: 'shopify_order_id' })
 
