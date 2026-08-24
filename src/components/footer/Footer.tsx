@@ -100,8 +100,9 @@ export default function Footer() {
             <li><Link href="/faq" style={linkStyle}>Preguntas frecuentes</Link></li>
             <li><Link href="/contacto" style={linkStyle}>Contacto</Link></li>
             <li><Link href="/faq#estado" style={linkStyle}>Estado de figuras</Link></li>
-            <li><Link href="#" style={linkStyle}>Términos</Link></li>
-            <li><Link href="#" style={linkStyle}>Privacidad</Link></li>
+            <li><Link href="/envios-devoluciones" style={linkStyle}>Envíos y devoluciones</Link></li>
+            <li><Link href="/terminos" style={linkStyle}>Términos y condiciones</Link></li>
+            <li><Link href="/aviso-privacidad" style={linkStyle}>Aviso de privacidad</Link></li>
           </ul>
         </div>
       </div>
