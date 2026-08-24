@@ -115,22 +115,22 @@ export default function Header({ alertsCount = 0 }: Props) {
             textDecoration: 'none', fontSize: 13, fontWeight: 700,
             color: 'var(--accent)', flexShrink: 0,
             transition: 'background .12s',
-          }} className="nav-desktop" aria-label="Mi saldo">
+          }} className="nav-desktop" aria-label="Mi saldo" title="Mi saldo">
             <Icon name="gift-card" size={13} />
             ${saldo.toLocaleString('es-MX')}
           </Link>
         )}
 
-        <Link href={user ? '/perfil' : '/login'} aria-label="Mi cuenta" style={icon}>
+        <Link href={user ? '/perfil' : '/login'} aria-label="Mi cuenta" title="Mi cuenta" style={icon}>
           <Icon name="user" size={17} />
         </Link>
 
-        <button aria-label="Alertas" style={{ ...icon, border:'none', cursor:'pointer', position:'relative' }}>
+        <button aria-label="Alertas" title="Alertas" style={{ ...icon, border:'none', cursor:'pointer', position:'relative' }}>
           <Icon name="bell" size={17} />
           {mounted && alertsCount > 0 && <Badge>{alertsCount}</Badge>}
         </button>
 
-        <button aria-label="Carrito" onClick={openCart}
+        <button aria-label="Carrito" title="Carrito" onClick={openCart}
           style={{ ...icon, border:'none', cursor:'pointer', position:'relative' }}>
           <Icon name="cart" size={17} />
           {mounted && count > 0 && <Badge>{count}</Badge>}

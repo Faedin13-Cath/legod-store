@@ -43,19 +43,33 @@ const PRODUCT_FIELDS = `
   variants(first: 5) { edges { node { id title price { amount } quantityAvailable } } }
 `
 
+/* ── Cache en memoria (60s) — evita repegar a Shopify al navegar ── */
+const TTL = 60_000
+let _productsCache: { data: ShopifyProduct[]; at: number } | null = null
+const _handleCache = new Map<string, { data: ShopifyProduct | null; at: number }>()
+const fresh = (at: number) => Date.now() - at < TTL
+
 export async function getProducts(): Promise<ShopifyProduct[]> {
+  if (_productsCache && fresh(_productsCache.at)) return _productsCache.data
   const data = await shopifyFetch<{ products: { edges: { node: ShopifyProduct }[] } }>(`
     { products(first: 100, sortKey: CREATED_AT, reverse: true) {
         edges { node { ${PRODUCT_FIELDS} } }
     }}
   `)
-  return data.products.edges.map(e => e.node)
+  const list = data.products.edges.map(e => e.node)
+  _productsCache = { data: list, at: Date.now() }
+  // aprovecha para llenar el cache por handle
+  for (const p of list) _handleCache.set(p.handle, { data: p, at: Date.now() })
+  return list
 }
 
 export async function getProductByHandle(handle: string): Promise<ShopifyProduct | null> {
+  const cached = _handleCache.get(handle)
+  if (cached && fresh(cached.at)) return cached.data
   const data = await shopifyFetch<{ productByHandle: ShopifyProduct | null }>(`
     { productByHandle(handle: "${handle}") { ${PRODUCT_FIELDS} } }
   `)
+  _handleCache.set(handle, { data: data.productByHandle, at: Date.now() })
   return data.productByHandle
 }
 

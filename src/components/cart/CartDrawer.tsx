@@ -209,7 +209,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
           </div>
           <button
             onClick={onClose}
-            aria-label="Cerrar carrito"
+            aria-label="Cerrar carrito" title="Cerrar carrito"
             style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--cream)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)', cursor: 'pointer' }}
           >
             <Icon name="close" size={16} />
@@ -410,7 +410,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
                 {/* Info icon */}
                 <button
                   onClick={() => setInfoOpen(v => !v)}
-                  aria-label="¿Cómo funciona el apartado?"
+                  aria-label="¿Cómo funciona el apartado?" title="¿Cómo funciona el apartado?"
                   style={{
                     width: 36, height: 44, borderRadius: 10, flexShrink: 0,
                     background: infoOpen ? 'var(--accent)' : 'var(--cream)',

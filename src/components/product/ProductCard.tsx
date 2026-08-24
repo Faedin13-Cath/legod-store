@@ -76,6 +76,7 @@ export default function ProductCard({ product, wished, onView, onAdd, onWish }: 
             className={'prod-wishlist ' + (wished ? 'active' : '')}
             onClick={e => { e.stopPropagation(); onWish(product) }}
             aria-label="Wishlist"
+            title={wished ? 'Quitar de wishlist' : 'Agregar a wishlist'}
             style={{
               position: 'absolute', top: 10, right: 10,
               width: 32, height: 32, borderRadius: '50%',
@@ -105,6 +106,7 @@ export default function ProductCard({ product, wished, onView, onAdd, onWish }: 
             disabled={out}
             onClick={e => { e.stopPropagation(); onAdd?.(product) }}
             aria-label="Añadir al carrito"
+            title={out ? 'Agotado' : 'Añadir al carrito'}
             style={{
               width: 32, height: 32, borderRadius: '50%',
               background: out ? 'var(--ink-4)' : 'var(--ink)',

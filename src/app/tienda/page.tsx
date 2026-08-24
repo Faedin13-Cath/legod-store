@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import ProductCard from '@/components/product/ProductCard'
+import { ProductGridSkeleton } from '@/components/ui/Skeleton'
 import Icon from '@/components/ui/Icon'
 import { useCart } from '@/components/cart/CartProvider'
 import { useAuth } from '@/components/auth/AuthProvider'
@@ -269,8 +270,8 @@ function TiendaContent() {
       {/* Product grid */}
       <div className="sec" style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 32px 80px' }}>
         {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0', color: 'var(--ink-3)', fontSize: 15 }}>
-            Cargando productos…
+          <div className="tienda-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 }}>
+            <ProductGridSkeleton count={10} />
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState onClear={clearAll} />
