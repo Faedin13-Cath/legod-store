@@ -231,18 +231,23 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {items.map(item => (
                 <div key={item.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 12, background: 'var(--cream)', border: '1px solid var(--line)' }}>
-                  {/* Color chip */}
+                  {/* Foto del artículo (o cuadro con iniciales si no hay) */}
                   <div style={{
-                    width: 52, height: 52, borderRadius: 8, flexShrink: 0,
-                    background: item.fig
+                    width: 52, height: 52, borderRadius: 8, flexShrink: 0, overflow: 'hidden',
+                    background: item.photo ? '#fff' : (item.fig
                       ? `linear-gradient(135deg, ${item.fig.c1} 0%, ${item.fig.c2} 100%)`
-                      : 'var(--accent-soft)',
+                      : 'var(--accent-soft)'),
                     border: '1px solid var(--line)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <span style={{ fontSize: 12, color: '#fff', fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
-                      {item.name.slice(0, 2).toUpperCase()}
-                    </span>
+                    {item.photo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.photo} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 3 }} />
+                    ) : (
+                      <span style={{ fontSize: 12, color: '#fff', fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
+                        {item.name.slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
