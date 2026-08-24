@@ -1,4 +1,4 @@
-export type ProductCat = 'starwars' | 'marvel' | 'dc' | 'harry' | 'stranger' | 'castle' | 'sports' | 'custom' | 'pixar' | 'series'
+export type ProductCat = 'starwars' | 'marvel' | 'dc' | 'harry' | 'stranger' | 'castle' | 'sports' | 'custom' | 'pixar' | 'series' | 'animales'
 export type ProductType = 'minifig' | 'set-sealed' | 'set-used'
 export type ProductState = 'perfect' | 'new' | 'crack' | 'no-acc' | 'incomplete'
 export type ProductRarity = 'comun' | 'rara' | 'limitada' | 'unica'

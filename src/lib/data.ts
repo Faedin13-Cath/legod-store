@@ -10,6 +10,7 @@ export const cats: Category[] = [
   { id: 'sports',   label: 'Deportes',        emoji: '⚽', icon: 'cat-sports' },
   { id: 'pixar',    label: 'Pixar',           emoji: '🎬', icon: 'cat-pixar' },
   { id: 'series',   label: 'Series',          emoji: '📺', icon: 'cat-series' },
+  { id: 'animales', label: 'Animales',        emoji: '🐾', icon: 'cat-animales' },
   { id: 'custom',   label: 'Custom',          emoji: '✦', icon: 'cat-custom' },
 ]
 

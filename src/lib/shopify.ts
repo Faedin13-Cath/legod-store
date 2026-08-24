@@ -62,13 +62,13 @@ export async function getProductByHandle(handle: string): Promise<ShopifyProduct
 /* ── Adapter: ShopifyProduct → local Product ─────────────────── */
 import type { Product, ProductCat, ProductType, ProductTag } from '@/types'
 
-const CAT_TAGS = ['starwars','marvel','dc','harry','stranger','castle','sports','pixar','series','custom']
+const CAT_TAGS = ['starwars','marvel','dc','harry','stranger','castle','sports','pixar','series','animales','custom']
 const PRODUCT_TAGS = ['nuevo','restock','oferta','edicion-limitada','sellado','usado','agotado','popular','limitada','custom','promo']
 const BL_ID_RE = /^[a-z]{2,4}\d{3,}/i   // sh0276, sw0123, hp001, etc.
 const CAT_LABELS: Record<string, string> = {
   starwars: 'Star Wars', marvel: 'Marvel', dc: 'DC Comics',
   harry: 'Harry Potter', stranger: 'Stranger Things',
-  sports: 'Deportes', castle: 'Castle', pixar: 'Pixar', series: 'Series', custom: 'Custom',
+  sports: 'Deportes', castle: 'Castle', pixar: 'Pixar', series: 'Series', animales: 'Animales', custom: 'Custom',
 }
 
 export function shopifyToProduct(p: ShopifyProduct): Product {

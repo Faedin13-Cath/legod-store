@@ -52,6 +52,8 @@ const paths: Record<string, React.ReactNode> = {
   'cat-pixar':    <><rect x="3" y="8.5" width="18" height="11.5" rx="1.5"/><path d="M3.4 8.5 5.5 4.4l3.2 1.6 3-1.9 3.2 1.6 3-1.9 2 3.6"/></>,
   'cat-series':   <><rect x="2.5" y="7" width="19" height="13" rx="2"/><path d="m8 3.5 4 3.5 4-3.5"/></>,
   'cat-custom':   <><path d="M5 19 15 9"/><path d="M17 3l.9 2.1L20 6l-2.1.9L17 9l-.9-2.1L14 6l2.1-.9z"/><path d="M20.5 13.5l.4 1 1 .4-1 .4-.4 1-.4-1-1-.4 1-.4z"/></>,
+  // Animales — huella
+  'cat-animales': <><circle cx="12" cy="15" r="3.5"/><circle cx="6" cy="10.5" r="1.7"/><circle cx="9.5" cy="6.5" r="1.7"/><circle cx="14.5" cy="6.5" r="1.7"/><circle cx="18" cy="10.5" r="1.7"/></>,
 }
 
 interface IconProps extends React.SVGProps<SVGSVGElement> {
