@@ -10,6 +10,10 @@ export const cats: Category[] = [
   { id: 'sports',   label: 'Deportes',        emoji: '⚽', icon: 'cat-sports' },
   { id: 'pixar',    label: 'Pixar',           emoji: '🎬', icon: 'cat-pixar' },
   { id: 'series',   label: 'Series',          emoji: '📺', icon: 'cat-series' },
+  { id: 'city',     label: 'City',            emoji: '🏙️', icon: 'cat-city' },
+  { id: 'ninjago',  label: 'Ninjago',         emoji: '🥷', icon: 'cat-ninjago' },
+  { id: 'lotr',     label: 'El Señor de los Anillos', emoji: '💍', icon: 'cat-lotr' },
+  { id: 'bionicle', label: 'Bionicle',        emoji: '🤖', icon: 'cat-bionicle' },
   { id: 'animales', label: 'Animales',        emoji: '🐾', icon: 'cat-animales' },
   { id: 'custom',   label: 'Custom',          emoji: '✦', icon: 'cat-custom' },
 ]

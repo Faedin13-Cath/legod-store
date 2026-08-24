@@ -54,6 +54,14 @@ const paths: Record<string, React.ReactNode> = {
   'cat-custom':   <><path d="M5 19 15 9"/><path d="M17 3l.9 2.1L20 6l-2.1.9L17 9l-.9-2.1L14 6l2.1-.9z"/><path d="M20.5 13.5l.4 1 1 .4-1 .4-.4 1-.4-1-1-.4 1-.4z"/></>,
   // Animales — huella
   'cat-animales': <><circle cx="12" cy="15" r="3.5"/><circle cx="6" cy="10.5" r="1.7"/><circle cx="9.5" cy="6.5" r="1.7"/><circle cx="14.5" cy="6.5" r="1.7"/><circle cx="18" cy="10.5" r="1.7"/></>,
+  // City — edificios
+  'cat-city':     <><path d="M3 21V10l5-3v14"/><path d="M8 21V4l6 2.5V21"/><path d="M14 21v-8l5 2.5V21"/><path d="M2.5 21h19"/><path d="M11 10v0M11 13v0M11 16v0"/></>,
+  // Ninjago — shuriken
+  'cat-ninjago':  <><path d="M12 3l2.4 6.1L21 12l-6.6 2.9L12 21l-2.4-6.1L3 12l6.6-2.9z"/><circle cx="12" cy="12" r="1.3"/></>,
+  // El Señor de los Anillos — el Anillo Único
+  'cat-lotr':     <><circle cx="12" cy="13.5" r="7"/><circle cx="12" cy="13.5" r="4"/><path d="M12 2.5l.9 2.1 2.1.9-2.1.9L12 8.6l-.9-2.2L9 5.5l2.1-.9z"/></>,
+  // Bionicle — máscara Kanohi
+  'cat-bionicle': <><path d="M7 4h10l1 6.5a6 6 0 0 1-12 0z"/><path d="M9.5 9.5h1.6"/><path d="M12.9 9.5h1.6"/><path d="M12 14.5v2.5"/></>,
 }
 
 interface IconProps extends React.SVGProps<SVGSVGElement> {
