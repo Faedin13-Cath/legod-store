@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { nextReward } from '@/lib/loyalty'
@@ -21,7 +22,15 @@ const OWNER_EMAIL = 'faedin@hotmail.com'
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname()
-  const { profile, loading, signOut } = useAuth()
+  const router = useRouter()
+  const { user, profile, loading, signOut } = useAuth()
+
+  // Guard: sin sesión no se puede entrar a la sección de cuenta → a login
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace(`/login?next=${encodeURIComponent(path)}`)
+    }
+  }, [loading, user, path, router])
 
   const displayName = profile?.name || 'Usuario'
   const displayHandle = profile?.handle || 'usuario'
@@ -36,7 +45,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
   const maxed = next <= 0
   const pct  = maxed ? 100 : Math.min(100, Math.round((pts / next) * 100))
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--cream)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ color: 'var(--ink-3)', fontSize: 15 }}>Cargando…</div>

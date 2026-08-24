@@ -11,8 +11,8 @@ export type ShippingData = {
   carrier: string
 }
 
-// Paqueterías disponibles. El precio no cambia para minifiguras (envío plano).
-export const CARRIERS = ['Estafeta', 'Correos de México', 'FedEx'] as const
+// Opciones de entrega. "Recoger en tienda" es gratis (entrega personal en CDMX).
+export const CARRIERS = ['Recoger en tienda', 'Estafeta', 'Correos de México', 'FedEx'] as const
 
 type Props = {
   open:        boolean
@@ -57,11 +57,16 @@ export default function SaldoConfirmModal({ open, title, amount, total, needShip
   const [state,   setState]   = useState(profile?.ship_state   ?? '')
   const [zip,     setZip]     = useState(profile?.ship_zip     ?? '')
   const [ref,     setRef]     = useState(profile?.ship_ref     ?? '')
-  const [carrier, setCarrier] = useState<string>(CARRIERS[0])
+  const [carrier, setCarrier] = useState<string>(CARRIERS[1])
 
   if (!open) return null
 
-  const missing = needShipping && (!name.trim() || !phone.trim() || !street.trim() || !numExt.trim() || !city.trim() || !state.trim() || !zip.trim())
+  const pickup = carrier === 'Recoger en tienda'
+  // Recoger en tienda solo necesita nombre + teléfono; envío necesita dirección completa.
+  const missing = needShipping && (
+    !name.trim() || !phone.trim() ||
+    (!pickup && (!street.trim() || !numExt.trim() || !city.trim() || !state.trim() || !zip.trim()))
+  )
 
   function confirm() {
     if (missing) return
@@ -98,27 +103,11 @@ export default function SaldoConfirmModal({ open, title, amount, total, needShip
 
         {needShipping && (
           <>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '4px 0 10px' }}>
-              ¿A dónde lo enviamos?
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
-              {field('Nombre completo', name, setName, { required: true })}
-              {field('Teléfono', phone, setPhone, { required: true, half: true, placeholder: '55 1234 5678' })}
-              {field('Código postal', zip, setZip, { required: true, half: true, placeholder: '00000' })}
-              {field('Calle', street, setStreet, { required: true })}
-              {field('Núm. exterior', numExt, setNumExt, { required: true, half: true, placeholder: '123' })}
-              {field('Núm. interior', numInt, setNumInt, { half: true, placeholder: 'Opcional' })}
-              {field('Colonia', colonia, setColonia, {})}
-              {field('Ciudad / municipio', city, setCity, { required: true, half: true })}
-              {field('Estado', state, setState, { required: true, half: true })}
-              {field('Referencia (entre calles, color de casa…)', ref, setRef, {})}
-            </div>
-
-            {/* Paquetería */}
+            {/* Entrega */}
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '4px 0 8px' }}>
-              Paquetería
+              Entrega
             </div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
               {CARRIERS.map(c => {
                 const on = carrier === c
                 return (
@@ -127,7 +116,7 @@ export default function SaldoConfirmModal({ open, title, amount, total, needShip
                     type="button"
                     onClick={() => setCarrier(c)}
                     style={{
-                      flex: 1, padding: '10px 8px', borderRadius: 10, cursor: 'pointer',
+                      flex: '1 1 40%', padding: '10px 8px', borderRadius: 10, cursor: 'pointer',
                       fontSize: 12, fontWeight: on ? 700 : 500, lineHeight: 1.2,
                       background: on ? 'var(--accent-soft)' : 'var(--paper)',
                       border: `1.5px solid ${on ? 'var(--accent)' : 'var(--line)'}`,
@@ -141,8 +130,35 @@ export default function SaldoConfirmModal({ open, title, amount, total, needShip
               })}
             </div>
             <div style={{ fontSize: 11, color: 'var(--ink-4)', marginBottom: 16 }}>
-              Envío incluido — el precio no cambia según la paquetería.
+              {pickup
+                ? 'Entrega personal en CDMX (punto medio o sábados en el Rock Show). Coordinamos por WhatsApp.'
+                : 'El costo del envío se cotiza según destino y se cobra por separado.'}
             </div>
+
+            {pickup ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+                {field('Nombre completo', name, setName, { required: true })}
+                {field('Teléfono', phone, setPhone, { required: true, placeholder: '55 1234 5678' })}
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '4px 0 10px' }}>
+                  ¿A dónde lo enviamos?
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+                  {field('Nombre completo', name, setName, { required: true })}
+                  {field('Teléfono', phone, setPhone, { required: true, half: true, placeholder: '55 1234 5678' })}
+                  {field('Código postal', zip, setZip, { required: true, half: true, placeholder: '00000' })}
+                  {field('Calle', street, setStreet, { required: true })}
+                  {field('Núm. exterior', numExt, setNumExt, { required: true, half: true, placeholder: '123' })}
+                  {field('Núm. interior', numInt, setNumInt, { half: true, placeholder: 'Opcional' })}
+                  {field('Colonia', colonia, setColonia, {})}
+                  {field('Ciudad / municipio', city, setCity, { required: true, half: true })}
+                  {field('Estado', state, setState, { required: true, half: true })}
+                  {field('Referencia (entre calles, color de casa…)', ref, setRef, {})}
+                </div>
+              </>
+            )}
           </>
         )}
 
