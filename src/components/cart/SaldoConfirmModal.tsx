@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { shippingCost } from '@/lib/shipping'
 
 export type ShippingData = {
   name: string; phone: string
@@ -59,9 +60,19 @@ export default function SaldoConfirmModal({ open, title, amount, total, needShip
   const [ref,     setRef]     = useState(profile?.ship_ref     ?? '')
   const [carrier, setCarrier] = useState<string>(CARRIERS[1])
 
+  // Bloquea el scroll del fondo mientras el modal está abierto
+  useEffect(() => {
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [open])
+
   if (!open) return null
 
   const pickup = carrier === 'Recoger en tienda'
+  const ship   = needShipping ? shippingCost(carrier) : 0
+  const grand  = amount + ship  // lo que se descuenta del saldo (producto + envío)
   // Recoger en tienda solo necesita nombre + teléfono; envío necesita dirección completa.
   const missing = needShipping && (
     !name.trim() || !phone.trim() ||
@@ -95,9 +106,15 @@ export default function SaldoConfirmModal({ open, title, amount, total, needShip
             <span>Total del pedido</span>
             <span style={{ fontWeight: 600 }}>${total.toLocaleString('es-MX')} MXN</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: 'var(--accent)', fontWeight: 700 }}>
+          {needShipping && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--ink-2)', marginBottom: 6 }}>
+              <span>Envío ({carrier})</span>
+              <span style={{ fontWeight: 600 }}>{ship === 0 ? 'Gratis' : `$${ship.toLocaleString('es-MX')} MXN`}</span>
+            </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: 'var(--accent)', fontWeight: 700, borderTop: '1px solid var(--line)', paddingTop: 6 }}>
             <span>Se descuenta de tu saldo</span>
-            <span>−${amount.toLocaleString('es-MX')} MXN</span>
+            <span>−${grand.toLocaleString('es-MX')} MXN</span>
           </div>
         </div>
 
@@ -110,6 +127,7 @@ export default function SaldoConfirmModal({ open, title, amount, total, needShip
             <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
               {CARRIERS.map(c => {
                 const on = carrier === c
+                const p  = shippingCost(c)
                 return (
                   <button
                     key={c}
@@ -117,14 +135,18 @@ export default function SaldoConfirmModal({ open, title, amount, total, needShip
                     onClick={() => setCarrier(c)}
                     style={{
                       flex: '1 1 40%', padding: '10px 8px', borderRadius: 10, cursor: 'pointer',
-                      fontSize: 12, fontWeight: on ? 700 : 500, lineHeight: 1.2,
+                      fontSize: 12, fontWeight: on ? 700 : 500, lineHeight: 1.3,
                       background: on ? 'var(--accent-soft)' : 'var(--paper)',
                       border: `1.5px solid ${on ? 'var(--accent)' : 'var(--line)'}`,
                       color: on ? 'var(--accent)' : 'var(--ink-2)',
                       transition: 'all .12s',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
                     }}
                   >
-                    {c}
+                    <span>{c}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: on ? 'var(--accent)' : 'var(--ink-3)' }}>
+                      {p === 0 ? 'Gratis' : `$${p} MXN`}
+                    </span>
                   </button>
                 )
               })}
@@ -132,7 +154,7 @@ export default function SaldoConfirmModal({ open, title, amount, total, needShip
             <div style={{ fontSize: 11, color: 'var(--ink-4)', marginBottom: 16 }}>
               {pickup
                 ? 'Entrega personal en CDMX (punto medio o sábados en el Rock Show). Coordinamos por WhatsApp.'
-                : 'El costo del envío se cotiza según destino y se cobra por separado.'}
+                : 'El costo del envío se suma al total y se descuenta de tu saldo.'}
             </div>
 
             {pickup ? (
@@ -178,7 +200,7 @@ export default function SaldoConfirmModal({ open, title, amount, total, needShip
             className="btn btn-primary"
             style={{ flex: 2, justifyContent: 'center', opacity: (loading || missing) ? 0.55 : 1 }}
           >
-            {loading ? 'Procesando…' : `Confirmar pago · $${amount.toLocaleString('es-MX')}`}
+            {loading ? 'Procesando…' : `Confirmar pago · $${grand.toLocaleString('es-MX')}`}
           </button>
         </div>
         {missing && (

@@ -634,3 +634,10 @@ a[href*="/tienda"].more-link,
   animation: shimmer 1.4s ease-in-out infinite;
   border-radius: 8px;
 }
+
+/* ── Testimonios responsive ── */
+@media (max-width: 768px) {
+  .reviews-grid { grid-template-columns: 1fr !important; }
+  .review-card  { grid-template-columns: 1fr !important; }
+  .review-card > div:first-child { min-height: 220px !important; }
+}

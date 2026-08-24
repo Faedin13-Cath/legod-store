@@ -275,9 +275,9 @@ export default function HomePage() {
           <Head eyebrow="Lo que dicen" title="clientes satisfechos" />
         </Reveal>
         <Reveal animation="fade-up">
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+          <div className="reviews-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
             {/* Review card con foto */}
-            <div style={{ background:'var(--paper)', border:'1px solid var(--line)', borderRadius:24, overflow:'hidden', display:'grid', gridTemplateColumns:'200px 1fr' }}>
+            <div className="review-card" style={{ background:'var(--paper)', border:'1px solid var(--line)', borderRadius:24, overflow:'hidden', display:'grid', gridTemplateColumns:'200px 1fr' }}>
               <div style={{ position:'relative', minHeight:200 }}>
                 <Image src="/assets/clientes/review1.jpg" alt="Colección de minifiguras — Edgar Jesús Silva Hernández" fill style={{ objectFit:'cover' }} />
               </div>

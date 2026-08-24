@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { awardPurchasePoints } from '@/lib/loyalty'
+import { shippingCost } from '@/lib/shipping'
 
 const domain     = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN!
 const adminToken = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN
@@ -58,7 +59,9 @@ export async function POST(req: NextRequest) {
   // Full saldo coverage — create + complete a Shopify order so it appears in
   // Admin (with customer + shipping), then settle balance/points here.
   if (applied >= balance && userId) {
-    if (!shipping || !shipping.name || !shipping.street || !shipping.numExt || !shipping.city || !shipping.state || !shipping.zip) {
+    const isPickup = shipping?.carrier === 'Recoger en tienda'
+    if (!shipping || !shipping.name || !shipping.phone ||
+        (!isPickup && (!shipping.street || !shipping.numExt || !shipping.city || !shipping.state || !shipping.zip))) {
       return NextResponse.json({ error: 'Falta la dirección de envío', needShipping: true }, { status: 400 })
     }
 
@@ -66,17 +69,22 @@ export async function POST(req: NextRequest) {
     const { data: prof } = await supabase.from('profiles').select('balance').eq('id', userId).single()
     const currentBalance = prof?.balance ?? 0
 
-    if (applied > currentBalance) {
-      return NextResponse.json({ error: 'Saldo insuficiente' }, { status: 400 })
+    const ship  = shippingCost(shipping.carrier)
+    const grand = balance + ship  // saldo pendiente + envío
+
+    if (grand > currentBalance) {
+      return NextResponse.json({ error: 'Saldo insuficiente para cubrir saldo + envío' }, { status: 400 })
     }
 
-    // Guardar dirección en el perfil
-    await supabase.from('profiles').update({
-      ship_name: shipping.name, ship_phone: shipping.phone, ship_street: shipping.street,
-      ship_num_ext: shipping.numExt ?? null, ship_num_int: shipping.numInt ?? null,
-      ship_colonia: shipping.colonia ?? null, ship_city: shipping.city,
-      ship_state: shipping.state, ship_zip: shipping.zip, ship_ref: shipping.ref ?? null,
-    }).eq('id', userId)
+    // Guardar dirección en el perfil (si no es pickup)
+    if (!isPickup) {
+      await supabase.from('profiles').update({
+        ship_name: shipping.name, ship_phone: shipping.phone, ship_street: shipping.street,
+        ship_num_ext: shipping.numExt ?? null, ship_num_int: shipping.numInt ?? null,
+        ship_colonia: shipping.colonia ?? null, ship_city: shipping.city,
+        ship_state: shipping.state, ship_zip: shipping.zip, ship_ref: shipping.ref ?? null,
+      }).eq('id', userId)
+    }
 
     // Orden real en Shopify (liquidación pagada con saldo)
     let shopifyOrderId = `liquidacion_${apartadoId}`
@@ -87,20 +95,22 @@ export async function POST(req: NextRequest) {
           draft_order: {
             line_items: items.map(i => ({
               title: i.name, price: (balance / items.reduce((s, x) => s + x.qty, 0)).toFixed(2),
-              quantity: i.qty, requires_shipping: true, taxable: false,
+              quantity: i.qty, requires_shipping: !isPickup, taxable: false,
             })),
             applied_discount: {
               description: 'Saldo Jango\'s Store', value_type: 'fixed_amount',
-              value: balance.toFixed(2), amount: balance.toFixed(2), title: 'Saldo Jango\'s Store',
+              value: grand.toFixed(2), amount: grand.toFixed(2), title: 'Saldo Jango\'s Store',
             },
+            ...(ship > 0 ? { shipping_line: { title: shipping.carrier, price: ship.toFixed(2) } } : {}),
             ...(userEmail ? { email: userEmail } : {}),
-            shipping_address: toShopifyAddress(shipping),
-            note: `Liquidación de apartado con saldo — ${itemNames}`,
+            ...(isPickup ? {} : { shipping_address: toShopifyAddress(shipping) }),
+            note: `Liquidación con saldo — ${itemNames} · Envío $${ship.toLocaleString('es-MX')} (${shipping.carrier})`,
             tags: 'apartado,liquidacion,saldo',
             note_attributes: [
               { name: 'tipo',        value: 'liquidacion_saldo' },
               { name: 'apartado_id', value: apartadoId },
               { name: 'user_id',     value: userId },
+              { name: 'entrega',     value: shipping.carrier },
             ],
           },
         }),
@@ -119,13 +129,13 @@ export async function POST(req: NextRequest) {
 
     await supabase.from('apartados').update({ status: 'completed' }).eq('id', apartadoId)
 
-    const newBalance = Math.max(0, currentBalance - applied)
+    const newBalance = Math.max(0, currentBalance - grand)
     await supabase.from('profiles').update({ balance: newBalance }).eq('id', userId)
     await supabase.from('balance_transactions').insert({
       user_id:     userId,
       type:        'spent',
-      amount:      applied,
-      description: `Liquidación apartado — ${itemNames}`,
+      amount:      grand,
+      description: `Liquidación apartado (incl. envío ${shipping.carrier}) — ${itemNames}`,
       reference_id: shopifyOrderId,
     })
 
@@ -134,7 +144,7 @@ export async function POST(req: NextRequest) {
       user_id:            userId,
       shopify_order_id:   shopifyOrderId,
       order_number:       shopifyOrderId,
-      total_price:        subtotal,
+      total_price:        subtotal + ship,
       financial_status:   'paid',
       fulfillment_status: 'unfulfilled',
       line_items:         items.map(i => ({ title: i.name, quantity: i.qty, price: String(subtotal / items.reduce((s, x) => s + x.qty, 0)) })),

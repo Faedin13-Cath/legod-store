@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { awardPurchasePoints } from '@/lib/loyalty'
+import { shippingCost } from '@/lib/shipping'
 
 const domain     = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN!
 const token      = process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_TOKEN!
@@ -86,19 +87,31 @@ async function checkoutWithBalance(
 
   // Full saldo coverage — create + auto-complete Shopify order (visible in Admin) without customer checkout
   if (applied >= subtotal) {
+    const isPickup = shipping?.carrier === 'Recoger en tienda'
     // La orden se crea directo en Shopify (bypass del checkout del cliente),
     // así que la dirección de envío tiene que venir de nuestro formulario.
-    if (!shipping || !shipping.name || !shipping.street || !shipping.numExt || !shipping.city || !shipping.state || !shipping.zip) {
+    // "Recoger en tienda" solo necesita nombre + teléfono.
+    if (!shipping || !shipping.name || !shipping.phone ||
+        (!isPickup && (!shipping.street || !shipping.numExt || !shipping.city || !shipping.state || !shipping.zip))) {
       return NextResponse.json({ error: 'Falta la dirección de envío', needShipping: true }, { status: 400 })
     }
 
-    // Guardar la dirección en el perfil para no volver a pedirla
-    await supabase.from('profiles').update({
-      ship_name: shipping.name, ship_phone: shipping.phone, ship_street: shipping.street,
-      ship_num_ext: shipping.numExt ?? null, ship_num_int: shipping.numInt ?? null,
-      ship_colonia: shipping.colonia ?? null, ship_city: shipping.city,
-      ship_state: shipping.state, ship_zip: shipping.zip, ship_ref: shipping.ref ?? null,
-    }).eq('id', userId)
+    const ship  = shippingCost(shipping.carrier)
+    const grand = subtotal + ship  // producto + envío, todo cubierto con saldo
+
+    if (grand > currentBalance) {
+      return NextResponse.json({ error: 'Saldo insuficiente para cubrir producto + envío' }, { status: 400 })
+    }
+
+    // Guardar la dirección en el perfil para no volver a pedirla (si no es pickup)
+    if (!isPickup) {
+      await supabase.from('profiles').update({
+        ship_name: shipping.name, ship_phone: shipping.phone, ship_street: shipping.street,
+        ship_num_ext: shipping.numExt ?? null, ship_num_int: shipping.numInt ?? null,
+        ship_colonia: shipping.colonia ?? null, ship_city: shipping.city,
+        ship_state: shipping.state, ship_zip: shipping.zip, ship_ref: shipping.ref ?? null,
+      }).eq('id', userId)
+    }
 
     // 1. Create draft order
     const draftRes = await fetch(`https://${domain}/admin/api/2024-01/draft_orders.json`, {
@@ -108,21 +121,23 @@ async function checkoutWithBalance(
         draft_order: {
           line_items: items.map(i => ({
             title: i.name, price: i.price.toFixed(2), quantity: i.qty,
-            requires_shipping: true, taxable: false,
+            requires_shipping: !isPickup, taxable: false,
           })),
           applied_discount: {
             description: 'Saldo Jango\'s Store', value_type: 'fixed_amount',
-            value: applied.toFixed(2), amount: applied.toFixed(2), title: 'Saldo Jango\'s Store',
+            value: grand.toFixed(2), amount: grand.toFixed(2), title: 'Saldo Jango\'s Store',
           },
+          ...(ship > 0 ? { shipping_line: { title: shipping.carrier, price: ship.toFixed(2) } } : {}),
           // Cliente + dirección → la orden deja de salir como "Sin cliente"
           ...(email ? { email } : {}),
-          shipping_address: toShopifyAddress(shipping),
-          note: `Compra con saldo completo — $${applied.toLocaleString('es-MX')} MXN`,
+          ...(isPickup ? {} : { shipping_address: toShopifyAddress(shipping) }),
+          note: `Compra con saldo — Producto $${subtotal.toLocaleString('es-MX')} + Envío $${ship.toLocaleString('es-MX')} (${shipping.carrier})`,
           tags: 'saldo,compra',
           note_attributes: [
             { name: 'tipo',         value: 'compra' },
-            { name: 'balance_used', value: String(applied) },
+            { name: 'balance_used', value: String(grand) },
             { name: 'user_id',      value: userId },
+            { name: 'entrega',      value: shipping.carrier },
           ],
         },
       }),
@@ -143,15 +158,15 @@ async function checkoutWithBalance(
     const completeData  = await completeRes.json()
     const shopifyOrderId = String(completeData?.draft_order?.order_id ?? draftId)
 
-    // 3. Deduct balance
-    const newBalance = Math.max(0, currentBalance - applied)
+    // 3. Deduct balance (producto + envío)
+    const newBalance = Math.max(0, currentBalance - grand)
     await supabase.from('profiles').update({ balance: newBalance }).eq('id', userId)
     await supabase.from('balance_transactions').insert({
-      user_id: userId, type: 'spent', amount: applied,
-      description: 'Compra con saldo', reference_id: shopifyOrderId,
+      user_id: userId, type: 'spent', amount: grand,
+      description: `Compra con saldo (incl. envío ${shipping.carrier})`, reference_id: shopifyOrderId,
     })
 
-    // 4. Add points with real order ID (prevents webhook double-processing)
+    // 4. Add points sobre el valor del producto (no el envío)
     await awardPurchasePoints(supabase, {
       userId,
       amount:      subtotal,
@@ -162,7 +177,7 @@ async function checkoutWithBalance(
     // 5. Save order in Supabase for "Mis pedidos"
     await supabase.from('orders').upsert({
       user_id: userId, shopify_order_id: shopifyOrderId, order_number: shopifyOrderId,
-      total_price: subtotal, financial_status: 'paid', fulfillment_status: 'unfulfilled',
+      total_price: grand, financial_status: 'paid', fulfillment_status: 'unfulfilled',
       line_items: items.map(i => ({ title: i.name, quantity: i.qty, price: String(i.price) })),
       shipping, carrier: shipping.carrier ?? null, created_at: new Date().toISOString(),
     }, { onConflict: 'shopify_order_id' })
