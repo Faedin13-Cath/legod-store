@@ -52,6 +52,8 @@ const paths: Record<string, React.ReactNode> = {
   'cat-pixar':    <><rect x="3" y="8.5" width="18" height="11.5" rx="1.5"/><path d="M3.4 8.5 5.5 4.4l3.2 1.6 3-1.9 3.2 1.6 3-1.9 2 3.6"/></>,
   'cat-series':   <><rect x="2.5" y="7" width="19" height="13" rx="2"/><path d="m8 3.5 4 3.5 4-3.5"/></>,
   'cat-custom':   <><path d="M5 19 15 9"/><path d="M17 3l.9 2.1L20 6l-2.1.9L17 9l-.9-2.1L14 6l2.1-.9z"/><path d="M20.5 13.5l.4 1 1 .4-1 .4-.4 1-.4-1-1-.4 1-.4z"/></>,
+  cash: <><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01"/><path d="M18 12h.01"/></>,
+  bank: <><path d="M3 10 12 4l9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 21h18"/></>,
   // Animales — huella
   'cat-animales': <><circle cx="12" cy="15" r="3.5"/><circle cx="6" cy="10.5" r="1.7"/><circle cx="9.5" cy="6.5" r="1.7"/><circle cx="14.5" cy="6.5" r="1.7"/><circle cx="18" cy="10.5" r="1.7"/></>,
   // City — edificios

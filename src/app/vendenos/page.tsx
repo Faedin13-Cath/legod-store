@@ -21,17 +21,14 @@ const accepts = [
 ]
 
 const notAccepts = [
-  'Piezas sueltas sin clasificar',
-  'Figuras con partes rotas o muy incompletas',
   'Copias o clones (Lepin, Lele, etc.)',
-  'Sets dañados o con caja deteriorada',
   'Piezas de terceros no LEGO',
 ]
 
 const PAYMENT_OPTIONS = [
-  { value: 'efectivo',      label: 'Efectivo',           emoji: '💵' },
-  { value: 'transferencia', label: 'Transferencia',       emoji: '🏦' },
-  { value: 'credito',       label: 'Crédito en tienda',  emoji: '🏷️' },
+  { value: 'efectivo',      label: 'Efectivo',           icon: 'cash' },
+  { value: 'transferencia', label: 'Transferencia',       icon: 'bank' },
+  { value: 'credito',       label: 'Crédito en tienda',  icon: 'gift-card' },
 ]
 
 const inputStyle: React.CSSProperties = {
@@ -280,7 +277,7 @@ export default function VendenosPage() {
                           transition: 'all .12s',
                         }}
                       >
-                        <span style={{ fontSize: 20 }}>{opt.emoji}</span>
+                        <Icon name={opt.icon} size={22} />
                         {opt.label}
                       </button>
                     ))}
