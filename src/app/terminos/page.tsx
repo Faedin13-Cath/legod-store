@@ -14,7 +14,7 @@ export default function TerminosPage() {
       <p>Cada artículo tiene su precio publicado en MXN. La mayoría de las piezas son únicas (stock 1), por lo que la disponibilidad es por orden de compra: se le da prioridad a quien realiza el pago o el apartado primero. Los artículos nuevos se publican primero para nuestra comunidad.</p>
 
       <H2>3. Apartados</H2>
-      <p>Puedes apartar una pieza con un anticipo (desde el 10% del costo, según el producto). Los clientes nuevos cuentan con <strong>2 días hábiles</strong> para realizar el depósito del apartado; de lo contrario la pieza se libera.</p>
+      <p>Puedes apartar una pieza con un anticipo del <strong>40%</strong> del costo. Los clientes nuevos cuentan con <strong>2 días hábiles</strong> para realizar el depósito del apartado; de lo contrario la pieza se libera.</p>
       <p>El plazo para liquidar depende del monto total. <strong>Los anticipos no son reembolsables</strong>, salvo que el problema sea de nuestra parte (por ejemplo, que la figura llegue dañada o no esté en óptimas condiciones al momento de verificarla).</p>
       <p>Después de la <strong>segunda semana</strong> de incumplimiento en una liquidación, el monto ya no podrá transferirse a otro pedido.</p>
 

@@ -58,7 +58,7 @@ export default function SaldoConfirmModal({ open, title, amount, total, needShip
   const [state,   setState]   = useState(profile?.ship_state   ?? '')
   const [zip,     setZip]     = useState(profile?.ship_zip     ?? '')
   const [ref,     setRef]     = useState(profile?.ship_ref     ?? '')
-  const [carrier, setCarrier] = useState<string>(CARRIERS[1])
+  const [carrier, setCarrier] = useState<string>(CARRIERS[0])
 
   // Bloquea el scroll del fondo mientras el modal está abierto
   useEffect(() => {
