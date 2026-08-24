@@ -191,7 +191,7 @@ async function checkoutWithBalance(
         },
         note: `Compra con saldo — Descuento: $${applied.toLocaleString('es-MX')} MXN`,
         tags: 'saldo,compra',
-        redirect_url: 'https://legod-store-2.vercel.app/pedidos',
+        redirect_url: 'https://jangos-store.com/pedidos',
         note_attributes: [
           { name: 'tipo',         value: 'compra' },
           { name: 'balance_used', value: String(applied) },

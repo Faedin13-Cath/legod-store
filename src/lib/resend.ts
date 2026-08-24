@@ -7,7 +7,7 @@ function getResend() {
 }
 
 const FROM = process.env.RESEND_FROM ?? 'LEGOD Jango\'s Store <onboarding@resend.dev>'
-const STORE = process.env.NEXT_PUBLIC_STORE_URL ?? 'https://legod-store-2.vercel.app'
+const STORE = process.env.NEXT_PUBLIC_STORE_URL ?? 'https://jangos-store.com'
 
 const OWNER = process.env.OWNER_EMAIL
 

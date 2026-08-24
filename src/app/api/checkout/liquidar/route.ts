@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
       ].join('\n'),
       tags:            'apartado,liquidacion',
       note_attributes: noteAttrs,
-      redirect_url:    'https://legod-store-2.vercel.app/apartados',
+      redirect_url:    'https://jangos-store.com/apartados',
     }
 
     if (applied > 0) {

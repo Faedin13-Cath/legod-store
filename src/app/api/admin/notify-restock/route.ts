@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { sendRestockEmail } from '@/lib/resend'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
-const STORE = process.env.NEXT_PUBLIC_STORE_URL ?? 'https://legod-store-2.vercel.app'
+const STORE = process.env.NEXT_PUBLIC_STORE_URL ?? 'https://jangos-store.com'
 
 export async function POST(req: NextRequest) {
+  const supabase = createAdminClient()
   const secret = req.headers.get('x-admin-secret')
   if (secret !== process.env.ADMIN_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
