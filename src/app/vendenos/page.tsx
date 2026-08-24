@@ -93,25 +93,33 @@ export default function VendenosPage() {
     setPreviews(prev => prev.filter((_, idx) => idx !== i))
   }
 
-  function handleSubmit() {
-    const payLabel = PAYMENT_OPTIONS.find(p => p.value === payment)?.label ?? 'No especificado'
-    const lines = [
-      '👋 *Hola, quiero cotizar mi colección LEGO*',
-      '',
-      `*Nombre:* ${name}`,
-      `*Teléfono:* ${phone}`,
-      '',
-      '*¿Qué tengo para vender?*',
-      description,
-      '',
-      `*Forma de pago preferida:* ${payLabel}`,
-    ]
-    if (photos.length > 0) {
-      lines.push('', `📸 _Adjunto ${photos.length} foto(s) de mis piezas en este chat._`)
+  const [sending, setSending] = useState(false)
+  const [error,   setError]   = useState('')
+
+  async function handleSubmit() {
+    setSending(true)
+    setError('')
+    try {
+      const payLabel = PAYMENT_OPTIONS.find(p => p.value === payment)?.label ?? ''
+      const fd = new FormData()
+      fd.append('name', name)
+      fd.append('phone', phone)
+      fd.append('description', description)
+      fd.append('payment', payLabel)
+      photos.forEach(f => fd.append('photos', f))
+
+      const res = await fetch('/api/sell', { method: 'POST', body: fd })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        setError(d.error ?? 'No se pudo enviar. Inténtalo de nuevo o escríbenos por WhatsApp.')
+        setSending(false)
+        return
+      }
+      setSent(true)
+    } catch {
+      setError('No se pudo enviar. Revisa tu conexión o escríbenos por WhatsApp.')
+      setSending(false)
     }
-    const url = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(lines.join('\n'))}`
-    window.open(url, '_blank')
-    setSent(true)
   }
 
   const canSubmit = name.trim() && phone.trim() && description.trim() && payment
@@ -357,23 +365,29 @@ export default function VendenosPage() {
                   fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.5,
                 }}>
                   <strong style={{ color: 'var(--accent)' }}>💡</strong>{' '}
-                  Al hacer clic se abrirá WhatsApp con tu información. Ahí podrás adjuntar las fotos directamente en el chat.
+                  Sube tus fotos aquí y envía la solicitud. Recibimos todo junto y te contactamos por WhatsApp con la oferta.
                 </div>
+
+                {error && (
+                  <div style={{ padding: '11px 14px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #F2BFBF', fontSize: 13, color: '#A23030' }}>
+                    {error} <a href={`https://wa.me/${WHATSAPP}`} target="_blank" rel="noreferrer" style={{ color: '#A23030', fontWeight: 700 }}>Escríbenos →</a>
+                  </div>
+                )}
 
                 {/* Submit */}
                 <button
                   onClick={handleSubmit}
-                  disabled={!canSubmit}
+                  disabled={!canSubmit || sending}
                   className="btn btn-primary"
                   style={{
                     alignSelf: 'stretch',
                     padding: '13px 28px',
                     fontSize: 15,
-                    opacity: canSubmit ? 1 : 0.45,
-                    cursor: canSubmit ? 'pointer' : 'not-allowed',
+                    opacity: (canSubmit && !sending) ? 1 : 0.45,
+                    cursor: (canSubmit && !sending) ? 'pointer' : 'not-allowed',
                   }}
                 >
-                  Solicitar cotización por WhatsApp →
+                  {sending ? 'Enviando…' : 'Enviar cotización →'}
                 </button>
               </div>
             ) : (
@@ -383,10 +397,10 @@ export default function VendenosPage() {
               }}>
                 <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
                 <h3 style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', margin: '0 0 8px' }}>
-                  ¡Se abrió WhatsApp!
+                  ¡Solicitud enviada!
                 </h3>
                 <p style={{ fontSize: 14, color: 'var(--ink-2)', margin: '0 0 8px', lineHeight: 1.6 }}>
-                  Tu mensaje ya está listo. Si subiste fotos, adjúntalas en el chat antes de enviar.
+                  Recibimos tus datos y fotos. Revisamos tu colección y te contactamos por WhatsApp con la oferta.
                 </p>
                 <p style={{ fontSize: 13, color: 'var(--ink-3)', margin: '0 0 24px' }}>
                   Te respondemos en las próximas 24 horas hábiles.
