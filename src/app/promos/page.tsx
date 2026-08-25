@@ -34,23 +34,41 @@ export default function PromosPage() {
         {/* ── Hero aniversario ── */}
         <div style={{
           position: 'relative', overflow: 'hidden',
-          background: 'var(--paper)', border: '1px solid var(--line)',
-          borderRadius: 28, padding: '56px 40px', textAlign: 'center',
+          background: 'linear-gradient(140deg, #1A1266 0%, #4A1D8F 55%, #6D5DE6 100%)',
+          borderRadius: 28, padding: '72px 40px 76px', textAlign: 'center', color: '#fff',
+          boxShadow: '0 30px 60px -30px rgba(74,29,143,0.6)',
         }}>
-          <Dragon style={{ position: 'absolute', left: '-8%', top: '10%', width: '55%', color: 'var(--accent)', opacity: 0.08, pointerEvents: 'none' }} />
+          {/* Dragón */}
+          <Dragon style={{ position: 'absolute', right: '-10%', bottom: '-28%', width: '58%', color: '#fff', opacity: 0.1, pointerEvents: 'none' }} />
+          {/* Confeti */}
+          {[
+            { c: '#F5C84A', top: '14%', left: '10%', s: 14, r: '18deg' },
+            { c: '#fff',    top: '22%', right: '14%', s: 10, r: '-12deg' },
+            { c: '#F5C84A', top: '62%', left: '16%', s: 10, r: '32deg' },
+            { c: '#B49CFF', top: '30%', left: '42%', s: 8,  r: '0deg' },
+            { c: '#fff',    top: '70%', right: '22%', s: 12, r: '24deg' },
+            { c: '#B49CFF', top: '12%', right: '34%', s: 8,  r: '-20deg' },
+          ].map((d, i) => (
+            <span key={i} style={{
+              position: 'absolute', top: d.top, left: d.left, right: d.right,
+              width: d.s, height: d.s, background: d.c, borderRadius: 3,
+              transform: `rotate(${d.r})`, opacity: 0.85, pointerEvents: 'none',
+            }} />
+          ))}
+
           <div style={{ position: 'relative' }}>
-            <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', margin: '0 0 10px' }}>
+            <p style={{ fontSize: 14, fontWeight: 800, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#F5C84A', margin: '0 0 12px' }}>
               Celebramos
             </p>
-            <h1 style={{ fontSize: 'clamp(40px, 9vw, 84px)', fontWeight: 900, color: 'var(--ink)', letterSpacing: '-0.03em', lineHeight: 0.95, margin: '0 0 6px' }}>
-              1 AÑO
+            <h1 style={{ fontSize: 'clamp(64px, 15vw, 130px)', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 0.9, margin: 0 }}>
+              1 <span style={{ color: '#F5C84A' }}>AÑO</span>
             </h1>
-            <h2 style={{ fontSize: 'clamp(20px, 4vw, 30px)', fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em', margin: '0 0 16px' }}>
+            <h2 style={{ fontSize: 'clamp(22px, 4.5vw, 34px)', fontWeight: 800, letterSpacing: '-0.02em', margin: '14px 0 18px' }}>
               de LEGOD 🎉
             </h2>
-            <p style={{ fontSize: 16, color: 'var(--ink-2)', maxWidth: 460, margin: '0 auto', lineHeight: 1.6 }}>
-              Un año gracias a ti. Lo celebramos <strong>a lo grande</strong> con descuento
-              y una rifa de figuras para nuestra comunidad.
+            <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.88)', maxWidth: 480, margin: '0 auto', lineHeight: 1.6 }}>
+              Un año gracias a ti. Lo celebramos <strong style={{ color: '#fff' }}>a lo grande</strong> con
+              descuento y una rifa de figuras para nuestra comunidad.
             </p>
           </div>
         </div>
