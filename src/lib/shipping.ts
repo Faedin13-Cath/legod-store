@@ -1,9 +1,10 @@
-// Precios de envío por paquetería (MXN). "Recoger en tienda" es gratis.
+// Precios de envío por paquetería (MXN). Deben coincidir con las tarifas
+// configuradas en Shopify (Configuración → Envíos y entrega).
 export const SHIPPING_PRICES: Record<string, number> = {
-  'Recoger en tienda': 0,
-  'Estafeta':          165,
-  'Correos de México':  75,
-  'FedEx':             220,
+  'Entrega en Rock Show': 0,
+  'Estafeta':             160,
+  'Correos de México':     75,
+  'FedEx':                250,
 }
 
 export function shippingCost(carrier?: string): number {

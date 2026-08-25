@@ -13,7 +13,7 @@ export type ShippingData = {
 }
 
 // Opciones de entrega. "Recoger en tienda" es gratis (entrega personal en CDMX).
-export const CARRIERS = ['Recoger en tienda', 'Estafeta', 'Correos de México', 'FedEx'] as const
+export const CARRIERS = ['Entrega en Rock Show', 'Estafeta', 'Correos de México', 'FedEx'] as const
 
 type Props = {
   open:        boolean
@@ -70,7 +70,7 @@ export default function SaldoConfirmModal({ open, title, amount, total, needShip
 
   if (!open) return null
 
-  const pickup = carrier === 'Recoger en tienda'
+  const pickup = carrier === 'Entrega en Rock Show'
   const ship   = needShipping ? shippingCost(carrier) : 0
   const grand  = amount + ship  // lo que se descuenta del saldo (producto + envío)
   // Recoger en tienda solo necesita nombre + teléfono; envío necesita dirección completa.

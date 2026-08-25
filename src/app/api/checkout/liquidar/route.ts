@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
   // Full saldo coverage — create + complete a Shopify order so it appears in
   // Admin (with customer + shipping), then settle balance/points here.
   if (applied >= balance && userId) {
-    const isPickup = shipping?.carrier === 'Recoger en tienda'
+    const isPickup = shipping?.carrier === 'Entrega en Rock Show'
     if (!shipping || !shipping.name || !shipping.phone ||
         (!isPickup && (!shipping.street || !shipping.numExt || !shipping.city || !shipping.state || !shipping.zip))) {
       return NextResponse.json({ error: 'Falta la dirección de envío', needShipping: true }, { status: 400 })

@@ -87,7 +87,7 @@ async function checkoutWithBalance(
 
   // Full saldo coverage — create + auto-complete Shopify order (visible in Admin) without customer checkout
   if (applied >= subtotal) {
-    const isPickup = shipping?.carrier === 'Recoger en tienda'
+    const isPickup = shipping?.carrier === 'Entrega en Rock Show'
     // La orden se crea directo en Shopify (bypass del checkout del cliente),
     // así que la dirección de envío tiene que venir de nuestro formulario.
     // "Recoger en tienda" solo necesita nombre + teléfono.
