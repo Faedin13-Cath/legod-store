@@ -162,8 +162,7 @@ export default function Header({ alertsCount = 0 }: Props) {
               type="search"
               placeholder="Buscar minifiguras, sets, temas..."
               className="search-input"
-              autoFocus
-              style={{ width:'100%', padding:'12px 16px 12px 40px', borderRadius:14, background:'var(--paper)', border:'1px solid var(--line)', fontSize:15, color:'var(--ink)', fontFamily:'inherit', outline:'none', boxSizing:'border-box' }}
+              style={{ width:'100%', padding:'12px 16px 12px 40px', borderRadius:14, background:'var(--paper)', border:'1px solid var(--line)', fontSize:16, color:'var(--ink)', fontFamily:'inherit', outline:'none', boxSizing:'border-box' }}
             />
           </div>
 
