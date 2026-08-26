@@ -64,7 +64,7 @@ export default function PromosPage() {
               1 <span style={{ color: '#F5C84A' }}>AÑO</span>
             </h1>
             <h2 style={{ fontSize: 'clamp(22px, 4.5vw, 34px)', fontWeight: 800, letterSpacing: '-0.02em', margin: '14px 0 18px' }}>
-              de LEGOD 🎉
+              de Jango&apos;s Store 🎉
             </h2>
             <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.88)', maxWidth: 480, margin: '0 auto', lineHeight: 1.6 }}>
               Un año gracias a ti. Lo celebramos <strong style={{ color: '#fff' }}>a lo grande</strong> con
