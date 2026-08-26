@@ -246,7 +246,7 @@ export default function HomePage() {
       ═══════════════════════════════════════════════════════ */}
       <Sec top={0}>
         <Reveal>
-          <Head eyebrow="Para coleccionistas" title="sets sellados">
+          <Head eyebrow="Para coleccionistas" title="sets">
             <Link href="/tienda?tipo=set-sealed" className="more-link" style={moreLink}>ver todos →</Link>
           </Head>
         </Reveal>
@@ -372,7 +372,7 @@ function Head({ eyebrow, title, children }: { eyebrow: string; title: string; ch
           <div style={{ width:20, height:2, background:'var(--accent)', borderRadius:1 }} />
           <div className="t-eyebrow">{eyebrow}</div>
         </div>
-        <h2 className="sec-title" style={{ margin:0, fontSize:36, fontWeight:800, color:'var(--ink)', textTransform:'lowercase', letterSpacing:'-0.03em', lineHeight:1 }}>{title}</h2>
+        <h2 className="sec-title" style={{ margin:0, fontSize:36, fontWeight:800, color:'var(--ink)', textTransform:'capitalize', letterSpacing:'-0.03em', lineHeight:1 }}>{title}</h2>
       </div>
       {children}
     </div>
