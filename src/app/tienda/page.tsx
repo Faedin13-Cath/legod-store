@@ -49,6 +49,8 @@ function TiendaContent() {
   const [wishlist,    setWishlist]    = useState<Set<string>>(new Set())
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const PER_PAGE = 24
 
   useEffect(() => {
     getProducts()
@@ -85,6 +87,13 @@ function TiendaContent() {
 
     return list
   }, [allProducts, typeTab, catFilter, stateFilter, search, sort])
+
+  // Reset page cuando cambian los filtros
+  useEffect(() => { setPage(1) }, [typeTab, catFilter, stateFilter, search, sort])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
+  const currentPage = Math.min(page, totalPages)
+  const paginated = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE)
 
   const hasFilters = catFilter || stateFilter || search.trim() || typeTab !== 'all'
 
@@ -276,25 +285,75 @@ function TiendaContent() {
         ) : filtered.length === 0 ? (
           <EmptyState onClear={clearAll} />
         ) : (
-          <div className="tienda-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(5, 1fr)',
-            gap: 16,
-          }}>
-            {filtered.map(p => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                wished={wishlist.has(p.id)}
-                onView={viewProduct}
-                onAdd={addToCart}
-                onWish={user ? toggleWish : undefined}
+          <>
+            <div className="tienda-grid" style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(5, 1fr)',
+              gap: 16,
+            }}>
+              {paginated.map(p => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  wished={wishlist.has(p.id)}
+                  onView={viewProduct}
+                  onAdd={addToCart}
+                  onWish={user ? toggleWish : undefined}
+                />
+              ))}
+            </div>
+            {totalPages > 1 && (
+              <Pagination
+                current={currentPage}
+                total={totalPages}
+                onChange={p => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
               />
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>
+  )
+}
+
+function Pagination({ current, total, onChange }: { current: number; total: number; onChange: (p: number) => void }) {
+  const pages: (number | 'ellipsis')[] = (() => {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+    if (current <= 4) return [1, 2, 3, 4, 5, 'ellipsis', total]
+    if (current >= total - 3) return [1, 'ellipsis', total - 4, total - 3, total - 2, total - 1, total]
+    return [1, 'ellipsis', current - 1, current, current + 1, 'ellipsis', total]
+  })()
+
+  const btn = (active: boolean, disabled = false): React.CSSProperties => ({
+    minWidth: 36, height: 36, padding: '0 10px', borderRadius: 8,
+    border: `1px solid ${active ? 'var(--ink)' : 'var(--line)'}`,
+    background: active ? 'var(--ink)' : 'var(--paper)',
+    color: active ? '#fff' : disabled ? 'var(--ink-4)' : 'var(--ink-2)',
+    fontSize: 13, fontWeight: active ? 600 : 500,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    transition: 'all .12s',
+  })
+
+  return (
+    <nav aria-label="Paginación" style={{
+      display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6,
+      marginTop: 36, flexWrap: 'wrap',
+    }}>
+      <button onClick={() => onChange(current - 1)} disabled={current === 1} style={btn(false, current === 1)} aria-label="Anterior">
+        <Icon name="chevron-left" size={14} />
+      </button>
+      {pages.map((p, i) => p === 'ellipsis' ? (
+        <span key={`e${i}`} style={{ padding: '0 4px', color: 'var(--ink-3)', fontSize: 13 }}>…</span>
+      ) : (
+        <button key={p} onClick={() => onChange(p)} style={btn(p === current)}>
+          {p}
+        </button>
+      ))}
+      <button onClick={() => onChange(current + 1)} disabled={current === total} style={btn(false, current === total)} aria-label="Siguiente">
+        <Icon name="chevron-right" size={14} />
+      </button>
+    </nav>
   )
 }
 

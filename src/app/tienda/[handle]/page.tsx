@@ -25,6 +25,8 @@ const RARITY_LABEL: Record<string, { label: string; color: string }> = {
   unica:    { label: 'Única',    color: '#E5632A' },
 }
 
+const DETALLE_CHIP = { label: 'Con detalle', color: '#B45309' }
+
 export default function ProductPage({ params }: { params: { handle: string } }) {
   const { handle } = params
   const router = useRouter()
@@ -184,6 +186,15 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
             }}>
               {rarity.label}
             </span>
+            {product.state === 'crack' && (
+              <span style={{
+                fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase',
+                color: DETALLE_CHIP.color, padding: '2px 8px', borderRadius: 999,
+                border: `1px solid ${DETALLE_CHIP.color}`, opacity: 0.9,
+              }}>
+                {DETALLE_CHIP.label}
+              </span>
+            )}
           </div>
 
           {/* Name */}

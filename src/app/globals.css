@@ -134,6 +134,7 @@ html, body {
 .pill.success { background:#DFF5E8; border-color:#B6E2C7; color:#16623B; }
 .pill.warn    { background:#FFF1D6; border-color:#F5D896; color:#8A5B0A; }
 .pill.danger  { background:#FCE3E3; border-color:#F2BFBF; color:#A23030; }
+.pill.detalle { background:#FEF3C7; border-color:#F5C88C; color:#B45309; font-weight:600; }
 
 /* ── Card ──────────────────────────────────────────────────── */
 .card {
@@ -640,4 +641,16 @@ a[href*="/tienda"].more-link,
   .reviews-grid { grid-template-columns: 1fr !important; }
   .review-card  { grid-template-columns: 1fr !important; }
   .review-card > div:first-child { min-height: 220px !important; }
+}
+
+/* ── Véndenos responsive ── */
+@media (max-width: 768px) {
+  .vendenos-wrap    { padding: 32px 20px 64px !important; }
+  .vendenos-h1      { font-size: 28px !important; }
+  .vendenos-grid    { grid-template-columns: 1fr !important; gap: 40px !important; }
+  .vendenos-accepts { grid-template-columns: 1fr !important; gap: 20px !important; }
+  .vendenos-photos  { grid-template-columns: repeat(3, 1fr) !important; }
+}
+@media (max-width: 480px) {
+  .vendenos-photos  { grid-template-columns: repeat(2, 1fr) !important; }
 }

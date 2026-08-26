@@ -57,6 +57,9 @@ export default function ProductCard({ product, wished, onView, onAdd, onWish }: 
 
         {/* Badges */}
         <div style={{ position: 'absolute', top: 10, left: 10, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          {product.state === 'crack' && (
+            <span className="pill detalle">Con detalle</span>
+          )}
           {visibleTags.slice(0, 2).map(t => (
             <span key={t} className={tagPill[t] ?? 'pill'}>{
               t === 'nuevo' ? 'Nuevo' :

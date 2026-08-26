@@ -51,12 +51,21 @@ const fresh = (at: number) => Date.now() - at < TTL
 
 export async function getProducts(): Promise<ShopifyProduct[]> {
   if (_productsCache && fresh(_productsCache.at)) return _productsCache.data
-  const data = await shopifyFetch<{ products: { edges: { node: ShopifyProduct }[] } }>(`
-    { products(first: 100, sortKey: CREATED_AT, reverse: true) {
-        edges { node { ${PRODUCT_FIELDS} } }
-    }}
-  `)
-  const list = data.products.edges.map(e => e.node)
+  // Storefront API tope: 250 por página. Paginamos hasta 500 en dos requests.
+  const list: ShopifyProduct[] = []
+  let after: string | null = null
+  for (let i = 0; i < 2; i++) {
+    const cursor: string = after ? `, after: "${after}"` : ''
+    const data = await shopifyFetch<{ products: { edges: { node: ShopifyProduct }[]; pageInfo: { hasNextPage: boolean; endCursor: string } } }>(`
+      { products(first: 250, sortKey: CREATED_AT, reverse: true${cursor}) {
+          edges { node { ${PRODUCT_FIELDS} } }
+          pageInfo { hasNextPage endCursor }
+      }}
+    `)
+    list.push(...data.products.edges.map(e => e.node))
+    if (!data.products.pageInfo.hasNextPage) break
+    after = data.products.pageInfo.endCursor
+  }
   _productsCache = { data: list, at: Date.now() }
   // aprovecha para llenar el cache por handle
   for (const p of list) _handleCache.set(p.handle, { data: p, at: Date.now() })
@@ -109,8 +118,11 @@ export function shopifyToProduct(p: ShopifyProduct): Product {
       const qty = p.variants.edges.reduce((s, e) => s + (e.node.quantityAvailable ?? 0), 0)
       return qty > 0 ? qty : (p.availableForSale ? 1 : 0)
     })(),
-    state:  'new',
-    rarity: 'comun',
+    state:  p.tags.includes('detalle') ? 'crack' : 'new',
+    rarity: p.tags.includes('unica')    ? 'unica'
+          : p.tags.includes('limitada') ? 'limitada'
+          : p.tags.includes('rara')     ? 'rara'
+          : 'comun',
     photo:  p.images.edges[0]?.node.url,
     tags:   productTags,
     desc:   p.description,

@@ -37,7 +37,7 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 10,
   border: '1px solid var(--line)',
   background: 'var(--paper)',
-  fontSize: 14,
+  fontSize: 16, // 16px evita zoom automático en iOS al hacer focus
   color: 'var(--ink)',
   outline: 'none',
   boxSizing: 'border-box',
@@ -123,14 +123,14 @@ export default function VendenosPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
-      <div style={{ maxWidth: 1060, margin: '0 auto', padding: '48px 32px 80px' }}>
+      <div className="vendenos-wrap" style={{ maxWidth: 1060, margin: '0 auto', padding: '48px 32px 80px' }}>
 
         {/* Hero */}
         <div style={{ maxWidth: 600, marginBottom: 52 }}>
           <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent)', margin: '0 0 10px' }}>
             COMPRA DE COLECCIONES
           </p>
-          <h1 style={{ fontSize: 36, fontWeight: 700, color: 'var(--ink)', margin: '0 0 14px', lineHeight: 1.2 }}>
+          <h1 className="vendenos-h1" style={{ fontSize: 36, fontWeight: 700, color: 'var(--ink)', margin: '0 0 14px', lineHeight: 1.2 }}>
             Véndenos tu colección
           </h1>
           <p style={{ fontSize: 16, color: 'var(--ink-2)', margin: 0, lineHeight: 1.7 }}>
@@ -138,7 +138,7 @@ export default function VendenosPage() {
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'start' }}>
+        <div className="vendenos-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'start' }}>
 
           {/* Left — steps + accepts */}
           <div>
@@ -171,7 +171,7 @@ export default function VendenosPage() {
               <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 16px' }}>
                 Qué aceptamos
               </h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="vendenos-accepts" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--success)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 4 }}>
                     <Icon name="check" size={13} /> SÍ aceptamos
@@ -331,7 +331,7 @@ export default function VendenosPage() {
 
                   {/* Photo previews */}
                   {previews.length > 0 && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+                    <div className="vendenos-photos" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
                       {previews.map((src, i) => src && (
                         <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--line)' }}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
