@@ -24,9 +24,26 @@ export const metadata: Metadata = {
   },
 }
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Store',
+  name: "Jango's Store",
+  url: 'https://www.jangos-store.com',
+  logo: 'https://www.jangos-store.com/assets/logo/legod-logo-violet.png',
+  description: 'Minifiguras LEGO, sets sellados, segunda mano y customs. Apartados, gift cards y envíos a todo México.',
+  address: { '@type': 'PostalAddress', addressLocality: 'CDMX', addressCountry: 'MX' },
+  priceRange: '$$',
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es-MX">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body>
         <AuthProvider>
           <CartProvider>
