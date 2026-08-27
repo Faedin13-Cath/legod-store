@@ -50,7 +50,7 @@ function TiendaContent() {
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
-  const PER_PAGE = 24
+  const PER_PAGE = 25
 
   useEffect(() => {
     getProducts()
