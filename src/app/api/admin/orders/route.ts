@@ -23,7 +23,7 @@ export async function GET() {
     .order('created_at', { ascending: false })
     .limit(30)
 
-  const userIds = [...new Set((orders ?? []).map(o => o.user_id).filter(Boolean))]
+  const userIds = Array.from(new Set((orders ?? []).map(o => o.user_id).filter(Boolean)))
   const { data: profiles } = userIds.length
     ? await admin.from('profiles').select('id, name, handle, email').in('id', userIds)
     : { data: [] as { id: string; name: string; handle: string | null; email: string | null }[] }
