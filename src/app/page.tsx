@@ -99,7 +99,9 @@ export default function HomePage() {
               {/* Main image card */}
               <div className="anim-scale-in d-2" style={{ position:'absolute', inset:0, borderRadius:32, overflow:'hidden', boxShadow:'0 48px 96px -24px rgba(0,0,0,0.7)', background:'#fff' }}>
                 <div className="anim-float" style={{ position:'absolute', inset:0 }}>
-                  <Image src="https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh1132.png" alt="Winter Soldier (Bucky) Minifig" fill style={{ objectFit:'contain', objectPosition:'center 30%' }} sizes="45vw" priority />
+                  <div style={{ position:'absolute', inset:0, transform:'scale(1.7)', transformOrigin:'center 40%' }}>
+                    <Image src="https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh1132.png" alt="Winter Soldier (Bucky) Minifig" fill style={{ objectFit:'contain', objectPosition:'center 30%' }} sizes="45vw" priority />
+                  </div>
                 </div>
                 <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, transparent 55%, rgba(15,18,64,0.55) 100%)' }} />
               </div>
