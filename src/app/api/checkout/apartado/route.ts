@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const domain      = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN!
 const adminToken  = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN
-const WHATSAPP    = process.env.NEXT_PUBLIC_WHATSAPP ?? '5215512345678'
+const WHATSAPP    = process.env.NEXT_PUBLIC_WHATSAPP ?? '525574777350'
 const DEPOSIT_PCT = 0.40
 
 type CartLine = { id: string; name: string; price: number; qty: number }

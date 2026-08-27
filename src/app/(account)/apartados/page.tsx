@@ -7,7 +7,7 @@ import { useAuth } from '@/components/auth/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import SaldoConfirmModal, { type ShippingData } from '@/components/cart/SaldoConfirmModal'
 
-const WHATSAPP = process.env.NEXT_PUBLIC_WHATSAPP ?? '5215512345678'
+const WHATSAPP = process.env.NEXT_PUBLIC_WHATSAPP ?? '525574777350'
 
 type ApartadoItem = { id: string; name: string; price: number; qty: number }
 type Apartado = {

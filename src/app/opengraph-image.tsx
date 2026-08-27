@@ -6,10 +6,7 @@ export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
 export default async function OG() {
-  const [bold, ultra] = await Promise.all([
-    fetch(new URL('../../public/fonts/ABCSolar-Bold-Trial.woff', import.meta.url)).then(r => r.arrayBuffer()),
-    fetch(new URL('../../public/fonts/ABCSolar-Ultra-Trial.woff', import.meta.url)).then(r => r.arrayBuffer()),
-  ])
+  const bold = await fetch(new URL('../../public/fonts/ABCSolar-Bold-Trial.woff', import.meta.url)).then(r => r.arrayBuffer())
 
   return new ImageResponse(
     (
@@ -47,7 +44,6 @@ export default async function OG() {
       ...size,
       fonts: [
         { name: 'ABC Solar', data: bold, weight: 700, style: 'normal' },
-        { name: 'ABC Solar', data: ultra, weight: 900, style: 'normal' },
       ],
     },
   )

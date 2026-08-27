@@ -7,26 +7,10 @@ const channels = [
   {
     icon: 'whatsapp',
     label: 'WhatsApp',
-    value: '+52 55 1234 5678',
-    href: 'https://wa.me/5215512345678?text=Hola,%20tengo%20una%20pregunta%20sobre%20LEGOD',
+    value: '+52 55 7477 7350',
+    href: 'https://wa.me/525574777350?text=Hola,%20tengo%20una%20pregunta%20sobre%20Jango%27s%20Store',
     desc: 'Respuesta en menos de 2 horas en horario hábil',
     cta: 'Abrir WhatsApp',
-  },
-  {
-    icon: 'chat',
-    label: 'Instagram',
-    value: '@legodstore',
-    href: 'https://instagram.com/legodstore',
-    desc: 'DM directo — también respondemos stories',
-    cta: 'Ir al perfil',
-  },
-  {
-    icon: 'user',
-    label: 'Email',
-    value: 'hola@legod.mx',
-    href: 'mailto:hola@legod.mx',
-    desc: 'Para cotizaciones, envíos y temas formales',
-    cta: 'Enviar correo',
   },
 ]
 
@@ -95,7 +79,7 @@ export default function ContactoPage() {
             }}>
               <div style={{ fontWeight: 600, color: 'var(--ink)', marginBottom: 4 }}>Horario de atención</div>
               <div>Lunes a viernes · 10:00 – 19:00 hrs CDMX</div>
-              <div>Sábados · 11:00 – 16:00 hrs</div>
+              <div>Sábados · 9:00 – 18:00 hrs</div>
             </div>
           </div>
 

@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import Icon from '@/components/ui/Icon'
 
-const WHATSAPP = '5215512345678'
+const WHATSAPP = '525574777350'
 
 const steps = [
   { n: '01', title: 'Mándanos fotos',   desc: 'Fotografía tus piezas con buena luz. Puedes subir hasta 10 fotos directamente aquí o mandárnoslas por WhatsApp.' },
