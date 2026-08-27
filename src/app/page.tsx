@@ -96,7 +96,7 @@ export default function HomePage() {
               <div className="anim-fade-up d-5" style={{ position:'absolute', bottom:28, left:-36, background:'rgba(15,18,64,0.72)', backdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.18)', borderRadius:20, padding:'14px 18px', zIndex:2, minWidth:184 }}>
                 <div style={{ fontSize:11, color:'rgba(255,255,255,0.55)', fontWeight:600, marginBottom:5, letterSpacing:'0.04em' }}>🔥 Promo activa</div>
                 <div style={{ fontSize:15, fontWeight:700, color:'#fff', marginBottom:3 }}>Bucky (Winter Soldier) · Marvel</div>
-                <div style={{ fontSize:20, fontWeight:800, color:'#F5C84A', letterSpacing:'-0.02em' }}>$950 MXN</div>
+                <div style={{ fontSize:20, fontWeight:800, color:'#F5C84A', letterSpacing:'-0.02em' }}>$1,050 MXN</div>
               </div>
 
               {/* Gold star badge */}
@@ -141,7 +141,7 @@ export default function HomePage() {
                 <h3 style={{ fontSize:26, lineHeight:1.0, textTransform:'lowercase', color:'#fff', margin:'0 0 4px', fontWeight:700 }}>bucky</h3>
                 <p style={{ fontSize:13, color:'rgba(255,255,255,0.75)', margin:'0 0 6px' }}>Winter Soldier · Marvel</p>
                 <div style={{ display:'flex', alignItems:'baseline', gap:8 }}>
-                  <span style={{ fontSize:22, fontWeight:800, color:'#F5C84A' }}>$950</span>
+                  <span style={{ fontSize:22, fontWeight:800, color:'#F5C84A' }}>$1,050</span>
                 </div>
               </div>
             </Link>
