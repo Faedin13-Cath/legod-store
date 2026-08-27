@@ -13,7 +13,6 @@ export default function PerfilPage() {
   const [handle, setHandle] = useState('')
   const [email,  setEmail]  = useState('')
   const [wa,     setWa]     = useState('')
-  const [privacy, setPrivacy] = useState('link-only')
   const [saved,  setSaved]  = useState(false)
   const [error,  setError]  = useState('')
   const [busy,   setBusy]   = useState(false)
@@ -24,7 +23,6 @@ export default function PerfilPage() {
       setHandle(profile.handle ?? '')
       setEmail(profile.email ?? '')
       setWa(profile.whatsapp ?? '')
-      setPrivacy(profile.profile_public ?? 'link-only')
     }
   }, [profile])
 
@@ -33,7 +31,7 @@ export default function PerfilPage() {
     setError(''); setBusy(true)
     const { error } = await supabase
       .from('profiles')
-      .update({ name, handle: handle.toLowerCase().replace(/\s+/g, ''), email, whatsapp: wa, profile_public: privacy })
+      .update({ name, handle: handle.toLowerCase().replace(/\s+/g, ''), email, whatsapp: wa })
       .eq('id', profile!.id)
     setBusy(false)
     if (error) { setError(error.message); return }
@@ -110,41 +108,6 @@ export default function PerfilPage() {
                 <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder={email} className="input" style={{ width: '100%' }} />
               </div>
             </div>
-          </div>
-        </section>
-
-        {/* Privacy */}
-        <section style={{
-          background: 'var(--paper)', border: '1px solid var(--line)',
-          borderRadius: 16, padding: '24px',
-        }}>
-          <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 16px' }}>
-            Privacidad del perfil
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {[
-              { value: 'public',    label: 'Público', desc: 'Cualquiera puede ver tu perfil y colección' },
-              { value: 'link-only', label: 'Solo con link', desc: 'Solo quien tenga el link directo puede verlo' },
-              { value: 'private',   label: 'Privado', desc: 'Solo tú puedes ver tu perfil' },
-            ].map(opt => (
-              <label key={opt.value} onClick={() => setPrivacy(opt.value)} style={{
-                display: 'flex', alignItems: 'flex-start', gap: 10,
-                padding: '12px 14px', borderRadius: 10, cursor: 'pointer',
-                border: `1px solid ${privacy === opt.value ? 'var(--accent)' : 'var(--line)'}`,
-                background: privacy === opt.value ? 'var(--accent-soft)' : 'transparent',
-              }}>
-                <input
-                  type="radio" name="privacy" value={opt.value}
-                  checked={privacy === opt.value}
-                  onChange={() => setPrivacy(opt.value)}
-                  style={{ marginTop: 2, accentColor: 'var(--accent)' }}
-                />
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink)' }}>{opt.label}</div>
-                  <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{opt.desc}</div>
-                </div>
-              </label>
-            ))}
           </div>
         </section>
 
