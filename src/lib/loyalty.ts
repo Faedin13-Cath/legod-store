@@ -42,9 +42,6 @@ export const REWARDS = [
 
 export const THRESHOLDS = REWARDS.map(r => r.pts)
 
-/** Bono único la primera vez que alguien compra. */
-export const WELCOME_BONUS = 100
-
 /** Nivel según puntos de por vida. */
 export function getTier(lifetime: number) {
   return [...TIERS].reverse().find(t => lifetime >= t.min) ?? TIERS[0]
@@ -114,37 +111,19 @@ export async function awardPurchasePoints(
 
   const earned = pointsFor(amount, lifetime)
 
-  // Bono de bienvenida: solo si nunca ha tenido una compra registrada
-  const { count } = await db
-    .from('points_history')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .eq('type', 'purchase')
-
-  const isFirst = (count ?? 0) === 0
-  const welcome = isFirst ? WELCOME_BONUS : 0
-
   // Siempre insertamos la fila de compra: es la marca de idempotencia
   await db.from('points_history').insert({
     user_id: userId, points: earned, type: 'purchase', description, order_id: orderId,
   })
 
-  if (welcome > 0) {
-    await db.from('points_history').insert({
-      user_id: userId, points: welcome, type: 'welcome',
-      description: '¡Bienvenido! Bono por tu primera compra', order_id: `${orderId}_welcome`,
-    })
-  }
-
-  const total = earned + welcome
-  if (total > 0) {
-    const newSpendable = spendable + total
+  if (earned > 0) {
+    const newSpendable = spendable + earned
     await db.from('profiles').update({
       points_total:       newSpendable,
-      points_lifetime:    lifetime + total,
+      points_lifetime:    lifetime + earned,
       points_next_reward: nextReward(newSpendable),
     }).eq('id', userId)
   }
 
-  return { earned, welcome, total }
+  return { earned, total: earned }
 }
