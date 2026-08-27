@@ -12,6 +12,14 @@ const channels = [
     desc: 'Respuesta en menos de 2 horas en horario hábil',
     cta: 'Abrir WhatsApp',
   },
+  {
+    icon: 'chat',
+    label: 'Comunidad',
+    value: 'Grupo de WhatsApp',
+    href: 'https://chat.whatsapp.com/LklBq0iXRJvIFUiM8eUULH?mode=gi_t',
+    desc: 'Restocks, promos y avisos antes que nadie',
+    cta: 'Unirme al grupo',
+  },
 ]
 
 export default function ContactoPage() {
