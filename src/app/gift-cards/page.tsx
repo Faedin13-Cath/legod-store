@@ -14,7 +14,6 @@ export default function GiftCardsPage() {
   const [recipient,   setRecipient]   = useState('')
   const [sending,     setSending]     = useState(false)
   const [error,       setError]       = useState('')
-  const [sent,        setSent]        = useState(false)
 
   const finalAmount = custom ? parseInt(custom, 10) || 0 : selected
 
@@ -30,10 +29,14 @@ export default function GiftCardsPage() {
         body: JSON.stringify({ amount: finalAmount, recipient: recipient.trim() }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error ?? 'Error al procesar'); return }
-      if (data.checkoutUrl) window.open(data.checkoutUrl, '_blank')
-      setSent(true)
-    } finally {
+      if (!res.ok) { setError(data.error ?? 'Error al procesar'); setSending(false); return }
+      if (!data.checkoutUrl) { setError('No se obtuvo el link de pago. Inténtalo de nuevo.'); setSending(false); return }
+      // Redirect en la misma pestaña: window.open() después de un await lo
+      // bloquean varios navegadores sin avisar, y el saldo no se acredita
+      // hasta que Shopify confirma el pago — no antes.
+      window.location.href = data.checkoutUrl
+    } catch {
+      setError('No se pudo conectar. Revisa tu conexión e inténtalo de nuevo.')
       setSending(false)
     }
   }
@@ -71,7 +74,7 @@ export default function GiftCardsPage() {
               Iniciar sesión
             </Link>
           </div>
-        ) : !sent ? (
+        ) : (
           <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 24, padding: '40px' }}>
 
             {/* Amount selector */}
@@ -142,26 +145,6 @@ export default function GiftCardsPage() {
                 {sending ? 'Procesando…' : 'Comprar gift card →'}
               </button>
             </div>
-          </div>
-        ) : (
-          /* Success */
-          <div style={{ background: 'var(--paper)', border: '1px solid #86EFAC', borderRadius: 24, padding: '56px 40px', textAlign: 'center' }}>
-            <div style={{
-              width: 64, height: 64, borderRadius: '50%',
-              background: '#F0FBF4', border: '1px solid #86EFAC',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 20px', color: '#22C55E',
-            }}>
-              <Icon name="check" size={24} />
-            </div>
-            <h2 style={{ fontSize: 26, fontWeight: 700, color: 'var(--ink)', margin: '0 0 8px' }}>¡Listo!</h2>
-            <p style={{ fontSize: 15, color: 'var(--ink-2)', margin: '0 0 28px', lineHeight: 1.6 }}>
-              El saldo se acreditará al destinatario en cuanto confirme el pago.
-            </p>
-            <button onClick={() => { setSent(false); setRecipient('') }} className="btn btn-secondary" style={{ marginRight: 12 }}>
-              Enviar otra
-            </button>
-            <a href="/tienda" className="btn btn-primary" style={{ textDecoration: 'none' }}>Seguir comprando</a>
           </div>
         )}
 
