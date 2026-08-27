@@ -77,10 +77,10 @@ export default function Header({ alertsCount = 0 }: Props) {
         </Link>
 
         {/* Desktop nav */}
-        <nav className="nav-desktop" style={{ display:'flex', gap:2, marginLeft:12 }}>
+        <nav className="nav-desktop" style={{ display:'flex', gap:4, marginLeft:16 }}>
           {navItems.map(it => (
             <Link key={it.href} href={it.href} className="nav-link"
-              style={{ padding:'6px 12px', borderRadius:8, fontSize:14, fontWeight:500, color:'var(--ink-2)', textDecoration:'none' }}>
+              style={{ padding:'8px 14px', borderRadius:8, fontSize:15, fontWeight:600, color:'var(--ink-2)', textDecoration:'none' }}>
               {it.label}
             </Link>
           ))}
@@ -101,7 +101,7 @@ export default function Header({ alertsCount = 0 }: Props) {
             type="search"
             placeholder="Buscar figuras, sets..."
             className="search-input"
-            style={{ width:'100%', padding:'8px 52px 8px 34px', borderRadius:999, background:'var(--paper-soft)', border:'1px solid var(--line)', fontSize:13, color:'var(--ink)', fontFamily:'inherit', outline:'none' }}
+            style={{ width:'100%', padding:'9px 52px 9px 36px', borderRadius:999, background:'var(--paper-soft)', border:'1px solid var(--line)', fontSize:14, color:'var(--ink)', fontFamily:'inherit', outline:'none' }}
           />
           <span className="search-kbd">⌘K</span>
         </div>
