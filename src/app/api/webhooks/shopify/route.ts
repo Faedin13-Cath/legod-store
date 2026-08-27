@@ -175,7 +175,55 @@ export async function POST(req: NextRequest) {
     created_at:         order.created_at ?? new Date().toISOString(),
   }, { onConflict: 'shopify_order_id' })
 
-  /* ── Apartado: create record if this is a deposit order ── */
+  /* ── Apartado: crea el registro en Supabase + descuenta saldo si se usó
+     como parte del anticipo. Cubre tanto pedidos del checkout normal (sin
+     saldo, o con saldo parcial) como pedidos creados a mano/por importación
+     en Shopify Admin, siempre que el email del pedido coincida con una
+     cuenta registrada (resolución por email arriba, sin depender de
+     note_attributes). ── */
+  if (attr('tipo') === 'apartado') {
+    const subtotal    = parseInt(attr('subtotal_original') ?? '0', 10)
+    const deposit     = parseInt(attr('anticipo_monto')    ?? '0', 10)
+    const balance     = parseInt(attr('saldo_pendiente')   ?? '0', 10)
+    const plazo       = attr('plazo_liquidar') ?? '15 días'
+    const balanceUsed = parseInt(attr('balance_used') ?? '0', 10)
+
+    let apItems: { id: string; name: string; price: number; qty: number }[] = []
+    try { apItems = JSON.parse(attr('original_items') ?? '[]') } catch { /* cae al fallback de abajo */ }
+    if (!apItems.length) {
+      apItems = (order.line_items ?? []).map(li => ({
+        id: li.title, name: li.title, price: parseFloat(li.price), qty: li.quantity,
+      }))
+    }
+
+    const baseDate = order.created_at ? new Date(order.created_at) : new Date()
+    const days     = plazo.includes('semana') ? 7 : plazo.includes('mes') ? 30 : 15
+    const deadline = new Date(baseDate)
+    deadline.setDate(deadline.getDate() + days)
+
+    await supabase.from('apartados').insert({
+      user_id:     authUser.id,
+      items:       apItems,
+      subtotal, deposit, balance,
+      deadline_at: deadline.toISOString(),
+      status:      'active',
+    })
+
+    if (balanceUsed > 0) {
+      const { data: prof } = await supabase.from('profiles').select('balance').eq('id', authUser.id).single()
+      const newBalance = Math.max(0, (prof?.balance ?? 0) - balanceUsed)
+      await supabase.from('profiles').update({ balance: newBalance }).eq('id', authUser.id)
+      await supabase.from('balance_transactions').insert({
+        user_id:      authUser.id,
+        type:         'spent',
+        amount:       balanceUsed,
+        description:  `Anticipo de apartado con saldo — Orden #${orderNum ?? orderId}`,
+        reference_id: orderId,
+      })
+    }
+
+    return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
+  }
 
   /* ── Liquidación: mark apartado as completed + deduct balance if used ── */
   if (attr('tipo') === 'liquidacion') {
