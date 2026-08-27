@@ -11,6 +11,11 @@ type SellRequest = {
   description: string; payment: string | null; photos: string[]; status: string
 }
 
+type ContactMessage = {
+  id: string; created_at: string; name: string; email: string
+  subject: string | null; message: string; status: string
+}
+
 export default function AdminPage() {
   const { profile, loading } = useAuth()
   const isOwner = (profile?.email ?? '').toLowerCase() === OWNER_EMAIL
@@ -18,12 +23,20 @@ export default function AdminPage() {
   const [sells, setSells] = useState<SellRequest[]>([])
   const [loadingSells, setLoadingSells] = useState(true)
 
+  const [messages, setMessages] = useState<ContactMessage[]>([])
+  const [loadingMessages, setLoadingMessages] = useState(true)
+
   useEffect(() => {
     if (!isOwner) return
     fetch('/api/admin/sell-requests')
       .then(r => r.ok ? r.json() : { requests: [] })
       .then(d => { setSells(d.requests ?? []); setLoadingSells(false) })
       .catch(() => setLoadingSells(false))
+
+    fetch('/api/admin/contact-messages')
+      .then(r => r.ok ? r.json() : { messages: [] })
+      .then(d => { setMessages(d.messages ?? []); setLoadingMessages(false) })
+      .catch(() => setLoadingMessages(false))
   }, [isOwner])
 
   if (loading) {
@@ -122,6 +135,49 @@ export default function AdminPage() {
                       ))}
                     </div>
                   )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Mensajes de contacto */}
+      <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 16, padding: '22px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+            <Icon name="chat" size={18} />
+          </div>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
+            Mensajes de contacto
+            {messages.length > 0 && (
+              <span style={{ fontSize: 11, fontWeight: 700, background: 'var(--accent)', color: '#fff', padding: '2px 8px', borderRadius: 999, marginLeft: 8 }}>
+                {messages.length}
+              </span>
+            )}
+          </h2>
+        </div>
+
+        {loadingMessages ? (
+          <p style={{ fontSize: 13, color: 'var(--ink-3)' }}>Cargando…</p>
+        ) : messages.length === 0 ? (
+          <p style={{ fontSize: 13, color: 'var(--ink-3)' }}>Aún no hay mensajes desde el formulario de contacto.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {messages.map(m => {
+              const date = new Date(m.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+              return (
+                <div key={m.id} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '14px 16px', background: 'var(--cream)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{m.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{m.email} · {date}{m.subject ? ` · ${m.subject}` : ''}</div>
+                    </div>
+                    <a href={`mailto:${m.email}`} className="btn btn-primary btn-sm" style={{ textDecoration: 'none' }}>
+                      <Icon name="chat" size={14} /> Responder
+                    </a>
+                  </div>
+                  <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.55, margin: '10px 0 0', whiteSpace: 'pre-wrap' }}>{m.message}</p>
                 </div>
               )
             })}

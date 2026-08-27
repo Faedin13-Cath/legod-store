@@ -25,10 +25,31 @@ const channels = [
 export default function ContactoPage() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', msg: '' })
   const [sent, setSent] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setSent(true)
+    setSending(true)
+    setError('')
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        setError(d.error ?? 'No se pudo enviar. Inténtalo de nuevo o escríbenos por WhatsApp.')
+        setSending(false)
+        return
+      }
+      setSent(true)
+    } catch {
+      setError('No se pudo enviar. Revisa tu conexión o escríbenos por WhatsApp.')
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -144,8 +165,18 @@ export default function ContactoPage() {
                     className="input" style={{ width: '100%', resize: 'vertical' }}
                   />
                 </div>
-                <button type="submit" className="btn btn-primary" style={{ alignSelf: 'flex-start', padding: '11px 28px' }}>
-                  Enviar mensaje
+                {error && (
+                  <div style={{ padding: '11px 14px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #F2BFBF', fontSize: 13, color: '#A23030' }}>
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit" disabled={sending}
+                  className="btn btn-primary"
+                  style={{ alignSelf: 'flex-start', padding: '11px 28px', opacity: sending ? 0.7 : 1, cursor: sending ? 'not-allowed' : 'pointer' }}
+                >
+                  {sending ? 'Enviando…' : 'Enviar mensaje'}
                 </button>
               </form>
             ) : (
