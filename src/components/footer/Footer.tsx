@@ -55,17 +55,14 @@ export default function Footer() {
         <div className="footer-brand">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
             <Image src="/assets/logo/legod-logo-violet.png" alt="LEGOD" width={40} height={40} style={{ borderRadius: '50%' }} />
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--ink)' }}>Jango&apos;s Store</div>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>Minifiguras LEGO</div>
-            </div>
+            <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--ink)' }}>Jango&apos;s Store</div>
           </div>
           <p style={{ fontSize: 14, lineHeight: 1.65, color: 'var(--ink-2)', maxWidth: 320, margin: '0 0 16px' }}>
             Minifiguras LEGO, sets sellados, segunda mano y customs. Apartados, gift cards y envíos a todo México e internacionales a cotizar.
           </p>
           <div style={{ display: 'flex', gap: 8 }}>
-            <a href="#" style={socialBtn}><Icon name="chat" size={15} /></a>
-            <a href="#" style={socialBtn}><Icon name="whatsapp" size={15} /></a>
+            <a href="https://chat.whatsapp.com/LklBq0iXRJvIFUiM8eUULH?mode=gi_t" target="_blank" rel="noreferrer" style={socialBtn} aria-label="Grupo de WhatsApp" title="Grupo de WhatsApp"><Icon name="chat" size={15} /></a>
+            <a href="https://wa.me/525574777350" target="_blank" rel="noreferrer" style={socialBtn} aria-label="WhatsApp" title="WhatsApp"><Icon name="whatsapp" size={15} /></a>
           </div>
         </div>
 
@@ -86,9 +83,9 @@ export default function Footer() {
           <h5 style={colHead}>Cuenta</h5>
           <ul style={ulStyle}>
             <li><Link href="/login" style={linkStyle}>Mi perfil</Link></li>
-            <li><Link href="/(account)/coleccion" style={linkStyle}>Mi colección</Link></li>
-            <li><Link href="/(account)/wishlist" style={linkStyle}>Wishlist</Link></li>
-            <li><Link href="/(account)/apartados" style={linkStyle}>Apartados</Link></li>
+            <li><Link href="/coleccion" style={linkStyle}>Mi colección</Link></li>
+            <li><Link href="/wishlist" style={linkStyle}>Wishlist</Link></li>
+            <li><Link href="/apartados" style={linkStyle}>Apartados</Link></li>
             <li><Link href="/vendenos" style={linkStyle}>Véndenos tu colección</Link></li>
           </ul>
         </div>

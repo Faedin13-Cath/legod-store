@@ -32,6 +32,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
   const [useBalance,     setUseBalance] = useState(false)
   const [confirmOpen,    setConfirmOpen] = useState(false)
   const [aptConfirmOpen, setAptConfirmOpen] = useState(false)
+  const [errorMsg,       setErrorMsg]   = useState('')
   const infoRef          = useRef<HTMLDivElement>(null)
 
   const userBalance = profile?.balance ?? 0
@@ -67,18 +68,25 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
     return () => { document.body.style.overflow = '' }
   }, [open])
 
+  /* ── clear error banner each time the drawer opens ── */
+  useEffect(() => {
+    if (open) setErrorMsg('')
+  }, [open])
+
   const applied   = useBalance ? Math.min(userBalance, subtotal) : 0
   const fullSaldo = applied > 0 && applied >= subtotal
 
   // Clic en "Pagar completo": si usa saldo, pide confirmación (y dirección si
   // el saldo cubre todo). Sin saldo, va directo al checkout de Shopify.
   function handlePay() {
+    setErrorMsg('')
     if (applied > 0) { setConfirmOpen(true); return }
     goToCheckout()
   }
 
   async function goToCheckout(shipping?: ShippingData) {
     setLoading(true)
+    setErrorMsg('')
     try {
       const payload  = applied > 0
         ? {
@@ -100,12 +108,12 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
       } else if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl
       } else {
-        alert(data.error ?? 'No se pudo conectar con Shopify. Verifica que el producto esté agregado en tu tienda.')
+        setErrorMsg(data.error ?? 'No se pudo conectar con Shopify. Verifica que el producto esté agregado en tu tienda.')
         setLoading(false)
         setConfirmOpen(false)
       }
     } catch {
-      alert('Error al procesar el checkout.')
+      setErrorMsg('Error al procesar el checkout. Inténtalo de nuevo.')
       setLoading(false)
       setConfirmOpen(false)
     }
@@ -115,6 +123,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
   const aptApplied  = useBalance ? Math.min(userBalance, deposit) : 0
 
   function handleApartado() {
+    setErrorMsg('')
     if (!user) { router.push('/login'); onClose(); return }
     if (aptApplied > 0) { setAptConfirmOpen(true); return }
     goToApartado()
@@ -122,6 +131,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
 
   async function goToApartado() {
     setLoadingApt(true)
+    setErrorMsg('')
     try {
       const res  = await fetch('/api/checkout/apartado', {
         method: 'POST',
@@ -156,7 +166,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
         window.location.href = data.checkoutUrl
       }
     } catch {
-      alert('Error al procesar el apartado. Inténtalo de nuevo.')
+      setErrorMsg('Error al procesar el apartado. Inténtalo de nuevo.')
       setLoadingApt(false)
       setAptConfirmOpen(false)
     }
@@ -223,9 +233,9 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
               <div style={{ color: 'var(--ink-4)', marginBottom: 4 }}><Icon name="cart" size={40} /></div>
               <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--ink-2)', margin: 0 }}>Tu carrito está vacío</p>
               <p style={{ fontSize: 13, color: 'var(--ink-3)', margin: 0 }}>Agrega minifiguras o sets desde la tienda</p>
-              <button onClick={onClose} className="btn btn-primary btn-sm" style={{ marginTop: 8 }}>
-                <Link href="/tienda" style={{ color: 'inherit', textDecoration: 'none' }}>Explorar tienda</Link>
-              </button>
+              <Link href="/tienda" onClick={onClose} className="btn btn-primary btn-sm" style={{ marginTop: 8, textDecoration: 'none' }}>
+                Explorar tienda
+              </Link>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -373,6 +383,19 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
                   </Link>
                 </div>
               )
+            )}
+
+            {/* Error banner */}
+            {errorMsg && (
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: 8,
+                padding: '10px 12px', borderRadius: 10, marginBottom: 10,
+                background: '#FEF2F2', border: '1px solid #F2BFBF',
+                fontSize: 13, color: '#A23030', lineHeight: 1.5,
+              }}>
+                <Icon name="close" size={14} />
+                <span>{errorMsg}</span>
+              </div>
             )}
 
             {/* Full payment button */}
