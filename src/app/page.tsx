@@ -99,7 +99,7 @@ export default function HomePage() {
               {/* Main image card */}
               <div className="anim-scale-in d-2" style={{ position:'absolute', inset:0, borderRadius:32, overflow:'hidden', boxShadow:'0 48px 96px -24px rgba(0,0,0,0.7)', background:'#fff' }}>
                 <div className="anim-float" style={{ position:'absolute', inset:0 }}>
-                  <Image src="/assets/posters/slinkydog.jpg" alt="Slinky Dog Minifig" fill style={{ objectFit:'contain', objectPosition:'center 30%' }} sizes="45vw" priority />
+                  <Image src="https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh1132.png" alt="Winter Soldier (Bucky) Minifig" fill style={{ objectFit:'contain', objectPosition:'center 30%' }} sizes="45vw" priority />
                 </div>
                 <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, transparent 55%, rgba(15,18,64,0.55) 100%)' }} />
               </div>
@@ -107,8 +107,8 @@ export default function HomePage() {
               {/* Glass badge — promo */}
               <div className="anim-fade-up d-5" style={{ position:'absolute', bottom:28, left:-36, background:'rgba(15,18,64,0.72)', backdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.18)', borderRadius:20, padding:'14px 18px', zIndex:2, minWidth:184 }}>
                 <div style={{ fontSize:11, color:'rgba(255,255,255,0.55)', fontWeight:600, marginBottom:5, letterSpacing:'0.04em' }}>🔥 Promo activa</div>
-                <div style={{ fontSize:15, fontWeight:700, color:'#fff', marginBottom:3 }}>Slinky Dog · Toy Story</div>
-                <div style={{ fontSize:20, fontWeight:800, color:'#F5C84A', letterSpacing:'-0.02em' }}>$750 MXN</div>
+                <div style={{ fontSize:15, fontWeight:700, color:'#fff', marginBottom:3 }}>Bucky (Winter Soldier) · Marvel</div>
+                <div style={{ fontSize:20, fontWeight:800, color:'#F5C84A', letterSpacing:'-0.02em' }}>$950 MXN</div>
               </div>
 
               {/* Gold star badge */}
