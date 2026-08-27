@@ -7,8 +7,8 @@ export const contentType = 'image/png'
 
 export default async function OG() {
   const [bold, ultra] = await Promise.all([
-    fetch(new URL('../../public/fonts/ABCSolar-Bold-Trial.otf', import.meta.url)).then(r => r.arrayBuffer()),
-    fetch(new URL('../../public/fonts/ABCSolar-Ultra-Trial.otf', import.meta.url)).then(r => r.arrayBuffer()),
+    fetch(new URL('../../public/fonts/ABCSolar-Bold-Trial.woff', import.meta.url)).then(r => r.arrayBuffer()),
+    fetch(new URL('../../public/fonts/ABCSolar-Ultra-Trial.woff', import.meta.url)).then(r => r.arrayBuffer()),
   ])
 
   return new ImageResponse(
