@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isAdmin } from '@/lib/admin'
 import { cookies } from 'next/headers'
-
-const OWNER = (process.env.OWNER_EMAIL ?? 'faedin@hotmail.com').toLowerCase()
 
 // Encabezado EXACTO de la carga masiva de Estafeta (Multiguía)
 const HEADER = [
@@ -35,7 +34,7 @@ export async function GET(req: NextRequest) {
     { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } },
   )
   const { data: { user } } = await auth.auth.getUser()
-  if (!user || (user.email ?? '').toLowerCase() !== OWNER) {
+  if (!user || !(await isAdmin(user.id))) {
     return NextResponse.json({ error: 'Solo el administrador puede exportar' }, { status: 403 })
   }
 

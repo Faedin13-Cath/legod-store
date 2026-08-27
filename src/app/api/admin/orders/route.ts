@@ -17,11 +17,22 @@ export async function GET() {
   }
 
   const admin = createAdminClient()
-  const { data } = await admin
-    .from('sell_requests')
+  const { data: orders } = await admin
+    .from('orders')
     .select('*')
     .order('created_at', { ascending: false })
-    .limit(100)
+    .limit(30)
 
-  return NextResponse.json({ requests: data ?? [] })
+  const userIds = [...new Set((orders ?? []).map(o => o.user_id).filter(Boolean))]
+  const { data: profiles } = userIds.length
+    ? await admin.from('profiles').select('id, name, handle, email').in('id', userIds)
+    : { data: [] as { id: string; name: string; handle: string | null; email: string | null }[] }
+  const byId = new Map((profiles ?? []).map(p => [p.id, p]))
+
+  const enriched = (orders ?? []).map(o => ({
+    ...o,
+    customer: byId.get(o.user_id) ?? null,
+  }))
+
+  return NextResponse.json({ orders: enriched })
 }

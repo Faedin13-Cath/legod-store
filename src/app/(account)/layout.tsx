@@ -18,8 +18,6 @@ const NAV = [
   { href: '/saldo',     icon: 'gift-card', label: 'Saldo' },
 ]
 
-const OWNER_EMAIL = 'faedin@hotmail.com'
-
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname()
   const router = useRouter()
@@ -34,7 +32,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
 
   const displayName = profile?.name || 'Usuario'
   const displayHandle = profile?.handle || 'usuario'
-  const isOwner = (profile?.email ?? '').toLowerCase() === OWNER_EMAIL
+  const isOwner = !!profile?.is_admin
   const navItems = isOwner
     ? [...NAV, { href: '/admin', icon: 'settings', label: 'Administración' }]
     : NAV

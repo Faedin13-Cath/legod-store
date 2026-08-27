@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isAdmin } from '@/lib/admin'
 import { cookies } from 'next/headers'
-
-const OWNER = (process.env.OWNER_EMAIL ?? 'faedin@hotmail.com').toLowerCase()
 
 export async function GET() {
   const cookieStore = cookies()
@@ -13,7 +12,7 @@ export async function GET() {
     { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } },
   )
   const { data: { user } } = await auth.auth.getUser()
-  if (!user || (user.email ?? '').toLowerCase() !== OWNER) {
+  if (!user || !(await isAdmin(user.id))) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
 

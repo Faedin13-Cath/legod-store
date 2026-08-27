@@ -19,6 +19,7 @@ export type Profile = {
   wishlist: string[]
   tier?: string | null
   balance: number
+  is_admin?: boolean
   ship_name?:    string | null
   ship_phone?:   string | null
   ship_street?:  string | null

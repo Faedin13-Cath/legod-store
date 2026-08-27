@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react'
 import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
 
-const OWNER_EMAIL = 'faedin@hotmail.com'
-
 type SellRequest = {
   id: string; created_at: string; name: string; phone: string
   description: string; payment: string | null; photos: string[]; status: string
@@ -16,15 +14,27 @@ type ContactMessage = {
   subject: string | null; message: string; status: string
 }
 
+type OrderRow = {
+  id: string; shopify_order_id: string; order_number: string
+  total_price: number; financial_status: string; fulfillment_status: string
+  tracking_number: string | null; carrier: string | null
+  line_items: { title: string; quantity: number }[]
+  created_at: string
+  customer: { name: string; handle: string | null; email: string | null } | null
+}
+
 export default function AdminPage() {
   const { profile, loading } = useAuth()
-  const isOwner = (profile?.email ?? '').toLowerCase() === OWNER_EMAIL
+  const isOwner = !!profile?.is_admin
 
   const [sells, setSells] = useState<SellRequest[]>([])
   const [loadingSells, setLoadingSells] = useState(true)
 
   const [messages, setMessages] = useState<ContactMessage[]>([])
   const [loadingMessages, setLoadingMessages] = useState(true)
+
+  const [orders, setOrders] = useState<OrderRow[]>([])
+  const [loadingOrders, setLoadingOrders] = useState(true)
 
   useEffect(() => {
     if (!isOwner) return
@@ -37,6 +47,11 @@ export default function AdminPage() {
       .then(r => r.ok ? r.json() : { messages: [] })
       .then(d => { setMessages(d.messages ?? []); setLoadingMessages(false) })
       .catch(() => setLoadingMessages(false))
+
+    fetch('/api/admin/orders')
+      .then(r => r.ok ? r.json() : { orders: [] })
+      .then(d => { setOrders(d.orders ?? []); setLoadingOrders(false) })
+      .catch(() => setLoadingOrders(false))
   }, [isOwner])
 
   if (loading) {
@@ -86,6 +101,69 @@ export default function AdminPage() {
           El peso (1 kg) y dimensiones (20×15×25 cm) van con valores por defecto — ajústalos en el CSV
           si alguna figura es más grande.
         </p>
+      </div>
+
+      {/* Pedidos recientes */}
+      <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 16, padding: '22px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+            <Icon name="cart" size={18} />
+          </div>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', margin: 0 }}>Pedidos recientes</h2>
+        </div>
+
+        {loadingOrders ? (
+          <p style={{ fontSize: 13, color: 'var(--ink-3)' }}>Cargando…</p>
+        ) : orders.length === 0 ? (
+          <p style={{ fontSize: 13, color: 'var(--ink-3)' }}>Aún no hay pedidos registrados.</p>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ textAlign: 'left', color: 'var(--ink-3)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <th style={{ padding: '0 10px 8px 0', fontWeight: 600 }}>Pedido</th>
+                  <th style={{ padding: '0 10px 8px', fontWeight: 600 }}>Cliente</th>
+                  <th style={{ padding: '0 10px 8px', fontWeight: 600 }}>Artículos</th>
+                  <th style={{ padding: '0 10px 8px', fontWeight: 600 }}>Total</th>
+                  <th style={{ padding: '0 10px 8px', fontWeight: 600 }}>Envío</th>
+                  <th style={{ padding: '0 0 8px', fontWeight: 600 }}>Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map(o => {
+                  const date = new Date(o.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+                  const itemsLabel = (o.line_items ?? []).map(li => `${li.title}${li.quantity > 1 ? ` ×${li.quantity}` : ''}`).join(', ')
+                  const fulfilled = o.fulfillment_status === 'fulfilled'
+                  return (
+                    <tr key={o.id} style={{ borderTop: '1px solid var(--line)' }}>
+                      <td style={{ padding: '10px 10px 10px 0', fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap' }}>#{o.order_number}</td>
+                      <td style={{ padding: '10px', color: 'var(--ink-2)' }}>
+                        {o.customer ? (o.customer.handle ? `@${o.customer.handle}` : o.customer.name) : '—'}
+                      </td>
+                      <td style={{ padding: '10px', color: 'var(--ink-2)', maxWidth: 260, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={itemsLabel}>
+                        {itemsLabel || '—'}
+                      </td>
+                      <td style={{ padding: '10px', color: 'var(--ink)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        ${Number(o.total_price).toLocaleString('es-MX')}
+                      </td>
+                      <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
+                        <span style={{
+                          fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 999,
+                          background: fulfilled ? '#DFF5E8' : 'var(--cream)',
+                          color: fulfilled ? '#16623B' : 'var(--ink-3)',
+                          border: `1px solid ${fulfilled ? '#B6E2C7' : 'var(--line)'}`,
+                        }}>
+                          {fulfilled ? 'Enviado' : 'Pendiente'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 0', color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>{date}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Solicitudes de venta (Véndenos) */}
