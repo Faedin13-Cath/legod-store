@@ -74,23 +74,9 @@ export default function HomePage() {
               </p>
 
               {/* CTAs */}
-              <div className="anim-fade-up d-3" style={{ display:'flex', gap:12, flexWrap:'wrap', marginBottom:36 }}>
+              <div className="anim-fade-up d-3" style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
                 <Link href="/tienda" className="btn-hero-primary">ver tienda →</Link>
                 <Link href="/promos" className="btn-hero-secondary">promos activas</Link>
-              </div>
-
-              {/* Glass stat blocks */}
-              <div className="anim-fade-up d-4 hero-stats" style={{ display:'flex', gap:8 }}>
-                {[
-                  { v:'4.9',  label:'320+ reseñas' },
-                  { v:'1.2k+',label:'figuras vendidas' },
-                  { v:'7 d',  label:'apartado gratis' },
-                ].map(s => (
-                  <div key={s.label} style={{ flex:1, padding:'12px 14px', borderRadius:14, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', backdropFilter:'blur(8px)' }}>
-                    <div style={{ fontSize:22, fontWeight:800, color:'#fff', letterSpacing:'-0.025em' }}>{s.v}</div>
-                    <div style={{ fontSize:10, color:'rgba(255,255,255,0.44)', fontWeight:600, letterSpacing:'0.07em', textTransform:'uppercase', marginTop:3 }}>{s.label}</div>
-                  </div>
-                ))}
               </div>
             </div>
 
@@ -140,23 +126,22 @@ export default function HomePage() {
       ═══════════════════════════════════════════════════════ */}
       <Sec>
         <Reveal>
-          <Head eyebrow="Esta semana" title="promos activas">
+          <Head title="promos activas">
             <Link href="/promos" className="more-link" style={moreLink}>ver todas →</Link>
           </Head>
         </Reveal>
         <div className="promos-grid" style={{ display:'grid', gridTemplateColumns:'1.6fr 1fr', gap:16 }}>
           <Reveal delay={0} animation="scale-in">
-            <Link href="/tienda/slinky-dog" className="promo-tile" style={{ borderRadius:28, overflow:'hidden', position:'relative', display:'flex', flexDirection:'column', justifyContent:'space-between', minHeight:200, textDecoration:'none', background:'linear-gradient(160deg,#1A1266,#2D1869)', padding:24 }}>
+            <Link href="/tienda/winter-soldier-dark-brown-hair-black-and-light-nougat-hands" className="promo-tile" style={{ borderRadius:28, overflow:'hidden', position:'relative', display:'flex', flexDirection:'column', justifyContent:'space-between', minHeight:200, textDecoration:'none', background:'linear-gradient(160deg,#1A1266,#2D1869)', padding:24 }}>
               <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight:16, overflow:'hidden' }}>
-                <Image src="/assets/posters/slinkydog.jpg" alt="Slinky Dog" width={180} height={180} style={{ objectFit:'contain', opacity:0.9 }} />
+                <Image src="https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh1132.png" alt="Bucky (Winter Soldier)" width={140} height={180} style={{ objectFit:'contain', opacity:0.95 }} />
               </div>
-              <span className="pill danger" style={{ alignSelf:'flex-start', position:'relative', zIndex:1 }}>−17% OFF</span>
+              <span className="pill gold" style={{ alignSelf:'flex-start', position:'relative', zIndex:1 }}>Nuevo</span>
               <div style={{ position:'relative', zIndex:1 }}>
-                <h3 style={{ fontSize:26, lineHeight:1.0, textTransform:'lowercase', color:'#fff', margin:'0 0 4px', fontWeight:700 }}>slinky dog</h3>
-                <p style={{ fontSize:13, color:'rgba(255,255,255,0.75)', margin:'0 0 6px' }}>Toy Story · Edición especial</p>
+                <h3 style={{ fontSize:26, lineHeight:1.0, textTransform:'lowercase', color:'#fff', margin:'0 0 4px', fontWeight:700 }}>bucky</h3>
+                <p style={{ fontSize:13, color:'rgba(255,255,255,0.75)', margin:'0 0 6px' }}>Winter Soldier · Marvel</p>
                 <div style={{ display:'flex', alignItems:'baseline', gap:8 }}>
-                  <span style={{ fontSize:22, fontWeight:800, color:'#F5C84A' }}>$750</span>
-                  <span style={{ fontSize:14, color:'rgba(255,255,255,0.45)', textDecoration:'line-through' }}>$900</span>
+                  <span style={{ fontSize:22, fontWeight:800, color:'#F5C84A' }}>$950</span>
                 </div>
               </div>
             </Link>
@@ -204,7 +189,7 @@ export default function HomePage() {
       ═══════════════════════════════════════════════════════ */}
       <Sec top={0}>
         <Reveal>
-          <Head eyebrow="Esta semana" title="nuevos ingresos">
+          <Head title="nuevos ingresos">
             <Link href="/tienda?tag=nuevo" className="more-link" style={moreLink}>ver todos →</Link>
           </Head>
         </Reveal>
@@ -230,17 +215,13 @@ export default function HomePage() {
             <Link href="/tienda?tag=restock" className="more-link" style={moreLink}>ver todos →</Link>
           </Head>
         </Reveal>
-        <Reveal animation="fade-in">
-          <div className="h-scroll-wrap">
-            <div className="h-scroll" style={{ gap:16 }}>
-              {restock.map(p => (
-                <div key={p.id} style={{ flexShrink:0, width:210 }}>
-                  <ProductCard product={p} onView={nav} onAdd={addItem} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </Reveal>
+        <div className="restock-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(170px, 1fr))', gap:16 }}>
+          {restock.map((p, i) => (
+            <Reveal key={p.id} delay={i * 60} animation="fade-up">
+              <ProductCard product={p} onView={nav} onAdd={addItem} />
+            </Reveal>
+          ))}
+        </div>
       </Sec>
 
       {/* ═══════════════════════════════════════════════════════
@@ -248,11 +229,11 @@ export default function HomePage() {
       ═══════════════════════════════════════════════════════ */}
       <Sec top={0}>
         <Reveal>
-          <Head eyebrow="Para coleccionistas" title="sets">
+          <Head title="sets">
             <Link href="/tienda?tipo=set-sealed" className="more-link" style={moreLink}>ver todos →</Link>
           </Head>
         </Reveal>
-        <div className="sets-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:16 }}>
+        <div className="sets-grid" style={{ display:'grid', gridTemplateColumns:`repeat(${sets.length + 1}, 1fr)`, gap:16 }}>
           {sets.map((p, i) => (
             <Reveal key={p.id} delay={i * 80} animation="scale-in">
               <ProductCard product={p} onView={nav} onAdd={addItem} />
@@ -274,7 +255,7 @@ export default function HomePage() {
       ═══════════════════════════════════════════════════════ */}
       <Sec>
         <Reveal>
-          <Head eyebrow="Lo que dicen" title="clientes satisfechos" />
+          <Head title="clientes satisfechos" />
         </Reveal>
         <Reveal animation="fade-up">
           <div className="reviews-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
@@ -365,14 +346,16 @@ function Sec({ children, top = 48, bottom = 0 }: { children: React.ReactNode; to
   )
 }
 
-function Head({ eyebrow, title, children }: { eyebrow: string; title: string; children?: React.ReactNode }) {
+function Head({ eyebrow, title, children }: { eyebrow?: string; title: string; children?: React.ReactNode }) {
   return (
     <div className="sec-head" style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:20, paddingTop:40 }}>
       <div>
-        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-          <div style={{ width:20, height:2, background:'var(--accent)', borderRadius:1 }} />
-          <div className="t-eyebrow">{eyebrow}</div>
-        </div>
+        {eyebrow && (
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+            <div style={{ width:20, height:2, background:'var(--accent)', borderRadius:1 }} />
+            <div className="t-eyebrow">{eyebrow}</div>
+          </div>
+        )}
         <h2 className="sec-title" style={{ margin:0, fontSize:36, fontWeight:800, color:'var(--ink)', textTransform:'capitalize', letterSpacing:'-0.03em', lineHeight:1 }}>{title}</h2>
       </div>
       {children}
