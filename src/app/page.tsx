@@ -332,12 +332,11 @@ export default function HomePage() {
           BENEFICIOS
       ═══════════════════════════════════════════════════════ */}
       <Sec>
-        <div className="benefits-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:16 }}>
+        <div className="benefits-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:16 }}>
           {[
             { icon:'truck',   title:'envíos seguros',  desc:'Burbuja + caja rígida. Correos, Estafeta o FedEx.' },
             { icon:'clock',   title:'apartado 40%',    desc:'Aparta con 40% de anticipo y liquida en 7 días.' },
             { icon:'shield',  title:'compra segura',   desc:'MercadoPago, Stripe o transferencia. Garantía 7 días.' },
-            { icon:'sparkle', title:'10% off primera', desc:'Con el cupón BIENVENIDA en tu primer pedido.' },
           ].map((b, i) => (
             <Reveal key={b.icon} delay={i * 80} animation="fade-up" style={{ height:'100%' }}>
               <div style={{ height:'100%', background:'var(--paper)', border:'1px solid var(--line)', borderRadius:20, padding:'24px 20px', display:'flex', flexDirection:'column', gap:10 }}>
