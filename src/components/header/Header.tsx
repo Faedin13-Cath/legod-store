@@ -71,8 +71,7 @@ export default function Header({ alertsCount = 0 }: Props) {
         <Link href="/" style={{ display:'flex', alignItems:'center', gap:10, textDecoration:'none', flexShrink:0 }}>
           <Image src="/assets/logo/legod-logo-violet.png" alt="LEGOD" width={34} height={34} style={{ borderRadius:'50%' }} />
           <div className="logo-text">
-            <div style={{ fontWeight:700, fontSize:16, color:'var(--ink)', lineHeight:1.1 }}>Jango&apos;s Store</div>
-            <div style={{ fontSize:10, fontWeight:600, letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--ink-3)' }}>Minifiguras LEGO</div>
+            <div style={{ fontWeight:800, fontSize:20, color:'var(--ink)', lineHeight:1.1 }}>Jango&apos;s Store</div>
           </div>
         </Link>
 
