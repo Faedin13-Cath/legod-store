@@ -23,7 +23,9 @@ const channels = [
 ]
 
 export default function ContactoPage() {
-  const [form, setForm] = useState({ name: '', email: '', subject: '', msg: '' })
+  // `web` es una trampa: está oculta para las personas, así que si llega con
+  // texto es un bot rellenando todos los campos del formulario.
+  const [form, setForm] = useState({ name: '', email: '', subject: '', msg: '', web: '' })
   const [sent, setSent] = useState(false)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
@@ -124,6 +126,16 @@ export default function ContactoPage() {
                 borderRadius: 16, padding: '28px',
                 display: 'flex', flexDirection: 'column', gap: 16,
               }}>
+                {/* Trampa para bots: fuera de pantalla y fuera del orden de
+                    tabulación, así que nadie la ve ni la alcanza tecleando. */}
+                <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, overflow: 'hidden' }}>
+                  <label htmlFor="web-url">No llenar</label>
+                  <input
+                    id="web-url" name="web-url" type="text" tabIndex={-1} autoComplete="off"
+                    value={form.web} onChange={e => setForm(f => ({ ...f, web: e.target.value }))}
+                  />
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div>
                     <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nombre</label>
@@ -196,7 +208,7 @@ export default function ContactoPage() {
                 <p style={{ fontSize: 14, color: 'var(--ink-2)', margin: '0 0 20px', lineHeight: 1.6 }}>
                   Te respondemos en menos de 24 horas.
                 </p>
-                <button onClick={() => { setSent(false); setForm({ name: '', email: '', subject: '', msg: '' }) }} className="btn btn-secondary">
+                <button onClick={() => { setSent(false); setForm({ name: '', email: '', subject: '', msg: '', web: '' }) }} className="btn btn-secondary">
                   Enviar otro
                 </button>
               </div>

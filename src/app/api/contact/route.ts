@@ -3,11 +3,19 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyOwner } from '@/lib/resend'
 
 export async function POST(req: NextRequest) {
-  let body: { name?: string; email?: string; subject?: string; msg?: string }
+  let body: { name?: string; email?: string; subject?: string; msg?: string; web?: string }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Formato inválido' }, { status: 400 })
+  }
+
+  // Campo trampa: invisible en el formulario, así que solo lo llena un bot.
+  // Se responde ok para que el bot crea que funcionó y no vuelva a intentar
+  // con otra táctica; simplemente no se guarda nada.
+  if (String(body.web ?? '').trim()) {
+    console.warn('[contact] descartado por honeypot:', body.email)
+    return NextResponse.json({ ok: true })
   }
 
   const name    = String(body.name ?? '').trim()
