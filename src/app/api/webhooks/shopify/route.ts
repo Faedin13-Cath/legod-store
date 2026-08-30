@@ -250,6 +250,12 @@ export async function POST(req: NextRequest) {
       order_id:  orderId,
     })
 
+    // El inventario se descuenta al pagar, no al generar el cobro: un checkout
+    // abandonado no debe dejar la figura apartada para siempre.
+    for (const item of pvItems) {
+      await adjustInventory(item.id, item.qty)
+    }
+
     return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
   }
 

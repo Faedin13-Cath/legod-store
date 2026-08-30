@@ -40,7 +40,8 @@ function PreventaCard({
   const pv = product.preventa!
   const picked = !!seleccion
   const qty = seleccion?.qty ?? 1
-  const maxQty = Math.max(1, Math.min(10, product.stock || 1))
+  const agotada = product.stock <= 0
+  const maxQty = Math.max(1, Math.min(10, product.stock))
 
   const options: { id: Modalidad; label: string; amount: number; sub: string }[] = [
     {
@@ -57,8 +58,9 @@ function PreventaCard({
 
   /** Clic en la opción activa = quitar la figura de la selección. */
   function pick(id: Modalidad) {
+    if (agotada) return
     if (seleccion?.modalidad === id) onChange(null)
-    else onChange({ modalidad: id, qty })
+    else onChange({ modalidad: id, qty: Math.min(qty, maxQty) })
   }
 
   const a = seleccion ? amountsFor(pv, seleccion.modalidad) : null
@@ -71,6 +73,7 @@ function PreventaCard({
       borderRadius: 20, overflow: 'hidden',
       display: 'grid', gridTemplateColumns: '220px 1fr',
       transition: 'border-color .12s, box-shadow .12s',
+      opacity: agotada ? 0.6 : 1,
     }}>
       <div style={{
         background: '#fff', borderRight: '1px solid var(--line)',
@@ -82,10 +85,10 @@ function PreventaCard({
           position: 'absolute', top: 14, left: 14,
           fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
           padding: '4px 10px', borderRadius: 999,
-          background: pv.badge ? 'var(--gold)' : 'var(--accent)',
-          color: pv.badge ? '#3A2A00' : '#fff',
+          background: agotada ? 'var(--ink-3)' : pv.badge ? 'var(--gold)' : 'var(--accent)',
+          color: agotada ? '#fff' : pv.badge ? '#3A2A00' : '#fff',
         }}>
-          {pv.badge ?? 'Preventa'}
+          {agotada ? 'Agotada' : pv.badge ?? 'Preventa'}
         </span>
       </div>
 
@@ -95,6 +98,11 @@ function PreventaCard({
         </h2>
         <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', margin: '0 0 18px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
           {product.tag}
+          {!agotada && product.stock <= 5 && (
+            <span style={{ color: 'var(--accent)', marginLeft: 8 }}>
+              · {product.stock === 1 ? 'Queda 1' : `Quedan ${product.stock}`}
+            </span>
+          )}
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -105,8 +113,10 @@ function PreventaCard({
                 key={o.id}
                 onClick={() => pick(o.id)}
                 aria-pressed={on}
+                disabled={agotada}
                 style={{
-                  textAlign: 'left', width: '100%', cursor: 'pointer',
+                  textAlign: 'left', width: '100%',
+                  cursor: agotada ? 'not-allowed' : 'pointer',
                   padding: '14px 16px', borderRadius: 12,
                   background: on ? 'var(--accent-soft)' : 'var(--cream)',
                   border: `1px solid ${on ? 'var(--accent)' : 'var(--line)'}`,

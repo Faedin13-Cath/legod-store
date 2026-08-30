@@ -50,6 +50,22 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Stock real de Shopify. Llega null si el token no tiene el scope de
+    // inventario; en ese caso no bloqueamos, solo dejamos pasar.
+    const cantidades = product.variants.edges.map(e => e.node.quantityAvailable)
+    if (cantidades.some(q => q !== null)) {
+      const stock = cantidades.reduce<number>((s, q) => s + (q ?? 0), 0)
+      if (stock <= 0) {
+        return NextResponse.json({ error: `${product.title} ya se agotó` }, { status: 409 })
+      }
+      if (qty > stock) {
+        return NextResponse.json(
+          { error: `De ${product.title} solo ${stock === 1 ? 'queda 1' : `quedan ${stock}`}` },
+          { status: 409 },
+        )
+      }
+    }
+
     const a = amountsFor(pricing, modalidad)
     total     += a.total   * qty
     pagadoHoy += a.today   * qty
