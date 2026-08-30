@@ -14,12 +14,17 @@ type Seleccion = { modalidad: Modalidad; qty: number }
 
 function PreventaCardSkeleton() {
   return (
-    <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 18, overflow: 'hidden' }}>
-      <div className="skeleton" style={{ width: '100%', aspectRatio: '1/1', borderRadius: 0 }} />
-      <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <Skeleton w="80%" h={14} />
-        <Skeleton w="45%" h={10} />
-        <Skeleton h={40} r={10} style={{ marginTop: 4 }} />
+    <div className="preventa-card" style={{
+      background: 'var(--paper)', border: '1px solid var(--line)',
+      borderRadius: 20, overflow: 'hidden',
+      display: 'grid', gridTemplateColumns: '220px 1fr',
+    }}>
+      <div className="skeleton" style={{ minHeight: 240, borderRadius: 0 }} />
+      <div style={{ padding: '24px 26px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <Skeleton w="60%" h={20} />
+        <Skeleton w="25%" h={11} />
+        <Skeleton h={56} r={12} style={{ marginTop: 6 }} />
+        <Skeleton h={56} r={12} />
       </div>
     </div>
   )
@@ -34,135 +39,131 @@ function PreventaCard({
 }) {
   const pv = product.preventa!
   const picked = !!seleccion
-  const modalidad = seleccion?.modalidad ?? 'completo'
   const qty = seleccion?.qty ?? 1
-  const a = amountsFor(pv, modalidad)
   const maxQty = Math.max(1, Math.min(10, product.stock || 1))
 
-  function toggle() {
-    onChange(picked ? null : { modalidad: 'completo', qty: 1 })
+  const options: { id: Modalidad; label: string; amount: number; sub: string }[] = [
+    {
+      id: 'completo', label: 'Pago completo', amount: pv.full,
+      sub: pv.split
+        ? `Un solo pago. Ahorras $${(pv.split.total - pv.full).toLocaleString('es-MX')} MXN.`
+        : 'Esta figura solo se puede pagar completa.',
+    },
+    ...(pv.split ? [{
+      id: 'split' as const, label: 'Anticipo y resto al llegar', amount: pv.split.deposit,
+      sub: `$${pv.split.pending.toLocaleString('es-MX')} MXN al llegar · total $${pv.split.total.toLocaleString('es-MX')} MXN`,
+    }] : []),
+  ]
+
+  /** Clic en la opción activa = quitar la figura de la selección. */
+  function pick(id: Modalidad) {
+    if (seleccion?.modalidad === id) onChange(null)
+    else onChange({ modalidad: id, qty })
   }
 
+  const a = seleccion ? amountsFor(pv, seleccion.modalidad) : null
+
   return (
-    <article style={{
+    <article className="preventa-card" style={{
       background: 'var(--paper)',
       border: `1px solid ${picked ? 'var(--accent)' : 'var(--line)'}`,
       boxShadow: picked ? '0 0 0 3px var(--accent-soft)' : 'none',
-      borderRadius: 18, overflow: 'hidden',
-      display: 'flex', flexDirection: 'column',
+      borderRadius: 20, overflow: 'hidden',
+      display: 'grid', gridTemplateColumns: '220px 1fr',
       transition: 'border-color .12s, box-shadow .12s',
     }}>
-      {/* Foto + selector */}
-      <button
-        onClick={toggle}
-        aria-pressed={picked}
-        style={{
-          position: 'relative', width: '100%', aspectRatio: '1/1',
-          background: '#fff', border: 'none', borderBottom: '1px solid var(--line)',
-          cursor: 'pointer', padding: 0, display: 'block',
-        }}
-      >
+      <div style={{
+        background: '#fff', borderRight: '1px solid var(--line)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        minHeight: 260, position: 'relative',
+      }}>
         <MinifigImage product={product} />
-
-        {pv.badge && (
-          <span style={{
-            position: 'absolute', top: 12, left: 12,
-            fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
-            padding: '4px 9px', borderRadius: 999,
-            background: 'var(--gold)', color: '#3A2A00',
-          }}>
-            {pv.badge}
-          </span>
-        )}
-
         <span style={{
-          position: 'absolute', top: 12, right: 12,
-          width: 24, height: 24, borderRadius: '50%',
-          background: picked ? 'var(--accent)' : 'rgba(255,255,255,0.95)',
-          border: `2px solid ${picked ? 'var(--accent)' : 'var(--line)'}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          position: 'absolute', top: 14, left: 14,
+          fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
+          padding: '4px 10px', borderRadius: 999,
+          background: pv.badge ? 'var(--gold)' : 'var(--accent)',
+          color: pv.badge ? '#3A2A00' : '#fff',
         }}>
-          {picked && <Icon name="check" size={13} color="#fff" />}
+          {pv.badge ?? 'Preventa'}
         </span>
-      </button>
+      </div>
 
-      <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', margin: '0 0 3px', lineHeight: 1.35 }}>
+      <div style={{ padding: '24px 26px' }}>
+        <h2 style={{ fontSize: 21, fontWeight: 700, color: 'var(--ink)', margin: '0 0 4px', lineHeight: 1.2 }}>
           {product.name}
-        </h3>
-        <p style={{ fontSize: 11, color: 'var(--ink-3)', margin: '0 0 10px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+        </h2>
+        <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', margin: '0 0 18px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
           {product.tag}
         </p>
 
-        {/* Precios */}
-        <div style={{ marginBottom: picked ? 12 : 0 }}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)' }}>
-            ${pv.full.toLocaleString('es-MX')}
-            <small style={{ fontSize: 11, fontWeight: 400, color: 'var(--ink-3)', marginLeft: 5 }}>completo</small>
-          </div>
-          {pv.split ? (
-            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>
-              o ${pv.split.deposit.toLocaleString('es-MX')} ahora + ${pv.split.pending.toLocaleString('es-MX')} al llegar
-            </div>
-          ) : (
-            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>Solo pago completo</div>
-          )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {options.map(o => {
+            const on = seleccion?.modalidad === o.id
+            return (
+              <button
+                key={o.id}
+                onClick={() => pick(o.id)}
+                aria-pressed={on}
+                style={{
+                  textAlign: 'left', width: '100%', cursor: 'pointer',
+                  padding: '14px 16px', borderRadius: 12,
+                  background: on ? 'var(--accent-soft)' : 'var(--cream)',
+                  border: `1px solid ${on ? 'var(--accent)' : 'var(--line)'}`,
+                  transition: 'all .12s',
+                  display: 'flex', alignItems: 'center', gap: 12,
+                }}
+              >
+                <span style={{
+                  width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                  border: `2px solid ${on ? 'var(--accent)' : 'var(--line)'}`,
+                  background: on ? 'var(--accent)' : 'var(--paper)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {on && <Icon name="check" size={10} color="#fff" />}
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: on ? 'var(--accent)' : 'var(--ink)' }}>
+                    {o.label}
+                  </span>
+                  <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>
+                    {o.sub}
+                  </span>
+                </span>
+                <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', flexShrink: 0 }}>
+                  ${o.amount.toLocaleString('es-MX')}
+                </span>
+              </button>
+            )
+          })}
         </div>
 
-        {/* Opciones al seleccionar */}
-        {picked && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 'auto' }}>
-            {pv.split && (
-              <div style={{ display: 'flex', gap: 6 }}>
-                {([
-                  { id: 'completo' as const, label: 'Completo', amount: pv.full },
-                  { id: 'split'    as const, label: 'Anticipo', amount: pv.split.deposit },
-                ]).map(o => {
-                  const on = modalidad === o.id
-                  return (
-                    <button
-                      key={o.id}
-                      onClick={() => onChange({ modalidad: o.id, qty })}
-                      style={{
-                        flex: 1, padding: '7px 6px', borderRadius: 9, cursor: 'pointer',
-                        background: on ? 'var(--accent)' : 'var(--cream)',
-                        border: `1px solid ${on ? 'var(--accent)' : 'var(--line)'}`,
-                        color: on ? '#fff' : 'var(--ink-2)',
-                        fontSize: 11, fontWeight: 600, transition: 'all .12s',
-                      }}
-                    >
-                      {o.label}
-                      <span style={{ display: 'block', fontSize: 12, fontWeight: 700, marginTop: 1 }}>
-                        ${o.amount.toLocaleString('es-MX')}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-
+        {picked && a && (
+          <div style={{
+            marginTop: 14, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
+          }}>
             <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              border: '1px solid var(--line)', borderRadius: 9, background: 'var(--cream)',
+              display: 'flex', alignItems: 'center',
+              border: '1px solid var(--line)', borderRadius: 10, background: 'var(--cream)',
             }}>
               <button
-                onClick={() => onChange({ modalidad, qty: Math.max(1, qty - 1) })}
+                onClick={() => onChange({ modalidad: seleccion.modalidad, qty: Math.max(1, qty - 1) })}
                 disabled={qty <= 1}
                 aria-label="Quitar una"
                 style={{
-                  width: 34, height: 34, background: 'none', border: 'none',
+                  width: 36, height: 38, background: 'none', border: 'none',
                   cursor: qty <= 1 ? 'not-allowed' : 'pointer',
                   color: qty <= 1 ? 'var(--ink-4)' : 'var(--ink)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
               ><Icon name="minus" size={13} /></button>
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{qty}</span>
+              <span style={{ width: 34, textAlign: 'center', fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{qty}</span>
               <button
-                onClick={() => onChange({ modalidad, qty: Math.min(maxQty, qty + 1) })}
+                onClick={() => onChange({ modalidad: seleccion.modalidad, qty: Math.min(maxQty, qty + 1) })}
                 disabled={qty >= maxQty}
                 aria-label="Agregar una"
                 style={{
-                  width: 34, height: 34, background: 'none', border: 'none',
+                  width: 36, height: 38, background: 'none', border: 'none',
                   cursor: qty >= maxQty ? 'not-allowed' : 'pointer',
                   color: qty >= maxQty ? 'var(--ink-4)' : 'var(--ink)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -170,10 +171,20 @@ function PreventaCard({
               ><Icon name="plus" size={13} /></button>
             </div>
 
-            <div style={{ fontSize: 11, color: 'var(--ink-3)', textAlign: 'center' }}>
-              Pagas hoy <strong style={{ color: 'var(--ink)' }}>${(a.today * qty).toLocaleString('es-MX')}</strong>
+            <div style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+              Pagas hoy <strong style={{ color: 'var(--ink)' }}>${(a.today * qty).toLocaleString('es-MX')} MXN</strong>
               {a.pending > 0 && ` · restan $${(a.pending * qty).toLocaleString('es-MX')}`}
             </div>
+
+            <button
+              onClick={() => onChange(null)}
+              style={{
+                marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 12, color: 'var(--ink-3)', textDecoration: 'underline', padding: 4,
+              }}
+            >
+              Quitar
+            </button>
           </div>
         )}
       </div>
@@ -270,7 +281,7 @@ export default function PreventasPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '48px 32px 140px' }}>
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '48px 32px 140px' }}>
         {!PREVENTAS_PUBLIC && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
@@ -292,8 +303,8 @@ export default function PreventasPage() {
         </p>
 
         {loading ? (
-          <div className="preventa-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 18 }}>
-            {Array.from({ length: 8 }).map((_, i) => <PreventaCardSkeleton key={i} />)}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {Array.from({ length: 4 }).map((_, i) => <PreventaCardSkeleton key={i} />)}
           </div>
         ) : items.length === 0 ? (
           <div style={{
@@ -308,7 +319,7 @@ export default function PreventasPage() {
             </p>
           </div>
         ) : (
-          <div className="preventa-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 18 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             {items.map(p => (
               <PreventaCard
                 key={p.id}
@@ -330,12 +341,12 @@ export default function PreventasPage() {
           padding: '14px 32px',
         }}>
           <div style={{
-            maxWidth: 1100, margin: '0 auto',
+            maxWidth: 900, margin: '0 auto',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
           }}>
             <div>
               <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>
-                {resumen.figuras} {resumen.figuras === 1 ? 'figura' : 'figuras'} seleccionadas
+                {resumen.figuras} {resumen.figuras === 1 ? 'figura seleccionada' : 'figuras seleccionadas'}
               </div>
               <div style={{ fontSize: 19, fontWeight: 700, color: 'var(--ink)' }}>
                 Pagas hoy ${resumen.hoy.toLocaleString('es-MX')} MXN
