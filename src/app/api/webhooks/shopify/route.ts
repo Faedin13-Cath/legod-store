@@ -121,7 +121,8 @@ export async function POST(req: NextRequest) {
 
   // Recargar saldo o comprar una gift card NO otorga puntos: los puntos se
   // ganan al gastar ese saldo. Contarlos aquí sería pagar dos veces.
-  const earnsPoints = tipo !== 'topup' && tipo !== 'gift'
+  // El envío tampoco: los puntos son por lo que compras, no por la paquetería.
+  const earnsPoints = tipo !== 'topup' && tipo !== 'gift' && tipo !== 'casillero_envio'
 
   // En compras con saldo, Shopify reporta el total ya descontado — hay que
   // sumar el descuento de vuelta para que los puntos reflejen el precio real.
@@ -161,6 +162,12 @@ export async function POST(req: NextRequest) {
     state:  sa.province ?? '', zip: sa.zip ?? '', ref: '',
   } : null
 
+  // Qué entrega eligió el cliente en el checkout. Antes esto se quedaba en
+  // null salvo que el pedido ya estuviera enviado, así que no había forma de
+  // saber quién pidió que le guardáramos su figura.
+  const metodoEntrega = (order as { shipping_lines?: { title?: string }[] })
+    .shipping_lines?.[0]?.title ?? null
+
   await supabase.from('orders').upsert({
     user_id:            authUser.id,
     shopify_order_id:   orderId,
@@ -169,7 +176,7 @@ export async function POST(req: NextRequest) {
     financial_status:   'paid',
     fulfillment_status: fulfillment ? 'fulfilled' : 'unfulfilled',
     tracking_number:    fulfillment?.tracking_number ?? null,
-    carrier:            fulfillment?.tracking_company ?? null,
+    carrier:            fulfillment?.tracking_company ?? metodoEntrega,
     line_items:         order.line_items ?? [],
     ...(shipping ? { shipping } : {}),
     created_at:         order.created_at ?? new Date().toISOString(),
@@ -254,6 +261,30 @@ export async function POST(req: NextRequest) {
     // abandonado no debe dejar la figura apartada para siempre.
     for (const item of pvItems) {
       await adjustInventory(item.id, item.qty)
+    }
+
+    return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
+  }
+
+  /* ── Envío de casillero: pagó el envío de lo que tenía guardado. Los
+     pedidos incluidos quedan marcados con el mismo shipment_id y salen
+     juntos en una caja. ── */
+  if (attr('tipo') === 'casillero_envio') {
+    const shipmentId = attr('shipment_id')
+
+    let orderIds: string[] = []
+    try { orderIds = JSON.parse(attr('order_ids') ?? '[]') } catch { /* sin ids no se agrupa nada */ }
+
+    if (shipmentId) {
+      await supabase.from('shipments')
+        .update({ status: 'paid', order_id: orderId })
+        .eq('id', shipmentId)
+
+      if (orderIds.length) {
+        await supabase.from('orders')
+          .update({ shipment_id: shipmentId })
+          .in('id', orderIds)
+      }
     }
 
     return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })

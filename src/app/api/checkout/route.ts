@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { awardPurchasePoints } from '@/lib/loyalty'
-import { shippingCost } from '@/lib/shipping'
+import { shippingCost, esCasillero } from '@/lib/shipping'
 
 const domain     = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN!
 const token      = process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_TOKEN!
@@ -87,10 +87,11 @@ async function checkoutWithBalance(
 
   // Full saldo coverage — create + auto-complete Shopify order (visible in Admin) without customer checkout
   if (applied >= subtotal) {
-    const isPickup = shipping?.carrier === 'Entrega en Rock Show'
     // La orden se crea directo en Shopify (bypass del checkout del cliente),
     // así que la dirección de envío tiene que venir de nuestro formulario.
-    // "Recoger en tienda" solo necesita nombre + teléfono.
+    // Recoger en persona y guardar en casillero no mueven paquete: basta
+    // nombre + teléfono, la dirección se pide al momento de enviar.
+    const isPickup = shipping?.carrier === 'Entrega en Rock Show' || esCasillero(shipping?.carrier)
     if (!shipping || !shipping.name || !shipping.phone ||
         (!isPickup && (!shipping.street || !shipping.numExt || !shipping.city || !shipping.state || !shipping.zip))) {
       return NextResponse.json({ error: 'Falta la dirección de envío', needShipping: true }, { status: 400 })

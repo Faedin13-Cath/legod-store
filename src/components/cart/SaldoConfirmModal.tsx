@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
-import { shippingCost } from '@/lib/shipping'
+import { shippingCost, CASILLERO } from '@/lib/shipping'
 
 export type ShippingData = {
   name: string; phone: string
@@ -12,8 +12,9 @@ export type ShippingData = {
   carrier: string
 }
 
-// Opciones de entrega. "Recoger en tienda" es gratis (entrega personal en CDMX).
-export const CARRIERS = ['Entrega en Rock Show', 'Estafeta', 'Correos de México', 'FedEx'] as const
+// Opciones de entrega. "Recoger en tienda" es gratis (entrega personal en CDMX)
+// y el casillero difiere la entrega hasta que el cliente junte varias cosas.
+export const CARRIERS = ['Entrega en Rock Show', CASILLERO, 'Estafeta', 'Correos de México', 'FedEx'] as const
 
 type Props = {
   open:        boolean
@@ -70,13 +71,16 @@ export default function SaldoConfirmModal({ open, title, amount, total, needShip
 
   if (!open) return null
 
-  const pickup = carrier === 'Entrega en Rock Show'
+  const pickup    = carrier === 'Entrega en Rock Show'
+  const guardado  = carrier === CASILLERO
+  // Ni recoger en persona ni guardar mueven un paquete todavía: la dirección
+  // se pide después, cuando el cliente pida el envío.
+  const sinEnvio  = pickup || guardado
   const ship   = needShipping ? shippingCost(carrier) : 0
   const grand  = amount + ship  // lo que se descuenta del saldo (producto + envío)
-  // Recoger en tienda solo necesita nombre + teléfono; envío necesita dirección completa.
   const missing = needShipping && (
     !name.trim() || !phone.trim() ||
-    (!pickup && (!street.trim() || !numExt.trim() || !city.trim() || !state.trim() || !zip.trim()))
+    (!sinEnvio && (!street.trim() || !numExt.trim() || !city.trim() || !state.trim() || !zip.trim()))
   )
 
   function confirm() {
@@ -152,12 +156,14 @@ export default function SaldoConfirmModal({ open, title, amount, total, needShip
               })}
             </div>
             <div style={{ fontSize: 11, color: 'var(--ink-4)', marginBottom: 16 }}>
-              {pickup
+              {guardado
+                ? 'Te la guardamos y la mandamos junto con lo que compres después. Pides el envío cuando quieras y pagas una sola vez.'
+                : pickup
                 ? 'Entrega personal en CDMX (punto medio o sábados en el Rock Show). Coordinamos por WhatsApp.'
                 : 'El costo del envío se suma al total y se descuenta de tu saldo.'}
             </div>
 
-            {pickup ? (
+            {sinEnvio ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
                 {field('Nombre completo', name, setName, { required: true })}
                 {field('Teléfono', phone, setPhone, { required: true, placeholder: '55 1234 5678' })}
