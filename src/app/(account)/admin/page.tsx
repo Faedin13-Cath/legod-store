@@ -42,6 +42,27 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [loadingOrders, setLoadingOrders] = useState(true)
 
+  const [mailStatus, setMailStatus] = useState('')
+  const [mailBusy, setMailBusy] = useState(false)
+
+  async function enviarPreviews() {
+    setMailBusy(true); setMailStatus('')
+    try {
+      const res = await fetch('/api/admin/email-preview', { method: 'POST' })
+      const d = await res.json()
+      if (!res.ok) { setMailStatus(d.error ?? 'No se pudieron enviar.'); return }
+      const fall = (d.fallidos ?? []) as { plantilla: string; error: string }[]
+      setMailStatus(
+        `Enviados a ${d.to}: ${(d.enviados ?? []).join(', ')}`
+        + (fall.length ? ` · Fallaron: ${fall.map(f => `${f.plantilla} (${f.error})`).join('; ')}` : '')
+      )
+    } catch {
+      setMailStatus('No se pudo conectar.')
+    } finally {
+      setMailBusy(false)
+    }
+  }
+
   const [figuras, setFiguras] = useState<PreventaFigura[]>([])
   const [loadingPreventas, setLoadingPreventas] = useState(true)
   const [marcando, setMarcando] = useState<string | null>(null)
@@ -202,6 +223,26 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
+        )}
+      </div>
+
+      {/* Plantillas de correo */}
+      <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 16, padding: '22px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+            <Icon name="user" size={18} />
+          </div>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', margin: 0 }}>Plantillas de correo</h2>
+        </div>
+        <p style={{ fontSize: 12, color: 'var(--ink-3)', margin: '0 0 14px', lineHeight: 1.6 }}>
+          Te manda una copia de cada plantilla a tu correo para revisarlas en Gmail,
+          que rompe HTML que en el navegador se ve bien.
+        </p>
+        <button onClick={enviarPreviews} disabled={mailBusy} className="btn btn-primary btn-sm">
+          {mailBusy ? 'Enviando…' : 'Enviarme las plantillas'}
+        </button>
+        {mailStatus && (
+          <p style={{ fontSize: 12, color: 'var(--ink-2)', margin: '10px 0 0', lineHeight: 1.6 }}>{mailStatus}</p>
         )}
       </div>
 
