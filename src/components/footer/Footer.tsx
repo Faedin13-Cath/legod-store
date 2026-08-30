@@ -73,6 +73,7 @@ export default function Footer() {
             <li><Link href="/tienda" style={linkStyle}>Todas las minifiguras</Link></li>
             <li><Link href="/tienda?tipo=set-sealed" style={linkStyle}>Sets sellados</Link></li>
             <li><Link href="/tienda?tipo=set-used" style={linkStyle}>Sets usados</Link></li>
+            <li><Link href="/preventas" style={linkStyle}>Preventas</Link></li>
             <li><Link href="/gift-cards" style={linkStyle}>Gift cards</Link></li>
             <li><Link href="/promos" style={linkStyle}>Promos</Link></li>
           </ul>

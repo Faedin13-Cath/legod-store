@@ -13,6 +13,7 @@ interface Props { alertsCount?: number }
 const navItems = [
   { href: '/',           label: 'Inicio' },
   { href: '/tienda',     label: 'Tienda' },
+  { href: '/preventas',  label: 'Preventas' },
   { href: '/promos',     label: 'Promos' },
   { href: '/vendenos',   label: 'Véndenos' },
   { href: '/gift-cards', label: 'Gift cards' },

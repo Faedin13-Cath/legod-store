@@ -85,10 +85,11 @@ export function amountsFor(pricing: PreventaPricing, modalidad: Modalidad) {
 export type Modalidad = 'completo' | 'split'
 
 /**
- * Mientras esté en `false`, el catálogo de preventas solo lo ven las cuentas
- * con `profiles.is_admin`. Ponerlo en `true` la abre a todo el público.
+ * En `false` el catálogo de preventas solo lo ven las cuentas con
+ * `profiles.is_admin`. En `true` lo ve cualquiera: apartar sigue pidiendo
+ * cuenta, pero mirar es libre.
  */
-export const PREVENTAS_PUBLIC = false
+export const PREVENTAS_PUBLIC = true
 
 /**
  * Llegada estimada del lote en preventa. Es tentativa: los envíos desde el

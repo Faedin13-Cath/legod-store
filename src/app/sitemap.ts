@@ -8,6 +8,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
     { url: BASE, changeFrequency: 'daily', priority: 1 },
     { url: `${BASE}/tienda`, changeFrequency: 'daily', priority: 0.9 },
+    { url: `${BASE}/preventas`, changeFrequency: 'daily', priority: 0.8 },
     { url: `${BASE}/promos`, changeFrequency: 'daily', priority: 0.7 },
     { url: `${BASE}/gift-cards`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE}/vendenos`, changeFrequency: 'monthly', priority: 0.6 },
@@ -22,7 +23,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const products = await getProducts()
     productPages = products
-      // Las preventas no se indexan: su sección aún no es pública.
+      // Las fichas de preventa no se indexan por separado: no se compran desde
+      // ahí y son temporales. /preventas es la página que sí queremos posicionar.
       .filter(p => !parsePreventa(p.tags))
       .map(p => ({
       url: `${BASE}/tienda/${p.handle}`,
