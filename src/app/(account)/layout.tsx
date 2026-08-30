@@ -10,20 +10,18 @@ import { nextReward } from '@/lib/loyalty'
 type Item = { href: string; icon: string; label: string }
 
 /**
- * Once entradas planas no se pueden escanear, y varias se confunden entre sí:
- * apartados, preventas y casillero son tres formas distintas de "mi figura
- * todavía no llega". Agrupadas, cada bloque responde a una pregunta.
+ * Pedidos, apartados, preventas y casillero contestaban la misma pregunta
+ * ("¿dónde está mi figura?") desde cuatro entradas distintas, y para acertar
+ * había que conocer las categorías internas de la tienda. Ahora "Mis pedidos"
+ * las reúne y desde ahí se entra a cada una; siguen existiendo como páginas.
  */
 const GRUPOS: { titulo: string; items: Item[] }[] = [
   {
     titulo: 'Mis figuras',
     items: [
-      { href: '/pedidos',       icon: 'package',   label: 'Mis pedidos' },
-      { href: '/casillero',     icon: 'truck',     label: 'Mi casillero' },
-      { href: '/apartados',     icon: 'clock',     label: 'Apartados' },
-      { href: '/mis-preventas', icon: 'package',   label: 'Preventas' },
-      { href: '/coleccion',     icon: 'grid',      label: 'Mi colección' },
-      { href: '/wishlist',      icon: 'star',      label: 'Wishlist' },
+      { href: '/pedidos',   icon: 'package', label: 'Mis pedidos' },
+      { href: '/coleccion', icon: 'grid',    label: 'Mi colección' },
+      { href: '/wishlist',  icon: 'star',    label: 'Wishlist' },
     ],
   },
   {
@@ -42,8 +40,18 @@ const GRUPOS: { titulo: string; items: Item[] }[] = [
   },
 ]
 
+/** Páginas que se abren desde "Mis pedidos" y ya no tienen entrada propia. */
+const HIJAS_DE_PEDIDOS = ['/casillero', '/apartados', '/mis-preventas']
+
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname()
+
+  function esActivo(href: string) {
+    if (path === href || path.startsWith(href + '/')) return true
+    // Estando en el casillero o en un apartado, el menú debe seguir señalando
+    // de dónde se entró; si no, nada queda marcado y se pierde el hilo.
+    return href === '/pedidos' && HIJAS_DE_PEDIDOS.some(h => path.startsWith(h))
+  }
   const router = useRouter()
   const { user, profile, loading, signOut } = useAuth()
 
@@ -134,7 +142,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                   {g.titulo}
                 </div>
                 {g.items.map(item => {
-                  const active = path === item.href || path.startsWith(item.href + '/')
+                  const active = esActivo(item.href)
                   return (
                     <Link
                       key={item.href}
@@ -207,7 +215,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
               scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch',
             }}>
               {navItems.map(item => {
-                const active = path === item.href || path.startsWith(item.href + '/')
+                const active = esActivo(item.href)
                 return (
                   <Link
                     key={item.href}
