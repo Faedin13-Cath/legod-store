@@ -23,6 +23,12 @@ type OrderRow = {
   customer: { name: string; handle: string | null; email: string | null } | null
 }
 
+type PreventaFigura = {
+  handle: string; name: string; photo: string | null; stock: number
+  arrivedAt: string | null
+  unidades: number; pendiente: number; clientes: number
+}
+
 export default function AdminPage() {
   const { profile, loading } = useAuth()
   const isOwner = !!profile?.is_admin
@@ -35,6 +41,34 @@ export default function AdminPage() {
 
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [loadingOrders, setLoadingOrders] = useState(true)
+
+  const [figuras, setFiguras] = useState<PreventaFigura[]>([])
+  const [loadingPreventas, setLoadingPreventas] = useState(true)
+  const [marcando, setMarcando] = useState<string | null>(null)
+
+  async function toggleLlegada(f: PreventaFigura) {
+    const marcar = !f.arrivedAt
+    if (marcar && f.clientes > 0 && !confirm(
+      `¿Marcar "${f.name}" como llegada?\n\n`
+      + `Se le habilita el cobro a ${f.clientes} ${f.clientes === 1 ? 'cliente' : 'clientes'}`
+      + ` por $${f.pendiente.toLocaleString('es-MX')} MXN en total.`
+    )) return
+
+    setMarcando(f.handle)
+    try {
+      const res = await fetch('/api/admin/preventas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handle: f.handle, arrived: marcar }),
+      })
+      if (!res.ok) { alert('No se pudo actualizar la figura.'); return }
+      setFiguras(prev => prev.map(x =>
+        x.handle === f.handle ? { ...x, arrivedAt: marcar ? new Date().toISOString() : null } : x
+      ))
+    } finally {
+      setMarcando(null)
+    }
+  }
 
   useEffect(() => {
     if (!isOwner) return
@@ -52,6 +86,11 @@ export default function AdminPage() {
       .then(r => r.ok ? r.json() : { orders: [] })
       .then(d => { setOrders(d.orders ?? []); setLoadingOrders(false) })
       .catch(() => setLoadingOrders(false))
+
+    fetch('/api/admin/preventas')
+      .then(r => r.ok ? r.json() : { figuras: [] })
+      .then(d => { setFiguras(d.figuras ?? []); setLoadingPreventas(false) })
+      .catch(() => setLoadingPreventas(false))
   }, [isOwner])
 
   if (loading) {
@@ -162,6 +201,69 @@ export default function AdminPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+      </div>
+
+      {/* Preventas — liberar el cobro del saldo cuando llega la figura */}
+      <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 16, padding: '22px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+            <Icon name="clock" size={18} />
+          </div>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
+            Preventas
+            {figuras.filter(f => f.clientes > 0 && !f.arrivedAt).length > 0 && (
+              <span style={{ fontSize: 11, fontWeight: 700, background: 'var(--accent)', color: '#fff', padding: '2px 8px', borderRadius: 999, marginLeft: 8 }}>
+                {figuras.filter(f => f.clientes > 0 && !f.arrivedAt).length} por llegar
+              </span>
+            )}
+          </h2>
+        </div>
+        <p style={{ fontSize: 12, color: 'var(--ink-3)', margin: '0 0 16px', lineHeight: 1.6 }}>
+          Marca una figura cuando la tengas en mano: se le habilita el pago del saldo a
+          todos los que la apartaron, sin importar cuántos sean.
+        </p>
+
+        {loadingPreventas ? (
+          <div style={{ color: 'var(--ink-3)', fontSize: 13, padding: '16px 0' }}>Cargando figuras…</div>
+        ) : figuras.length === 0 ? (
+          <div style={{ color: 'var(--ink-3)', fontSize: 13, padding: '16px 0' }}>No hay figuras en preventa.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {figuras.map(f => {
+              const llego = !!f.arrivedAt
+              return (
+                <div key={f.handle} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '10px 12px', borderRadius: 10,
+                  background: llego ? '#F0FBF4' : 'var(--cream)',
+                  border: `1px solid ${llego ? '#86EFAC' : 'var(--line)'}`,
+                }}>
+                  {f.photo && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={f.photo} alt="" width={34} height={34}
+                         style={{ objectFit: 'contain', flexShrink: 0, background: '#fff', borderRadius: 6 }} />
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{f.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 1 }}>
+                      {f.clientes > 0
+                        ? `${f.clientes} ${f.clientes === 1 ? 'cliente espera' : 'clientes esperan'} · $${f.pendiente.toLocaleString('es-MX')} por cobrar`
+                        : 'Sin apartados con saldo pendiente'}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => toggleLlegada(f)}
+                    disabled={marcando === f.handle}
+                    className={llego ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm'}
+                    style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+                  >
+                    {marcando === f.handle ? '…' : llego ? 'Llegó — deshacer' : 'Marcar que llegó'}
+                  </button>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

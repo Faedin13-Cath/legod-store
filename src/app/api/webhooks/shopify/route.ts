@@ -259,6 +259,41 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
   }
 
+  /* ── Liquidación de preventa: el cliente pagó las figuras que ya llegaron.
+     Puede quedar saldo vivo si en el mismo apartado hay figuras por llegar. ── */
+  if (attr('tipo') === 'preventa_liquidacion') {
+    const preventaId = attr('preventa_id')
+
+    let handles: string[] = []
+    try { handles = JSON.parse(attr('handles') ?? '[]') } catch { /* se cierra completa abajo */ }
+
+    if (preventaId) {
+      const { data: pv } = await supabase
+        .from('preventas')
+        .select('items, pagado, pendiente')
+        .eq('id', preventaId)
+        .single()
+
+      type PvItem = { id: string; pagado?: number; pendiente?: number }
+      const items = ((pv?.items ?? []) as PvItem[]).map(it =>
+        // Sin lista de handles (pedido viejo) se liquida todo.
+        (!handles.length || handles.includes(it.id))
+          ? { ...it, pagado: (it.pagado ?? 0) + (it.pendiente ?? 0), pendiente: 0 }
+          : it
+      )
+
+      const pendiente = items.reduce((s, it) => s + (it.pendiente ?? 0), 0)
+      const pagado    = items.reduce((s, it) => s + (it.pagado ?? 0), 0)
+
+      await supabase.from('preventas').update({
+        items, pagado, pendiente,
+        status: pendiente > 0 ? 'active' : 'completed',
+      }).eq('id', preventaId)
+    }
+
+    return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
+  }
+
   /* ── Liquidación: mark apartado as completed + deduct balance if used ── */
   if (attr('tipo') === 'liquidacion') {
     const apartadoId  = attr('apartado_id')
