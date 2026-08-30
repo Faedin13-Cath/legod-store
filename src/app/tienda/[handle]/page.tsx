@@ -32,7 +32,7 @@ const DETALLE_CHIP = { label: 'Con detalle', color: '#B45309' }
 export default function ProductPage({ params }: { params: { handle: string } }) {
   const { handle } = params
   const router = useRouter()
-  const { addItem } = useCart()
+  const { addItem, openCart } = useCart()
   const { profile } = useAuth()
 
   const [product,  setProduct]  = useState<Product | null | undefined>(undefined)
@@ -99,6 +99,10 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
       for (let i = 0; i < qty; i++) addItem(product)
     }
     setAdded(true)
+    // El botón cambiaba 2 segundos y aparecía un 1 diminuto en el ícono:
+    // mirando la foto es fácil no notarlo y darle dos veces. Abrir el cajón
+    // confirma sin ambigüedad y de paso enseña la opción de casillero.
+    openCart()
     setTimeout(() => setAdded(false), 2000)
   }
 

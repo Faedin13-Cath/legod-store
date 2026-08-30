@@ -1,15 +1,34 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
 import { createClient } from '@/lib/supabase/client'
 
 type View = 'login' | 'register' | 'forgot'
 
-export default function LoginPage() {
+/** De dónde te sacó el guardia, para explicarlo y devolverte ahí después. */
+const DESTINOS: Record<string, string> = {
+  '/perfil':        'ver tu perfil',
+  '/pedidos':       'ver tus pedidos',
+  '/casillero':     'ver tu casillero',
+  '/mis-preventas': 'ver tus preventas',
+  '/apartados':     'ver tus apartados',
+  '/coleccion':     'ver tu colección',
+  '/wishlist':      'ver tu wishlist',
+  '/alertas':       'ver tus alertas',
+  '/lealtad':       'ver tus puntos',
+  '/saldo':         'ver tu saldo',
+  '/preventas':     'apartar en preventa',
+  '/admin':         'entrar a administración',
+}
+
+function LoginContent() {
+  const searchParams = useSearchParams()
+  const next = searchParams.get('next') ?? ''
+  const motivo = DESTINOS[next] ?? ''
   const [view,    setView]    = useState<View>('login')
   const [email,   setEmail]   = useState('')
   const [pass,    setPass]    = useState('')
@@ -28,7 +47,9 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password: pass })
     setBusy(false)
     if (error) { setError(error.message); return }
-    router.push('/perfil')
+    // Devolver a donde iba, no al perfil por defecto: si lo sacaron de su
+    // casillero, mandarlo al perfil lo obliga a buscar el camino de vuelta.
+    router.push(next || '/perfil')
     router.refresh()
   }
 
@@ -80,9 +101,15 @@ export default function LoginPage() {
             <Image src="/assets/logo/legod-logo-violet.png" alt="LEGOD" width={40} height={40} style={{ borderRadius: '50%' }} />
             <div style={{ textAlign: 'left' }}>
               <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--ink)' }}>Jango&apos;s Store</div>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>Jango&apos;s Store</div>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>Minifiguras LEGO</div>
             </div>
           </Link>
+
+          {motivo && (
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', margin: '14px 0 0', lineHeight: 1.5 }}>
+              Inicia sesión para {motivo}.
+            </p>
+          )}
         </div>
 
         <div style={{ padding: '28px 36px 36px' }}>
@@ -271,5 +298,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// useSearchParams obliga a un límite de Suspense para que la página siga
+// prerenderizándose en el build.
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-3)', fontSize: 15 }}>
+        Cargando…
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }

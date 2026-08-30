@@ -46,7 +46,13 @@
   /* Text */
   --ink:             #1A1E5A;
   --ink-2:           #4F5180;
-  --ink-3:           #8A8CA8;
+  /* Es el color del texto secundario en todo el sitio (fechas, subtítulos,
+     etiquetas de formulario) a 11-13px. El gris anterior daba 2.96:1 sobre
+     crema, muy por debajo del mínimo legible de 4.5:1: este es el más claro
+     que pasa sobre papel, crema y accent-soft a la vez. */
+  --ink-3:           #636579;
+  /* Solo para íconos decorativos y estados deshabilitados: no pasa contraste
+     de texto, así que nunca debe llevar contenido que haya que leer. */
   --ink-4:           #C9CADD;
   /* Lines */
   --line:            #E6E4DD;
@@ -547,6 +553,17 @@ a[href*="/tienda"].more-link,
   .sets-grid   { grid-template-columns: repeat(3, 1fr) !important; }
 }
 
+/* ── Tablet: el menú tiene seis entradas y entre 769 y 1023px se partía en
+   dos líneas, además de aplastar el buscador. Se aprieta antes de romperse. ── */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .header-row    { padding: 0 16px !important; gap: 4px !important; }
+  .logo-text     { font-size: 15px !important; }
+  .nav-desktop   { margin-left: 8px !important; gap: 0 !important; }
+  .nav-link      { font-size: 13px !important; padding: 6px 6px !important; white-space: nowrap !important; }
+  .search-wrap   { width: 132px !important; }
+  .search-kbd    { display: none !important; }
+}
+
 /* ── Mobile ≤768px ───────────────────────────────────────────── */
 @media (max-width: 768px) {
   /* Header */
@@ -616,6 +633,10 @@ a[href*="/tienda"].more-link,
   /* Account layout */
   .account-layout { grid-template-columns: 1fr !important; }
   .account-sidebar-el { display: none !important; }
+  /* Reemplaza a la barra lateral oculta: sin esto la cuenta no se puede
+     navegar en teléfono. */
+  .account-nav-mobile { display: block !important; }
+  .account-nav-mobile nav::-webkit-scrollbar { display: none; }
 }
 
 /* ── Small mobile ≤480px ──────────────────────────────────────── */

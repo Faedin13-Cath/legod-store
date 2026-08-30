@@ -303,6 +303,25 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
         {items.length > 0 && (
           <div style={{ padding: '20px 24px', borderTop: '1px solid var(--line)' }}>
 
+            {/* El envío se elige y se cobra hasta el checkout, así que el
+                subtotal de arriba no es el total. Decirlo aquí evita la
+                sorpresa, y es el único momento en que el casillero es una
+                decisión útil: después ya está enterrado entre paqueterías. */}
+            <div style={{
+              display: 'flex', alignItems: 'flex-start', gap: 8,
+              background: 'var(--cream)', border: '1px solid var(--line)',
+              borderRadius: 10, padding: '10px 12px', marginBottom: 14,
+            }}>
+              <span style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 1 }}>
+                <Icon name="truck" size={14} />
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.55 }}>
+                El envío se calcula al pagar. Si prefieres juntar varias compras,
+                elige <strong>&ldquo;Guardar en mi casillero&rdquo;</strong> y te lo
+                guardamos sin costo hasta que pidas el envío.
+              </span>
+            </div>
+
             {/* Subtotal */}
             <div style={{ marginBottom: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: useBalance && userBalance > 0 ? 4 : 0 }}>
