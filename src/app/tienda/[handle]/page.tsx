@@ -253,9 +253,11 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
               {canSeePreventa ? (
                 <>
                   <p style={{ fontSize: 13, color: 'var(--ink-2)', margin: '0 0 14px', lineHeight: 1.6 }}>
-                    Pagando completo son <strong>${pv.full.toLocaleString('es-MX')} MXN</strong>. Con
-                    anticipo, <strong>${pv.deposit.toLocaleString('es-MX')} MXN</strong> ahora y{' '}
-                    <strong>${pv.pending.toLocaleString('es-MX')} MXN</strong> al llegar.
+                    Pagando completo son <strong>${pv.full.toLocaleString('es-MX')} MXN</strong>.
+                    {pv.split
+                      ? <> Con anticipo, <strong>${pv.split.deposit.toLocaleString('es-MX')} MXN</strong> ahora y{' '}
+                          <strong>${pv.split.pending.toLocaleString('es-MX')} MXN</strong> al llegar.</>
+                      : ' Esta figura solo se puede pagar completa.'}
                   </p>
                   <Link href="/preventas" className="btn btn-primary" style={{ textDecoration: 'none', display: 'inline-flex' }}>
                     Reservar en preventa →

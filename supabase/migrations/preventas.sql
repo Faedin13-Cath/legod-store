@@ -6,8 +6,9 @@ create table if not exists preventas (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references profiles(id) on delete cascade,
   items       jsonb not null default '[]'::jsonb,
-  -- 'completo' = se pagó todo al reservar; 'split' = 60% ahora, resto al llegar
-  modalidad   text not null check (modalidad in ('completo', 'split')),
+  -- 'completo' = se pagó todo al reservar; 'split' = 60% ahora, resto al llegar;
+  -- 'mixta' = un mismo pedido con figuras de las dos modalidades
+  modalidad   text not null check (modalidad in ('completo', 'split', 'mixta')),
   total       integer not null,
   pagado      integer not null,
   pendiente   integer not null default 0,

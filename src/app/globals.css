@@ -607,7 +607,7 @@ a[href*="/tienda"].more-link,
   .pdp-grid { grid-template-columns: 1fr !important; }
 
   /* Preventas */
-  .preventa-card { grid-template-columns: 1fr !important; }
+  .preventa-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
 
   /* Head component title + spacing */
   .sec-title { font-size: 28px !important; }
