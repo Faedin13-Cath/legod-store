@@ -314,10 +314,9 @@ export default function LealtadPage() {
         <h2 style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 14px' }}>
           Cómo ganar puntos
         </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
           {[
             { emoji: '🛍️', label: 'Comprar en tienda', sub: 'Según tu nivel: $3–$5 MXN = 1 pto' },
-            { emoji: '👋', label: 'Primera compra',    sub: '+100 puntos de bienvenida' },
           ].map(item => (
             <div key={item.label} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <div style={{
