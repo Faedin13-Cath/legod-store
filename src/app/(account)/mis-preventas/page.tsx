@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
+import { LLEGADA_TENTATIVA } from '@/lib/preventa'
 
 const WHATSAPP = process.env.NEXT_PUBLIC_WHATSAPP ?? '525574777350'
 
@@ -75,9 +76,11 @@ function PreventaCard({ pv }: { pv: Preventa }) {
           background: 'var(--cream)', border: '1px solid var(--line)',
           fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.6,
         }}>
+          <strong style={{ color: 'var(--ink)' }}>Llegada tentativa: {LLEGADA_TENTATIVA}</strong>{' '}
+          (puede tardar más).{' '}
           {liquidada
             ? 'Ya está cubierta por completo. Te escribimos en cuanto llegue para coordinar el envío.'
-            : <>Cuando la figura llegue te contactamos para cobrar los ${pv.pendiente.toLocaleString('es-MX')} MXN restantes y coordinar el envío.{' '}
+            : <>Cuando llegue te contactamos para cobrar los ${pv.pendiente.toLocaleString('es-MX')} MXN restantes y coordinar el envío.{' '}
                 <a href={`https://wa.me/${WHATSAPP}`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 500 }}>
                   ¿Dudas? Escríbenos.
                 </a>

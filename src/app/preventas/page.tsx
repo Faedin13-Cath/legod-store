@@ -7,7 +7,7 @@ import MinifigImage from '@/components/product/MinifigImage'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { getProducts, shopifyToProduct } from '@/lib/shopify'
-import { PREVENTAS_PUBLIC, amountsFor, type Modalidad } from '@/lib/preventa'
+import { PREVENTAS_PUBLIC, LLEGADA_TENTATIVA, amountsFor, type Modalidad } from '@/lib/preventa'
 import type { Product } from '@/types'
 
 type Seleccion = { modalidad: Modalidad; qty: number }
@@ -209,6 +209,7 @@ export default function PreventasPage() {
   const [sel,     setSel]     = useState<Record<string, Seleccion>>({})
   const [sending, setSending] = useState(false)
   const [error,   setError]   = useState('')
+  const [needsLogin, setNeedsLogin] = useState(false)
 
   const allowed = PREVENTAS_PUBLIC || !!profile?.is_admin
 
@@ -234,6 +235,7 @@ export default function PreventasPage() {
   }, [items, sel])
 
   function setSeleccion(handle: string, next: Seleccion | null) {
+    setNeedsLogin(false)
     setSel(prev => {
       const copy = { ...prev }
       if (next) copy[handle] = next
@@ -243,7 +245,9 @@ export default function PreventasPage() {
   }
 
   async function reservar() {
-    if (!user) { window.location.href = '/login?next=/preventas'; return }
+    // Ver el catálogo es libre; apartar necesita cuenta para poder ligar la
+    // preventa a alguien. En vez de mandarlo al login de golpe, se le avisa.
+    if (!user) { setNeedsLogin(true); return }
     setError(''); setSending(true)
     try {
       const res = await fetch('/api/checkout/preventa', {
@@ -306,11 +310,27 @@ export default function PreventasPage() {
         <h1 style={{ fontSize: 34, fontWeight: 700, color: 'var(--ink)', margin: '0 0 8px', lineHeight: 1.15 }}>
           Preventas
         </h1>
-        <p style={{ fontSize: 15, color: 'var(--ink-2)', margin: '0 0 32px', lineHeight: 1.6, maxWidth: 580 }}>
+        <p style={{ fontSize: 15, color: 'var(--ink-2)', margin: '0 0 20px', lineHeight: 1.6, maxWidth: 580 }}>
           Aparta figuras antes de que lleguen. Elige las que quieras: pagas menos si
           liquidas de una vez, o reservas con un anticipo y cubres el resto cuando
           las tengamos en mano.
         </p>
+
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: 10,
+          background: 'var(--paper)', border: '1px solid var(--line)',
+          borderLeft: '1px solid var(--line)', borderRadius: 12,
+          padding: '14px 18px', marginBottom: 32, maxWidth: 580,
+        }}>
+          <span style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 1 }}>
+            <Icon name="truck" size={17} />
+          </span>
+          <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.6 }}>
+            <strong style={{ color: 'var(--ink)' }}>Llegada tentativa: {LLEGADA_TENTATIVA}.</strong>{' '}
+            Es una estimación, no una fecha garantizada: los envíos se retrasan seguido
+            y pueden tardar más. Te avisamos por WhatsApp en cuanto lleguen.
+          </div>
+        </div>
 
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -372,12 +392,29 @@ export default function PreventasPage() {
               {error && (
                 <span style={{ fontSize: 13, color: '#DC2626', maxWidth: 280 }}>{error}</span>
               )}
-              <button onClick={() => { setSel({}); setError('') }} className="btn btn-secondary btn-sm">
-                Limpiar
-              </button>
-              <button onClick={reservar} disabled={sending} className="btn btn-primary" style={{ height: 44, fontSize: 15, padding: '0 24px' }}>
-                {sending ? 'Generando pago…' : 'Reservar →'}
-              </button>
+              {needsLogin ? (
+                <>
+                  <span style={{ fontSize: 13, color: 'var(--ink-2)', maxWidth: 260 }}>
+                    Necesitas una cuenta para apartar.
+                  </span>
+                  <Link
+                    href="/login?next=/preventas"
+                    className="btn btn-primary"
+                    style={{ height: 44, fontSize: 15, padding: '0 24px', textDecoration: 'none' }}
+                  >
+                    Iniciar sesión →
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => { setSel({}); setError('') }} className="btn btn-secondary btn-sm">
+                    Limpiar
+                  </button>
+                  <button onClick={reservar} disabled={sending} className="btn btn-primary" style={{ height: 44, fontSize: 15, padding: '0 24px' }}>
+                    {sending ? 'Generando pago…' : 'Reservar →'}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

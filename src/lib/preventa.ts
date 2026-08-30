@@ -89,3 +89,10 @@ export type Modalidad = 'completo' | 'split'
  * con `profiles.is_admin`. Ponerlo en `true` la abre a todo el público.
  */
 export const PREVENTAS_PUBLIC = false
+
+/**
+ * Llegada estimada del lote en preventa. Es tentativa: los envíos desde el
+ * extranjero se retrasan seguido, así que en la interfaz siempre se dice
+ * junto con la advertencia de que puede tardar más.
+ */
+export const LLEGADA_TENTATIVA = '4 de noviembre'

@@ -9,7 +9,7 @@ import ProductCard from '@/components/product/ProductCard'
 import { useCart } from '@/components/cart/CartProvider'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { getProducts, getProductByHandle, shopifyToProduct } from '@/lib/shopify'
-import { PREVENTAS_PUBLIC } from '@/lib/preventa'
+import { PREVENTAS_PUBLIC, LLEGADA_TENTATIVA } from '@/lib/preventa'
 import type { Product } from '@/types'
 
 const STATE_LABEL: Record<string, string> = {
@@ -59,7 +59,9 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
         if (!all) return
         setRelated(
           all.map(shopifyToProduct)
-             .filter(p => p.id !== handle)
+             // Las preventas fuera: aquí saldrían con su precio de catálogo,
+             // que no es el que se paga en /preventas.
+             .filter(p => p.id !== handle && !p.preventa)
              .slice(0, 5)
         )
       })
@@ -258,6 +260,7 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
                       ? <> Con anticipo, <strong>${pv.split.deposit.toLocaleString('es-MX')} MXN</strong> ahora y{' '}
                           <strong>${pv.split.pending.toLocaleString('es-MX')} MXN</strong> al llegar.</>
                       : ' Esta figura solo se puede pagar completa.'}
+                    {' '}Llegada tentativa: <strong>{LLEGADA_TENTATIVA}</strong> (puede tardar más).
                   </p>
                   <Link href="/preventas" className="btn btn-primary" style={{ textDecoration: 'none', display: 'inline-flex' }}>
                     Reservar en preventa →
@@ -358,7 +361,9 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
             {[
               { icon: 'truck',   text: 'Envío a todo México' },
               { icon: 'shield',  text: 'Pago seguro' },
-              { icon: 'clock',   text: 'Apartado 7 días' },
+              // En preventa no aplica el plazo de apartado: la figura no está aquí.
+              pv ? { icon: 'clock', text: `Llega aprox. ${LLEGADA_TENTATIVA}` }
+                 : { icon: 'clock', text: 'Apartado 7 días' },
               { icon: 'sparkle', text: 'Puntos por cada compra' },
             ].map(b => (
               <div key={b.text} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--ink-2)' }}>
