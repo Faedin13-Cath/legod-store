@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { awardPurchasePoints } from '@/lib/loyalty'
+import { guardarEnCasillero } from '@/lib/casillero'
 
 const domain     = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN!
 const adminToken = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN
@@ -320,6 +321,17 @@ export async function POST(req: NextRequest) {
         items, pagado, pendiente,
         status: pendiente > 0 ? 'active' : 'completed',
       }).eq('id', preventaId)
+
+      // Lo que acaba de quedar pagado ya llegó y es suyo: se va al casillero
+      // para que lo junte con sus otras compras en un solo envío.
+      const reciénPagadas = (items as (PvItem & { name?: string; qty?: number })[])
+        .filter(it => !handles.length || handles.includes(it.id))
+      await guardarEnCasillero(supabase, {
+        userId:     authUser.id,
+        piezas:     reciénPagadas.map(it => ({ name: it.name ?? it.id, qty: it.qty ?? 1 })),
+        referencia: `preventa_${preventaId}_${orderId}`,
+        numero:     String(orderNum ?? orderId),
+      })
     }
 
     return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })

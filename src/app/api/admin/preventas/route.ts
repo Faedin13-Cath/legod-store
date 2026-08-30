@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isAdmin } from '@/lib/admin'
 import { getProducts, shopifyToProduct } from '@/lib/shopify'
+import { guardarEnCasillero } from '@/lib/casillero'
 import { cookies } from 'next/headers'
 
 async function requireAdmin() {
@@ -84,5 +85,29 @@ export async function POST(req: NextRequest) {
     : await admin.from('preventa_arrivals').delete().eq('handle', handle)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+
+  // Quien pagó la figura completa por adelantado no tiene saldo que liquidar,
+  // así que nada dispararía su entrega. Al marcarla como llegada pasa directo
+  // al casillero, listo para que pida el envío.
+  let alCasillero = 0
+  if (arrived) {
+    const { data: preventas } = await admin
+      .from('preventas')
+      .select('id, user_id, items')
+      .in('status', ['active', 'completed'])
+
+    type Pieza = { id: string; name?: string; qty?: number; pendiente?: number }
+    for (const pv of preventas ?? []) {
+      const pieza = ((pv.items ?? []) as Pieza[]).find(i => i.id === handle)
+      if (!pieza || (pieza.pendiente ?? 0) > 0) continue
+      await guardarEnCasillero(admin, {
+        userId:     pv.user_id,
+        piezas:     [{ name: pieza.name ?? handle, qty: pieza.qty ?? 1 }],
+        referencia: `preventa_${pv.id}_${handle}`,
+      })
+      alCasillero++
+    }
+  }
+
+  return NextResponse.json({ ok: true, alCasillero })
 }

@@ -23,6 +23,22 @@ type OrderRow = {
   customer: { name: string; handle: string | null; email: string | null } | null
 }
 
+type Cliente = { name: string; handle: string | null; email: string | null; whatsapp: string | null }
+
+type Casillero = {
+  userId: string; customer: Cliente | null
+  pedidos: { id: string; order_number: string; line_items: { title: string; quantity: number }[]; created_at: string }[]
+  piezas: number; diasMasViejo: number
+}
+
+type Envio = {
+  id: string; carrier: string; cost: number; status: string
+  tracking_number: string | null; created_at: string
+  shipping: { name?: string; phone?: string; street?: string; numExt?: string; colonia?: string; city?: string; state?: string; zip?: string } | null
+  customer: Cliente | null
+  contenido: { title: string; quantity: number }[]
+}
+
 type PreventaFigura = {
   handle: string; name: string; photo: string | null; stock: number
   arrivedAt: string | null
@@ -60,6 +76,32 @@ export default function AdminPage() {
       setMailStatus('No se pudo conectar.')
     } finally {
       setMailBusy(false)
+    }
+  }
+
+  const [casilleros, setCasilleros] = useState<Casillero[]>([])
+  const [envios, setEnvios] = useState<Envio[]>([])
+  const [loadingCasillero, setLoadingCasillero] = useState(true)
+  const [guias, setGuias] = useState<Record<string, string>>({})
+  const [despachando, setDespachando] = useState<string | null>(null)
+
+  async function marcarEnviado(e: Envio) {
+    const guia = (guias[e.id] ?? '').trim()
+    if (!confirm(`¿Marcar como enviado el paquete de ${e.customer?.name ?? 'este cliente'}?`
+      + (guia ? `\nGuía: ${guia}` : '\nSin número de guía.'))) return
+    setDespachando(e.id)
+    try {
+      const res = await fetch('/api/admin/casillero', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shipmentId: e.id, tracking: guia }),
+      })
+      if (!res.ok) { alert('No se pudo marcar como enviado.'); return }
+      setEnvios(prev => prev.map(x =>
+        x.id === e.id ? { ...x, status: 'shipped', tracking_number: guia || null } : x
+      ))
+    } finally {
+      setDespachando(null)
     }
   }
 
@@ -112,6 +154,15 @@ export default function AdminPage() {
       .then(r => r.ok ? r.json() : { figuras: [] })
       .then(d => { setFiguras(d.figuras ?? []); setLoadingPreventas(false) })
       .catch(() => setLoadingPreventas(false))
+
+    fetch('/api/admin/casillero')
+      .then(r => r.ok ? r.json() : { casilleros: [], envios: [] })
+      .then(d => {
+        setCasilleros(d.casilleros ?? [])
+        setEnvios(d.envios ?? [])
+        setLoadingCasillero(false)
+      })
+      .catch(() => setLoadingCasillero(false))
   }, [isOwner])
 
   if (loading) {
@@ -223,6 +274,129 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
+        )}
+      </div>
+
+      {/* Casillero — qué hay guardado y qué falta empacar */}
+      <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 16, padding: '22px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+            <Icon name="truck" size={18} />
+          </div>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
+            Casillero
+            {envios.filter(e => e.status === 'paid').length > 0 && (
+              <span style={{ fontSize: 11, fontWeight: 700, background: '#F5C84A', color: '#3A2A00', padding: '2px 8px', borderRadius: 999, marginLeft: 8 }}>
+                {envios.filter(e => e.status === 'paid').length} por empacar
+              </span>
+            )}
+          </h2>
+        </div>
+
+        {loadingCasillero ? (
+          <div style={{ color: 'var(--ink-3)', fontSize: 13, padding: '16px 0' }}>Cargando…</div>
+        ) : (
+          <>
+            {/* Envíos pagados que faltan mandar */}
+            {envios.filter(e => e.status === 'paid').length > 0 && (
+              <div style={{ marginBottom: 22 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                  Listos para empacar
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {envios.filter(e => e.status === 'paid').map(e => (
+                    <div key={e.id} style={{ background: '#FFF8E1', border: '1px solid #F5C84A', borderRadius: 12, padding: '14px 16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>
+                          {e.customer?.name ?? '—'}
+                          {e.customer?.handle && <span style={{ color: 'var(--ink-3)', fontWeight: 400, fontSize: 12 }}> @{e.customer.handle}</span>}
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#7A5B00' }}>{e.carrier}</div>
+                      </div>
+
+                      <div style={{ fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 8 }}>
+                        <strong>Contenido:</strong> {e.contenido.map(c => `${c.title}${c.quantity > 1 ? ` ×${c.quantity}` : ''}`).join(', ') || '—'}
+                      </div>
+
+                      {e.shipping && (
+                        <div style={{ fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 10 }}>
+                          <strong>Enviar a:</strong> {e.shipping.name} · {e.shipping.phone}<br />
+                          {[e.shipping.street, e.shipping.numExt].filter(Boolean).join(' ')}
+                          {e.shipping.colonia ? `, ${e.shipping.colonia}` : ''}
+                          {e.shipping.city ? `, ${e.shipping.city}` : ''}
+                          {e.shipping.state ? `, ${e.shipping.state}` : ''}
+                          {e.shipping.zip ? ` CP ${e.shipping.zip}` : ''}
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <input
+                          value={guias[e.id] ?? ''}
+                          onChange={ev => setGuias(g => ({ ...g, [e.id]: ev.target.value }))}
+                          placeholder="Número de guía"
+                          className="input"
+                          style={{ flex: '1 1 180px', fontSize: 13 }}
+                        />
+                        <button
+                          onClick={() => marcarEnviado(e)}
+                          disabled={despachando === e.id}
+                          className="btn btn-primary btn-sm"
+                          style={{ whiteSpace: 'nowrap' }}
+                        >
+                          {despachando === e.id ? '…' : 'Marcar enviado'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Lo que sigue esperando en bodega */}
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+              Guardado en bodega
+            </div>
+            {casilleros.length === 0 ? (
+              <div style={{ color: 'var(--ink-3)', fontSize: 13, padding: '8px 0' }}>
+                Nadie tiene cosas guardadas ahora mismo.
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', color: 'var(--ink-3)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <th style={{ padding: '8px 10px 8px 0' }}>Cliente</th>
+                      <th style={{ padding: '8px 10px' }}>Contenido</th>
+                      <th style={{ padding: '8px 10px' }}>Piezas</th>
+                      <th style={{ padding: '8px 0 8px 10px' }}>Más antiguo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {casilleros.map(c => {
+                      const viejo = c.diasMasViejo >= 60
+                      return (
+                        <tr key={c.userId} style={{ borderTop: '1px solid var(--line)' }}>
+                          <td style={{ padding: '10px 10px 10px 0', color: 'var(--ink)' }}>
+                            {c.customer?.name ?? '—'}
+                            {c.customer?.handle && (
+                              <span style={{ color: 'var(--ink-3)', fontSize: 11, display: 'block' }}>@{c.customer.handle}</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '10px', color: 'var(--ink-2)', fontSize: 12 }}>
+                            {c.pedidos.flatMap(p => p.line_items ?? []).map(li => `${li.title}${li.quantity > 1 ? ` ×${li.quantity}` : ''}`).join(', ')}
+                          </td>
+                          <td style={{ padding: '10px', color: 'var(--ink-2)' }}>{c.piezas}</td>
+                          <td style={{ padding: '10px 0 10px 10px', color: viejo ? '#B45309' : 'var(--ink-2)', fontWeight: viejo ? 600 : 400 }}>
+                            {c.diasMasViejo === 0 ? 'hoy' : c.diasMasViejo === 1 ? '1 día' : `${c.diasMasViejo} días`}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </div>
 
