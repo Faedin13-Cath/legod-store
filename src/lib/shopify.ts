@@ -84,6 +84,7 @@ export async function getProductByHandle(handle: string): Promise<ShopifyProduct
 
 /* ── Adapter: ShopifyProduct → local Product ─────────────────── */
 import type { Product, ProductCat, ProductType, ProductTag } from '@/types'
+import { parsePreventa } from '@/lib/preventa'
 
 const CAT_TAGS = ['starwars','marvel','dc','harry','stranger','castle','sports','pixar','series','city','ninjago','lotr','bionicle','animales','custom']
 const PRODUCT_TAGS = ['nuevo','restock','oferta','edicion-limitada','sellado','usado','agotado','popular','limitada','custom','promo']
@@ -127,7 +128,13 @@ export function shopifyToProduct(p: ShopifyProduct): Product {
     tags:   productTags,
     desc:   p.description,
     blId,
+    ...(parsePreventa(p.tags) ? { preventa: parsePreventa(p.tags)! } : {}),
   }
+}
+
+/** Los productos en preventa se venden solo desde /preventas, no en la tienda. */
+export function isPreventa(p: Product): boolean {
+  return !!p.preventa
 }
 
 /* ── Cart mutations ──────────────────────────────────────────── */

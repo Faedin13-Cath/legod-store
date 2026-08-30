@@ -606,6 +606,9 @@ a[href*="/tienda"].more-link,
   /* PDP */
   .pdp-grid { grid-template-columns: 1fr !important; }
 
+  /* Preventas */
+  .preventa-card { grid-template-columns: 1fr !important; }
+
   /* Head component title + spacing */
   .sec-title { font-size: 28px !important; }
   .sec-head  { padding-top: 28px !important; margin-bottom: 16px !important; }

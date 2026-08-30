@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { getProducts } from '@/lib/shopify'
+import { parsePreventa } from '@/lib/preventa'
 
 const BASE = 'https://www.jangos-store.com'
 
@@ -20,7 +21,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let productPages: MetadataRoute.Sitemap = []
   try {
     const products = await getProducts()
-    productPages = products.map(p => ({
+    productPages = products
+      // Las preventas no se indexan: su sección aún no es pública.
+      .filter(p => !parsePreventa(p.tags))
+      .map(p => ({
       url: `${BASE}/tienda/${p.handle}`,
       changeFrequency: 'weekly' as const,
       priority: 0.6,

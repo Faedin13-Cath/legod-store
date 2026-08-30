@@ -7,7 +7,9 @@ import Icon from '@/components/ui/Icon'
 import MinifigImage from '@/components/product/MinifigImage'
 import ProductCard from '@/components/product/ProductCard'
 import { useCart } from '@/components/cart/CartProvider'
+import { useAuth } from '@/components/auth/AuthProvider'
 import { getProducts, getProductByHandle, shopifyToProduct } from '@/lib/shopify'
+import { PREVENTAS_PUBLIC } from '@/lib/preventa'
 import type { Product } from '@/types'
 
 const STATE_LABEL: Record<string, string> = {
@@ -31,6 +33,7 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
   const { handle } = params
   const router = useRouter()
   const { addItem } = useCart()
+  const { profile } = useAuth()
 
   const [product,  setProduct]  = useState<Product | null | undefined>(undefined)
   const [related,  setRelated]  = useState<Product[]>([])
@@ -84,6 +87,10 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
   const stock = realStock ?? product.stock
   const out = stock === 0
   const rarity = RARITY_LABEL[product.rarity]
+  // En preventa no se vende desde aquí: el cobro va por /preventas, que usa
+  // draft orders (sin campo de código de descuento).
+  const pv = product.preventa
+  const canSeePreventa = PREVENTAS_PUBLIC || !!profile?.is_admin
 
   function handleAdd() {
     if (product) {
@@ -205,22 +212,27 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
             {product.tag}
           </p>
 
-          {/* Price */}
-          <div style={{ fontSize: 38, fontWeight: 700, color: 'var(--ink)', margin: '0 0 20px' }}>
-            ${product.price.toLocaleString('es-MX')}
-            <small style={{ fontSize: 16, fontWeight: 400, color: 'var(--ink-3)', marginLeft: 6 }}>MXN</small>
-          </div>
+          {/* Price — en preventa el precio de catálogo no aplica */}
+          {(!pv || canSeePreventa) && (
+            <div style={{ fontSize: 38, fontWeight: 700, color: 'var(--ink)', margin: '0 0 20px' }}>
+              {pv && <small style={{ fontSize: 15, fontWeight: 500, color: 'var(--ink-3)', marginRight: 8 }}>Desde</small>}
+              ${(pv ? pv.full : product.price).toLocaleString('es-MX')}
+              <small style={{ fontSize: 16, fontWeight: 400, color: 'var(--ink-3)', marginLeft: 6 }}>MXN</small>
+            </div>
+          )}
 
-          {/* State + stock */}
+          {/* State + stock — el inventario de una preventa aún no existe */}
           <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ink-2)' }}>
               <Icon name="check" size={14} />
               {STATE_LABEL[product.state] ?? product.state}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: out ? 'var(--danger)' : 'var(--success)' }}>
-              <Icon name={out ? 'close' : 'check'} size={14} />
-              {out ? 'Agotado' : stock > 5 ? '+5 en stock' : `${stock} en stock`}
-            </div>
+            {!pv && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: out ? 'var(--danger)' : 'var(--success)' }}>
+                <Icon name={out ? 'close' : 'check'} size={14} />
+                {out ? 'Agotado' : stock > 5 ? '+5 en stock' : `${stock} en stock`}
+              </div>
+            )}
           </div>
 
           {/* Description */}
@@ -228,8 +240,38 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
             {product.desc}
           </p>
 
+          {/* Preventa: reemplaza compra y apartado */}
+          {pv && (
+            <div style={{
+              padding: '18px 20px', borderRadius: 14, marginBottom: 20,
+              background: 'var(--accent-soft)', border: '1px solid var(--accent)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ color: 'var(--accent)' }}><Icon name="clock" size={16} /></span>
+                <strong style={{ fontSize: 15, color: 'var(--accent)' }}>Esta figura está en preventa</strong>
+              </div>
+              {canSeePreventa ? (
+                <>
+                  <p style={{ fontSize: 13, color: 'var(--ink-2)', margin: '0 0 14px', lineHeight: 1.6 }}>
+                    Pagando completo son <strong>${pv.full.toLocaleString('es-MX')} MXN</strong>. Con
+                    anticipo, <strong>${pv.deposit.toLocaleString('es-MX')} MXN</strong> ahora y{' '}
+                    <strong>${pv.pending.toLocaleString('es-MX')} MXN</strong> al llegar.
+                  </p>
+                  <Link href="/preventas" className="btn btn-primary" style={{ textDecoration: 'none', display: 'inline-flex' }}>
+                    Reservar en preventa →
+                  </Link>
+                </>
+              ) : (
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', margin: 0, lineHeight: 1.6 }}>
+                  Todavía no la tenemos en mano. Muy pronto vas a poder reservarla desde
+                  la sección de preventas.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Quantity + actions */}
-          {!out && (
+          {!out && !pv && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                 {/* Qty selector */}
@@ -293,7 +335,7 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
             </>
           )}
 
-          {out && (
+          {out && !pv && (
             <button
               className="btn btn-secondary"
               style={{ width: '100%', height: 44, fontSize: 14, marginBottom: 20 }}

@@ -225,6 +225,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
   }
 
+  /* ── Preventa: registra la reserva. A diferencia del apartado no lleva
+     fecha límite — el saldo (si lo hay) se liquida cuando la figura llega. ── */
+  if (attr('tipo') === 'preventa') {
+    const modalidad = attr('modalidad') === 'completo' ? 'completo' : 'split'
+    const total     = parseInt(attr('preventa_total')  ?? '0', 10)
+    const pagado    = parseInt(attr('preventa_pagado') ?? '0', 10)
+    const pendiente = parseInt(attr('preventa_pend')   ?? '0', 10)
+
+    let pvItems: { id: string; name: string; price: number; qty: number }[] = []
+    try { pvItems = JSON.parse(attr('original_items') ?? '[]') } catch { /* usa el fallback */ }
+    if (!pvItems.length) {
+      pvItems = (order.line_items ?? []).map(li => ({
+        id: li.title, name: li.title.replace(/\s*—.*$/, '').trim(),
+        price: parseFloat(li.price), qty: li.quantity,
+      }))
+    }
+
+    await supabase.from('preventas').insert({
+      user_id:   authUser.id,
+      items:     pvItems,
+      modalidad, total, pagado, pendiente,
+      status:    pendiente > 0 ? 'active' : 'completed',
+      order_id:  orderId,
+    })
+
+    return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
+  }
+
   /* ── Liquidación: mark apartado as completed + deduct balance if used ── */
   if (attr('tipo') === 'liquidacion') {
     const apartadoId  = attr('apartado_id')

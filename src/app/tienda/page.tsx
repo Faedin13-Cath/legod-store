@@ -54,7 +54,8 @@ function TiendaContent() {
 
   useEffect(() => {
     getProducts()
-      .then(ps => setAllProducts(ps.map(shopifyToProduct)))
+      // Las preventas se venden solo desde /preventas, con su propio checkout.
+      .then(ps => setAllProducts(ps.map(shopifyToProduct).filter(p => !p.preventa)))
       .catch(() => setAllProducts([]))
       .finally(() => setLoading(false))
   }, [])

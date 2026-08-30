@@ -13,6 +13,7 @@ const NAV = [
   { href: '/coleccion', icon: 'grid',    label: 'Mi colección' },
   { href: '/wishlist',  icon: 'star',    label: 'Wishlist' },
   { href: '/apartados', icon: 'clock',   label: 'Apartados' },
+  { href: '/mis-preventas', icon: 'package', label: 'Preventas' },
   { href: '/alertas',   icon: 'bell',    label: 'Alertas' },
   { href: '/lealtad',   icon: 'sparkle',   label: 'Lealtad' },
   { href: '/saldo',     icon: 'gift-card', label: 'Saldo' },

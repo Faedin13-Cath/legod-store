@@ -22,7 +22,10 @@ export default function HomePage() {
   const [allProducts, setAllProducts] = useState<Product[]>([])
 
   useEffect(() => {
-    getProducts().then(raw => setAllProducts(raw.map(shopifyToProduct))).catch(() => {})
+    getProducts()
+      // Las preventas tienen su propia sección y checkout: fuera de los carruseles.
+      .then(raw => setAllProducts(raw.map(shopifyToProduct).filter(p => !p.preventa)))
+      .catch(() => {})
   }, [])
 
   const nav     = (p2: Product) => router.push(`/tienda/${p2.id}`)

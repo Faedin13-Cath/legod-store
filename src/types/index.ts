@@ -20,6 +20,8 @@ export interface Product {
   tags: ProductTag[]
   desc: string
   blId?: string
+  /** Precios de preventa si el producto está etiquetado como tal. */
+  preventa?: import('@/lib/preventa').PreventaPricing
 }
 
 export interface CartItem extends Product {
