@@ -637,6 +637,7 @@ a[href*="/tienda"].more-link,
      navegar en teléfono. */
   .account-nav-mobile { display: block !important; }
   .account-nav-mobile nav::-webkit-scrollbar { display: none; }
+  .pedidos-tabs::-webkit-scrollbar { display: none; }
 }
 
 /* ── Small mobile ≤480px ──────────────────────────────────────── */
