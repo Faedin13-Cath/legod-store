@@ -36,6 +36,16 @@ const CARRIER_URL: Record<string, string> = {
 const fecha = (d: string) =>
   new Date(d).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
 
+/**
+ * Los nombres no coinciden entre fuentes: el catálogo dice "Miles Morales
+ * Prowler" y el apartado guardó "Miles Morales - Prowler". Comparando solo
+ * letras y números la foto se encuentra igual. Los dos lados pasan por aquí,
+ * así que los acentos tampoco importan mientras se traten igual.
+ */
+const clave = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+const WHATSAPP = process.env.NEXT_PUBLIC_WHATSAPP ?? '525574777350'
+
 /** Pieza tal como se dibuja, venga de un pedido, un apartado o una preventa. */
 type Pieza = { nombre: string; qty: number; handle?: string }
 
@@ -73,7 +83,7 @@ export default function MisPedidosPage() {
   }, [user])
 
   // Los pedidos solo guardan el título de la figura, no su foto. Se arma un
-  // índice del catálogo por handle y por nombre para poder ilustrarlos.
+  // índice del catálogo para poder ilustrarlos.
   useEffect(() => {
     getProducts()
       .then(ps => {
@@ -82,7 +92,7 @@ export default function MisPedidosPage() {
           const p = shopifyToProduct(raw)
           if (!p.photo) continue
           map[p.id] = p.photo
-          map[p.name.toLowerCase().trim()] = p.photo
+          map[clave(p.name)] = p.photo
         }
         setFotos(map)
       })
@@ -90,7 +100,7 @@ export default function MisPedidosPage() {
   }, [])
 
   const fotoDe = (pieza: Pieza) =>
-    (pieza.handle && fotos[pieza.handle]) || fotos[pieza.nombre.toLowerCase().trim()] || null
+    (pieza.handle && fotos[pieza.handle]) || fotos[clave(pieza.nombre)] || null
 
   const { guardadas, enCamino, enviadas } = useMemo(() => ({
     guardadas: orders.filter(o => o.carrier === CASILLERO && !o.shipment_id),
@@ -100,13 +110,25 @@ export default function MisPedidosPage() {
 
   const preventasVivas = preventas.filter(p => p.status === 'active')
 
+  /**
+   * Cada estado lleva su color e insignia. Sin eso, en la vista "Todo" un
+   * apartado y una preventa se ven idénticos y hay que leer la cabecera de
+   * la sección para saber qué se está mirando.
+   */
   const secciones = [
-    { id: 'casillero', icon: 'truck',   titulo: 'En tu casillero', cuenta: guardadas.length },
-    { id: 'apartados', icon: 'clock',   titulo: 'Apartados',       cuenta: apartados.length },
-    { id: 'preventas', icon: 'package', titulo: 'Preventas',       cuenta: preventasVivas.length },
-    { id: 'camino',    icon: 'clock',   titulo: 'En preparación',  cuenta: enCamino.length },
-    { id: 'enviados',  icon: 'check',   titulo: 'Enviados',        cuenta: enviadas.length },
+    { id: 'casillero', icon: 'truck',   titulo: 'En tu casillero', cuenta: guardadas.length,
+      color: 'var(--accent)',        fondo: 'var(--accent-soft)', insignia: 'Guardado' },
+    { id: 'apartados', icon: 'clock',   titulo: 'Apartados',       cuenta: apartados.length,
+      color: 'var(--warning)',       fondo: 'var(--warning-bg)',  insignia: 'Apartado' },
+    { id: 'preventas', icon: 'package', titulo: 'Preventas',       cuenta: preventasVivas.length,
+      color: 'var(--accent-bright)', fondo: '#ECEAFB',            insignia: 'Preventa' },
+    { id: 'camino',    icon: 'clock',   titulo: 'En preparación',  cuenta: enCamino.length,
+      color: 'var(--ink-2)',         fondo: 'var(--cream-2)',     insignia: 'Preparando' },
+    { id: 'enviados',  icon: 'check',   titulo: 'Enviados',        cuenta: enviadas.length,
+      color: 'var(--success)',       fondo: 'var(--success-bg)',  insignia: 'Enviado' },
   ].filter(s => s.cuenta > 0)
+
+  const seccion = (id: string) => secciones.find(s => s.id === id)
 
   const total = secciones.reduce((s, x) => s + x.cuenta, 0)
   const ver = (id: string) => tab === 'todo' || tab === id
@@ -140,14 +162,33 @@ export default function MisPedidosPage() {
     )
   }
 
-  function Tarjeta({ piezas, meta, derecha, pie }: {
-    piezas: Pieza[]; meta: React.ReactNode; derecha?: React.ReactNode; pie?: React.ReactNode
+  function Tarjeta({ tipo, piezas, meta, derecha, pie, alerta }: {
+    tipo: string; piezas: Pieza[]; meta: React.ReactNode
+    derecha?: React.ReactNode; pie?: React.ReactNode
+    /** Sustituye la insignia del tipo cuando algo va mal (plazo vencido). */
+    alerta?: string
   }) {
+    const s = seccion(tipo)
     return (
       <div style={{
         background: 'var(--paper)', border: '1px solid var(--line)',
         borderRadius: 14, padding: '16px 18px',
       }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12,
+        }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999,
+            background: alerta ? 'var(--danger-bg)' : (s?.fondo ?? 'var(--cream)'),
+            color:      alerta ? 'var(--danger)'    : (s?.color ?? 'var(--ink-2)'),
+            border: `1px solid ${alerta ? 'var(--danger)' : (s?.color ?? 'var(--line)')}33`,
+          }}>
+            <Icon name={alerta ? 'close' : (s?.icon ?? 'package')} size={11} />
+            {alerta ?? s?.insignia}
+          </span>
+        </div>
+
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <Piezas piezas={piezas} />
@@ -251,6 +292,7 @@ export default function MisPedidosPage() {
         {guardadas.map(o => (
           <Tarjeta
             key={o.id}
+            tipo="casillero"
             piezas={piezasDePedido(o)}
             meta={<>Pedido #{o.order_number} · guardado desde el {fecha(o.created_at)}</>}
           />
@@ -260,7 +302,12 @@ export default function MisPedidosPage() {
       <Bloque
         id="apartados" icon="clock" titulo="Apartados"
         nota="Ya diste el anticipo. Te guardamos la figura hasta que liquides."
-        cta={{ href: '/apartados', label: 'Liquidar apartado →' }}
+        // El botón solo si queda alguno vivo: un apartado caducado ya no se
+        // puede liquidar, y ofrecerlo lleva a una página donde no hay nada
+        // que hacer.
+        cta={apartados.some(a => new Date(a.deadline_at).getTime() >= Date.now())
+          ? { href: '/apartados', label: 'Liquidar apartado →' }
+          : undefined}
       >
         {apartados.map(a => {
           const vencido = new Date(a.deadline_at).getTime() < Date.now()
@@ -269,15 +316,23 @@ export default function MisPedidosPage() {
           return (
             <Tarjeta
               key={a.id}
+              tipo="apartados"
+              alerta={vencido ? 'Caducado' : undefined}
               piezas={piezasDeLista(a.items)}
               meta={
-                <span style={{ color: vencido ? 'var(--danger)' : 'var(--ink-3)' }}>
-                  {vencido ? 'Plazo vencido' : `${dias} ${dias === 1 ? 'día' : 'días'} para liquidar`}
-                </span>
+                vencido
+                  ? <span style={{ color: 'var(--danger)' }}>
+                      El plazo venció y el anticipo no es reembolsable.{' '}
+                      <a href={`https://wa.me/${WHATSAPP}`} target="_blank" rel="noreferrer"
+                         style={{ color: 'var(--danger)', fontWeight: 600 }}>
+                        Escríbenos para ver opciones
+                      </a>.
+                    </span>
+                  : <>{dias} {dias === 1 ? 'día' : 'días'} para liquidar</>
               }
               derecha={
                 <>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: vencido ? 'var(--ink-3)' : 'var(--ink)' }}>
                     ${a.balance.toLocaleString('es-MX')}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>por pagar</div>
@@ -310,6 +365,7 @@ export default function MisPedidosPage() {
           return (
             <Tarjeta
               key={p.id}
+              tipo="preventas"
               piezas={piezasDeLista(p.items)}
               meta={
                 <span style={{ color: porPagar > 0 ? 'var(--warning)' : 'var(--ink-3)' }}>
@@ -347,6 +403,7 @@ export default function MisPedidosPage() {
         {enCamino.map(o => (
           <Tarjeta
             key={o.id}
+            tipo="camino"
             piezas={piezasDePedido(o)}
             meta={<>Pedido #{o.order_number} · {fecha(o.created_at)}{o.carrier ? ` · ${o.carrier}` : ''}</>}
             derecha={
@@ -365,6 +422,7 @@ export default function MisPedidosPage() {
           return (
             <Tarjeta
               key={o.id}
+              tipo="enviados"
               piezas={piezasDePedido(o)}
               meta={
                 <>
