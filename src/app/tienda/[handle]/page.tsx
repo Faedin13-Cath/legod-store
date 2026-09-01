@@ -131,12 +131,15 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
         gap: 40, padding: '32px 32px 80px', alignItems: 'stretch',
       }}>
         {/* Left: image */}
-        <div style={{ height: '100%' }}>
+        {/* Columna en flex: la caja de la foto se estira con flex:1 en vez de
+            height:100%, que la hacía ocupar todo y empujaba el aviso de estado
+            fuera de la columna, encimándose sobre el bloque de al lado. */}
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
           <div style={{
             borderRadius: 24, overflow: 'hidden',
             background: '#fff',
             border: '1px solid var(--line)',
-            height: '100%', minHeight: 420,
+            flex: 1, minHeight: 420,
             position: 'relative',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
