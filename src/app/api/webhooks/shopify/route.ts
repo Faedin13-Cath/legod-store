@@ -72,6 +72,7 @@ export async function POST(req: NextRequest) {
 
   let order: {
     email?: string; total_price?: string; id?: string | number; order_number?: number
+    total_shipping_price_set?: { shop_money?: { amount?: string } }
     note_attributes?: { name: string; value: string }[]
     line_items?: { title: string; price: string; quantity: number; variant_id?: number }[]
     created_at?: string
@@ -80,6 +81,7 @@ export async function POST(req: NextRequest) {
 
   const email      = order.email
   const totalPrice = parseFloat(order.total_price ?? '0')
+  const envio      = parseFloat(order.total_shipping_price_set?.shop_money?.amount ?? '0')
   const orderId    = String(order.id ?? '')
   const orderNum   = order.order_number
 
@@ -128,7 +130,10 @@ export async function POST(req: NextRequest) {
   // En compras con saldo, Shopify reporta el total ya descontado — hay que
   // sumar el descuento de vuelta para que los puntos reflejen el precio real.
   const balanceDiscount = tipo === 'compra' ? parseFloat(attr('balance_used') ?? '0') : 0
-  const pointsBase      = totalPrice + balanceDiscount
+  // El envío se le paga a la paquetería, no deja margen: dar puntos por él es
+  // regalar saldo. Con Estafeta a $160 eran un tercio de los puntos de un
+  // pedido de $333 en figuras.
+  const pointsBase      = Math.max(0, totalPrice + balanceDiscount - envio)
 
   let pointsToAdd = 0
   if (earnsPoints) {
