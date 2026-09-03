@@ -15,6 +15,9 @@ export const cats: Category[] = [
   { id: 'lotr',     label: 'El Señor de los Anillos', emoji: '💍', icon: 'cat-lotr' },
   { id: 'bionicle', label: 'Bionicle',        emoji: '🤖', icon: 'cat-bionicle' },
   { id: 'animales', label: 'Animales',        emoji: '🐾', icon: 'cat-animales' },
+  { id: 'espacio',  label: 'Espacio',         emoji: '🚀', icon: 'cat-espacio' },
+  { id: 'piratas',  label: 'Piratas',         emoji: '🏴', icon: 'cat-piratas' },
+  { id: 'aventureros', label: 'Aventureros',  emoji: '🧭', icon: 'cat-aventureros' },
   { id: 'custom',   label: 'Custom',          emoji: '✦', icon: 'cat-custom' },
 ]
 

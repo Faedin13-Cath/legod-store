@@ -64,6 +64,12 @@ const paths: Record<string, React.ReactNode> = {
   'cat-lotr':     <><circle cx="12" cy="13.5" r="7"/><circle cx="12" cy="13.5" r="4"/><path d="M12 2.5l.9 2.1 2.1.9-2.1.9L12 8.6l-.9-2.2L9 5.5l2.1-.9z"/></>,
   // Bionicle — máscara Kanohi
   'cat-bionicle': <><path d="M7 4h10l1 6.5a6 6 0 0 1-12 0z"/><path d="M9.5 9.5h1.6"/><path d="M12.9 9.5h1.6"/><path d="M12 14.5v2.5"/></>,
+  // Espacio — cohete clásico
+  'cat-espacio':  <><path d="M12 2.5c2.6 2.3 4 5.5 4 9v4H8v-4c0-3.5 1.4-6.7 4-9z"/><circle cx="12" cy="9" r="1.8"/><path d="M8 13.5 5 16v3l3-1.7"/><path d="M16 13.5 19 16v3l-3-1.7"/><path d="M10.5 15.5v4l1.5 2 1.5-2v-4"/></>,
+  // Piratas — calavera
+  'cat-piratas':  <><path d="M12 3a7 7 0 0 1 7 7v2.5l-2 1.5v3H7v-3l-2-1.5V10a7 7 0 0 1 7-7z"/><circle cx="9.5" cy="10.5" r="1.5"/><circle cx="14.5" cy="10.5" r="1.5"/><path d="M11 14.5h2"/></>,
+  // Aventureros — sombrero de explorador
+  'cat-aventureros': <><path d="M7.5 12c-.4-3 .3-5.5 1.5-6.8C10 4 11 3.5 12 3.5s2 .5 3 1.7c1.2 1.3 1.9 3.8 1.5 6.8"/><path d="M3 13.5c2.5 2 5.6 3 9 3s6.5-1 9-3"/><path d="M6.5 12.6c3.5 1.2 7.5 1.2 11 0"/></>,
 }
 
 interface IconProps extends React.SVGProps<SVGSVGElement> {

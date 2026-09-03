@@ -86,6 +86,12 @@ function TiendaContent() {
     if (sort === 'precio-desc') list.sort((a, b) => b.price - a.price)
     if (sort === 'nombre')      list.sort((a, b) => a.name.localeCompare(b.name, 'es'))
 
+    // Los agotados hasta el final, sea cual sea el orden elegido. Si caen en la
+    // primera página la tienda parece vacía aunque haya inventario más abajo.
+    // El sort de JS es estable, así que dentro de cada grupo se respeta el
+    // orden anterior.
+    list.sort((a, b) => Number(a.stock <= 0) - Number(b.stock <= 0))
+
     return list
   }, [allProducts, typeTab, catFilter, stateFilter, search, sort])
 
