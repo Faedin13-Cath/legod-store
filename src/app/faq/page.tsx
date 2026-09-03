@@ -9,7 +9,7 @@ const extraFaqs = [
   { sec: 'Estado de las figuras', items: [
     { q: '¿Qué significa "nuevo"?', a: 'Pieza sin uso, tal como sale de fábrica o sin ningún tipo de marca, roce ni desgaste.' },
     { q: '¿Qué significa "perfecto"?', a: 'Pieza de segunda mano en estado impecable, sin marcas visibles ni desgaste.' },
-    { q: '¿Qué significa "con crack"?', a: 'La pieza tiene una pequeña fractura visible, normalmente en el torso. El precio ya lo refleja. Siempre hay fotos del detalle.' },
+    { q: '¿Qué significa "con detalle"?', a: 'La pieza no está perfecta: puede ser un crack en el torso, una pieza cambiada (brazos o piernas de otro color) o algo despintado. Cuál es el detalle viene escrito en la ficha del producto, y siempre hay fotos. El precio ya lo refleja.' },
     { q: '¿Qué significa "sin accesorios"?', a: 'La figura está completa pero le falta algún accesorio (varita, arma, capa, etc.). Se especifica en la descripción.' },
   ]},
   { sec: 'Véndenos', items: [

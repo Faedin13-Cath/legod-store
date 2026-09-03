@@ -29,7 +29,7 @@ const TYPE_TABS = [
 const STATE_FILTERS = [
   { value: 'new',        label: 'Nuevo' },
   { value: 'perfect',    label: 'Perfecto' },
-  { value: 'crack',      label: 'Con crack' },
+  { value: 'crack',      label: 'Con detalle' },
   { value: 'no-acc',     label: 'Sin accesorios' },
   { value: 'incomplete', label: 'Incompleto' },
 ]

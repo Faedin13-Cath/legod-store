@@ -15,7 +15,7 @@ import type { Product } from '@/types'
 const STATE_LABEL: Record<string, string> = {
   new:        'Nuevo · sin uso',
   perfect:    'Perfecto · sin marcas',
-  crack:      'Con crack · ver fotos',
+  crack:      'Con detalle · ver descripción',
   'no-acc':   'Sin accesorios',
   incomplete: 'Incompleto',
 }
@@ -183,7 +183,7 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
               background: '#FFF8E1', border: '1px solid #F5C84A',
               fontSize: 13, color: '#7A5B00', lineHeight: 1.5,
             }}>
-              <strong>⚠ Atención:</strong> Esta pieza tiene un pequeño crack. Revisa las fotos antes de comprar. El precio ya refleja el estado.
+              <strong>⚠ Atención:</strong> Esta pieza tiene un detalle. Está descrito abajo y se ve en las fotos. El precio ya lo refleja.
             </div>
           )}
         </div>
