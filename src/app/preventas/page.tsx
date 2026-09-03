@@ -43,18 +43,33 @@ function PreventaCard({
   const agotada = product.stock <= 0
   const maxQty = Math.max(1, Math.min(10, product.stock))
 
-  const options: { id: Modalidad; label: string; amount: number; sub: string }[] = [
+  /**
+   * El número grande de cada opción es SIEMPRE el total, nunca el anticipo.
+   * Antes el pago diferido enseñaba su anticipo en la misma tipografía que el
+   * precio completo ($600 contra $450) y se leía como la opción barata, cuando
+   * en realidad sale $150 más cara. Comparar total contra total es lo único
+   * honesto; lo que se cobra hoy va debajo, en letra chica.
+   */
+  const options: {
+    id: Modalidad; label: string; sub: string
+    total: number; badge: string | null
+  }[] = [
     {
-      id: 'completo', label: 'Pago completo', amount: pv.full,
+      id: 'completo', label: 'Pagar todo ahora',
+      total: pv.full,
       sub: !pv.split
         ? 'Esta figura solo se puede pagar completa.'
-        : pv.split.surcharge > 0
-          ? `Un solo pago. Ahorras $${pv.split.surcharge.toLocaleString('es-MX')} MXN.`
-          : 'Un solo pago y queda liquidada.',
+        : 'Se liquida hoy y ya no debes nada.',
+      badge: pv.split && pv.split.surcharge > 0
+        ? `Ahorras $${pv.split.surcharge.toLocaleString('es-MX')}`
+        : null,
     },
     ...(pv.split ? [{
-      id: 'split' as const, label: `Paga ${pv.split.pct}% ahora`, amount: pv.split.deposit,
-      sub: `$${pv.split.pending.toLocaleString('es-MX')} MXN al llegar · total $${pv.split.total.toLocaleString('es-MX')} MXN`,
+      id: 'split' as const, label: 'Pagar en dos partes',
+      total: pv.split.total,
+      sub: `Hoy $${pv.split.deposit.toLocaleString('es-MX')} (${pv.split.pct}%)`
+         + ` · $${pv.split.pending.toLocaleString('es-MX')} cuando llegue`,
+      badge: null,
     }] : []),
   ]
 
@@ -135,15 +150,34 @@ function PreventaCard({
                   {on && <Icon name="check" size={10} color="#fff" />}
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: on ? 'var(--accent)' : 'var(--ink)' }}>
-                    {o.label}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: on ? 'var(--accent)' : 'var(--ink)' }}>
+                      {o.label}
+                    </span>
+                    {o.badge && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase',
+                        padding: '2px 7px', borderRadius: 999,
+                        background: 'var(--gold)', color: '#3A2A00',
+                      }}>
+                        {o.badge}
+                      </span>
+                    )}
                   </span>
-                  <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>
+                  <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-3)', marginTop: 3 }}>
                     {o.sub}
                   </span>
                 </span>
-                <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', flexShrink: 0 }}>
-                  ${o.amount.toLocaleString('es-MX')}
+                <span style={{ flexShrink: 0, textAlign: 'right' }}>
+                  <span style={{ display: 'block', fontSize: 18, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.1 }}>
+                    ${o.total.toLocaleString('es-MX')}
+                  </span>
+                  <span style={{
+                    display: 'block', fontSize: 10, fontWeight: 600, marginTop: 1,
+                    letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-3)',
+                  }}>
+                    total
+                  </span>
                 </span>
               </button>
             )
@@ -315,9 +349,9 @@ export default function PreventasPage() {
           Preventas
         </h1>
         <p style={{ fontSize: 15, color: 'var(--ink-2)', margin: '0 0 20px', lineHeight: 1.6, maxWidth: 580 }}>
-          Aparta figuras antes de que lleguen. Elige las que quieras: pagas menos si
-          liquidas de una vez, o reservas con un anticipo y cubres el resto cuando
-          las tengamos en mano.
+          Aparta figuras antes de que lleguen. Elige las que quieras y cómo pagarlas:
+          todo de una vez, o un anticipo hoy y el resto cuando las tengamos en mano.
+          El precio grande de cada opción es el total.
         </p>
 
         <div style={{
