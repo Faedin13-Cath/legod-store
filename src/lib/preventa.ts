@@ -8,28 +8,35 @@
  *   preventa            → el producto es preventa
  *   pv-full-800         → precio pagando el total de una vez  (obligatorio)
  *   pv-split-1000       → precio total pagando en dos partes   (opcional)
+ *   pv-dep-70           → % de anticipo de esa figura          (opcional)
  *   pv-badge-mega-oferta → distintivo que se pinta sobre la foto (opcional)
  *
  * Sin `pv-split-*` la figura solo se puede pagar completa. Cuando existe,
- * pagar diferido cuesta más: el precio "split" siempre es el alto.
+ * pagar diferido puede costar más (el precio "split" es el alto) o costar
+ * igual, si solo se quiere partir el pago sin recargo.
  */
 
-/** Porción del precio diferido que se cobra al reservar; el resto va al llegar. */
+/** Anticipo por defecto: se usa cuando la figura no trae `pv-dep-*`. */
 export const DEPOSIT_PCT = 0.60
 
 export const PREVENTA_TAG = 'preventa'
 
 const FULL_RE  = /^pv-full-(\d+)$/i
 const SPLIT_RE = /^pv-split-(\d+)$/i
+const DEP_RE   = /^pv-dep-(\d+)$/i
 const BADGE_RE = /^pv-badge-(.+)$/i
 
 export type PreventaSplit = {
-  /** Precio total pagando en dos partes (más alto que `full`). */
+  /** Precio total pagando en dos partes (igual o más alto que `full`). */
   total: number
   /** Lo que se cobra hoy. */
   deposit: number
   /** Lo que queda por pagar cuando llega la figura. */
   pending: number
+  /** Anticipo en porcentaje entero, para escribirlo en la interfaz. */
+  pct: number
+  /** Cuánto más cuesta diferir el pago. 0 = mismo precio que pagar completo. */
+  surcharge: number
 }
 
 export type PreventaPricing = {
@@ -54,20 +61,34 @@ export function parsePreventa(tags: string[]): PreventaPricing | null {
   if (!fullTag) return null
 
   const splitTag = lower.map(t => t.match(SPLIT_RE)?.[1]).find(Boolean)
+  const depTag   = lower.map(t => t.match(DEP_RE)?.[1]).find(Boolean)
   const badgeTag = lower.map(t => t.match(BADGE_RE)?.[1]).find(Boolean)
+
+  const full = parseInt(fullTag, 10)
+
+  // Un `pv-dep-*` fuera de 1–99 dejaría el anticipo en 0 o en el total, que no
+  // es un pago partido: se ignora y manda el porcentaje por defecto.
+  const depPct = depTag && +depTag > 0 && +depTag < 100
+    ? +depTag / 100
+    : DEPOSIT_PCT
 
   let split: PreventaSplit | null = null
   if (splitTag) {
     const total   = parseInt(splitTag, 10)
-    const deposit = Math.round(total * DEPOSIT_PCT)
-    split = { total, deposit, pending: total - deposit }
+    const deposit = Math.round(total * depPct)
+    split = {
+      total, deposit,
+      pending:   total - deposit,
+      pct:       Math.round(depPct * 100),
+      surcharge: total - full,
+    }
   }
 
   const badge = badgeTag
     ? badgeTag.replace(/-/g, ' ').replace(/^./, c => c.toUpperCase())
     : null
 
-  return { full: parseInt(fullTag, 10), split, badge }
+  return { full, split, badge }
 }
 
 /** Lo que se cobra hoy y lo que queda pendiente, según la modalidad elegida. */

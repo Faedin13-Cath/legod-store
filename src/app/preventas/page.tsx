@@ -46,12 +46,14 @@ function PreventaCard({
   const options: { id: Modalidad; label: string; amount: number; sub: string }[] = [
     {
       id: 'completo', label: 'Pago completo', amount: pv.full,
-      sub: pv.split
-        ? `Un solo pago. Ahorras $${(pv.split.total - pv.full).toLocaleString('es-MX')} MXN.`
-        : 'Esta figura solo se puede pagar completa.',
+      sub: !pv.split
+        ? 'Esta figura solo se puede pagar completa.'
+        : pv.split.surcharge > 0
+          ? `Un solo pago. Ahorras $${pv.split.surcharge.toLocaleString('es-MX')} MXN.`
+          : 'Un solo pago y queda liquidada.',
     },
     ...(pv.split ? [{
-      id: 'split' as const, label: 'Anticipo y resto al llegar', amount: pv.split.deposit,
+      id: 'split' as const, label: `Paga ${pv.split.pct}% ahora`, amount: pv.split.deposit,
       sub: `$${pv.split.pending.toLocaleString('es-MX')} MXN al llegar · total $${pv.split.total.toLocaleString('es-MX')} MXN`,
     }] : []),
   ]
@@ -216,7 +218,9 @@ export default function PreventasPage() {
   useEffect(() => {
     if (!allowed) return
     getProducts()
-      .then(ps => setItems(ps.map(shopifyToProduct).filter(p => p.preventa)))
+      // Las agotadas se esconden: una tarjeta que ya no se puede apartar solo
+      // le roba atención a las que sí. Vuelven solas si se repone inventario.
+      .then(ps => setItems(ps.map(shopifyToProduct).filter(p => p.preventa && p.stock > 0)))
       .catch(() => setItems([]))
       .finally(() => setLoading(false))
   }, [allowed])
