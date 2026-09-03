@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react'
 import Dragon from '@/components/ui/Dragon'
 import Icon from '@/components/ui/Icon'
 import ProductCard from '@/components/product/ProductCard'
+import { ProductCardSkeleton } from '@/components/ui/Skeleton'
 import Reveal from '@/components/ui/Reveal'
 import { useCart } from '@/components/cart/CartProvider'
 import { getProducts, shopifyToProduct } from '@/lib/shopify'
@@ -29,7 +30,13 @@ export default function HomePage() {
   }, [])
 
   const nav     = (p2: Product) => router.push(`/tienda/${p2.id}`)
-  const nuevos  = allProducts.filter(p => p.tags.includes('nuevo')).slice(0, 7)
+  const cargando = allProducts.length === 0
+  // "Nuevos ingresos" va por fecha de alta, no por la etiqueta `nuevo`: Shopify
+  // ya devuelve el catálogo del más reciente al más viejo. Con la etiqueta había
+  // que acordarse de ponerla en cada alta y de quitarla después, así que un lote
+  // recién subido no aparecía y la sección enseñaba figuras de hace semanas.
+  // Sin stock no entran: una figura agotada no es un ingreso nuevo que ofrecer.
+  const nuevos  = allProducts.filter(p => p.stock > 0).slice(0, 7)
   const restock = allProducts.filter(p => p.tags.includes('restock')).slice(0, 7)
   const sets    = allProducts.filter(p => p.type === 'set-sealed').slice(0, 3)
 
@@ -199,11 +206,17 @@ export default function HomePage() {
         <Reveal animation="fade-in">
           <div className="h-scroll-wrap">
             <div className="h-scroll" style={{ gap:16 }}>
-              {nuevos.map(p => (
-                <div key={p.id} style={{ flexShrink:0, width:210 }}>
-                  <ProductCard product={p} onView={nav} onAdd={addItem} />
-                </div>
-              ))}
+              {/* Mientras carga el catálogo se pintan cajas: sin ellas la portada
+                  son tres títulos sueltos sobre el fondo y parece rota. */}
+              {cargando
+                ? Array.from({ length: 7 }).map((_, i) => (
+                    <div key={i} style={{ flexShrink:0, width:210 }}><ProductCardSkeleton /></div>
+                  ))
+                : nuevos.map(p => (
+                    <div key={p.id} style={{ flexShrink:0, width:210 }}>
+                      <ProductCard product={p} onView={nav} onAdd={addItem} />
+                    </div>
+                  ))}
             </div>
           </div>
         </Reveal>
@@ -219,11 +232,13 @@ export default function HomePage() {
           </Head>
         </Reveal>
         <div className="restock-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(170px, 1fr))', gap:16 }}>
-          {restock.map((p, i) => (
-            <Reveal key={p.id} delay={i * 60} animation="fade-up">
-              <ProductCard product={p} onView={nav} onAdd={addItem} />
-            </Reveal>
-          ))}
+          {cargando
+            ? Array.from({ length: 7 }).map((_, i) => <ProductCardSkeleton key={i} />)
+            : restock.map((p, i) => (
+                <Reveal key={p.id} delay={i * 60} animation="fade-up">
+                  <ProductCard product={p} onView={nav} onAdd={addItem} />
+                </Reveal>
+              ))}
         </div>
       </Sec>
 
