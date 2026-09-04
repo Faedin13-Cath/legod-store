@@ -615,7 +615,19 @@ a[href*="/tienda"].more-link,
   .tienda-grid { grid-template-columns: repeat(2, 1fr) !important; }
 
   /* Tienda filter bar */
-  .filter-cats { display: none !important; } /* hide cat pills on mobile — use tabs */
+  /* Las categorías estaban en display:none "porque ya están las pestañas", pero
+     esas pestañas son Todos / Minifiguras / Sets: en celular no había forma de
+     filtrar por tema. Ahora van en una tira que se desliza de lado. */
+  .filter-cats {
+    flex: 1 1 100% !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px !important;
+  }
+  .filter-cats::-webkit-scrollbar { display: none; }
+  .filter-cats > button { flex-shrink: 0 !important; }
   .filter-selects { flex-wrap: wrap !important; gap: 6px !important; }
   .filter-search { flex: 1 1 100% !important; }
   .filter-search input { width: 100% !important; box-sizing: border-box !important; }
