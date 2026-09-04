@@ -18,6 +18,7 @@ export const cats: Category[] = [
   { id: 'espacio',  label: 'Espacio',         emoji: '🚀', icon: 'cat-espacio' },
   { id: 'piratas',  label: 'Piratas',         emoji: '🏴', icon: 'cat-piratas' },
   { id: 'aventureros', label: 'Aventureros',  emoji: '🧭', icon: 'cat-aventureros' },
+  { id: 'piezas',   label: 'Piezas y accesorios', emoji: '🧩', icon: 'cat-piezas' },
   { id: 'custom',   label: 'Custom',          emoji: '✦', icon: 'cat-custom' },
 ]
 

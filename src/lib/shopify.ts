@@ -86,7 +86,7 @@ export async function getProductByHandle(handle: string): Promise<ShopifyProduct
 import type { Product, ProductCat, ProductType, ProductTag } from '@/types'
 import { parsePreventa } from '@/lib/preventa'
 
-const CAT_TAGS = ['starwars','marvel','dc','harry','stranger','castle','sports','pixar','series','city','ninjago','lotr','bionicle','animales','espacio','piratas','aventureros','custom']
+const CAT_TAGS = ['starwars','marvel','dc','harry','stranger','castle','sports','pixar','series','city','ninjago','lotr','bionicle','animales','espacio','piratas','aventureros','piezas','custom']
 const PRODUCT_TAGS = ['nuevo','restock','oferta','edicion-limitada','sellado','usado','agotado','popular','limitada','custom','promo']
 const BL_ID_RE = /^[a-z]{2,4}\d{3,}/i   // sh0276, sw0123, hp001, etc.
 const CAT_LABELS: Record<string, string> = {
@@ -94,7 +94,8 @@ const CAT_LABELS: Record<string, string> = {
   harry: 'Harry Potter', stranger: 'Stranger Things',
   sports: 'Deportes', castle: 'Castle', pixar: 'Pixar', series: 'Series', animales: 'Animales',
   city: 'City', lotr: 'El Señor de los Anillos', ninjago: 'Ninjago', bionicle: 'Bionicle',
-  espacio: 'Espacio', piratas: 'Piratas', aventureros: 'Aventureros', custom: 'Custom',
+  espacio: 'Espacio', piratas: 'Piratas', aventureros: 'Aventureros',
+  piezas: 'Piezas y accesorios', custom: 'Custom',
 }
 
 export function shopifyToProduct(p: ShopifyProduct): Product {
