@@ -117,4 +117,4 @@ export const PREVENTAS_PUBLIC = true
  * extranjero se retrasan seguido, así que en la interfaz siempre se dice
  * junto con la advertencia de que puede tardar más.
  */
-export const LLEGADA_TENTATIVA = '4 de noviembre'
+export const LLEGADA_TENTATIVA = '4 de octubre'
