@@ -118,13 +118,13 @@ function PreventaCard({
           {/* Va aquí y no sobre la foto porque ese lugar ya lo ocupa "Preventa",
               y de las dos cosas la que el cliente necesita saber primero es que
               la figura todavía no llega. */}
-          {product.tags.includes('sellado') && (
+          {product.tags.includes('nuevo') && (
             <span style={{
               marginLeft: 8, padding: '2px 7px', borderRadius: 999,
               background: 'var(--accent-soft)', color: 'var(--accent)',
               fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
             }}>
-              Sellado
+              Nuevo
             </span>
           )}
           {!agotada && product.stock <= 5 && (
