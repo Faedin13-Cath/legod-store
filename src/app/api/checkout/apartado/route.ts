@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 const domain      = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN!
 const adminToken  = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN
 const WHATSAPP    = process.env.NEXT_PUBLIC_WHATSAPP ?? '525574777350'
-const DEPOSIT_PCT = 0.40
+import { APARTADO_LABEL, anticipoDe, anticipoTotal } from '@/lib/apartado'
 
 type CartLine = { id: string; name: string; price: number; qty: number }
 
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
   }
 
-  const deposit = Math.round(subtotal * DEPOSIT_PCT)
+  const deposit = anticipoTotal(items)
   const balance = subtotal - deposit
   const plazo   = deadlineLabel(subtotal)
 
@@ -79,8 +79,8 @@ export async function POST(req: NextRequest) {
   /* ── Draft Order via Admin API (clean checkout, no "AHORRO TOTAL") ── */
   if (adminToken) {
     const lineItems = items.map(i => ({
-      title:             `${i.name} — Apartado (${Math.round(DEPOSIT_PCT * 100)}%)`,
-      price:             (i.price * DEPOSIT_PCT).toFixed(2),
+      title:             `${i.name} — Apartado (${APARTADO_LABEL})`,
+      price:             anticipoDe(i.price).toFixed(2),
       quantity:          i.qty,
       requires_shipping: false,
       taxable:           false,
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     const note = [
       'APARTADO',
       `Total original: $${subtotal.toLocaleString('es-MX')} MXN`,
-      `Anticipo (${Math.round(DEPOSIT_PCT * 100)}%): $${deposit.toLocaleString('es-MX')} MXN`,
+      `Anticipo (${APARTADO_LABEL}): $${deposit.toLocaleString('es-MX')} MXN`,
       `Saldo pendiente: $${balance.toLocaleString('es-MX')} MXN`,
       `Plazo: ${plazo}`,
     ].join('\n')
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
     linesList,
     '',
     `💰 Total: $${subtotal.toLocaleString('es-MX')} MXN`,
-    `🏷️ Anticipo (${Math.round(DEPOSIT_PCT * 100)}%): $${deposit.toLocaleString('es-MX')} MXN`,
+    `🏷️ Anticipo (${APARTADO_LABEL}): $${deposit.toLocaleString('es-MX')} MXN`,
     `⏳ Plazo: ${plazo}`,
     '',
     '¿Me puedes enviar los datos para el pago?',

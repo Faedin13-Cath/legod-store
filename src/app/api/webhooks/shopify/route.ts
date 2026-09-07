@@ -7,6 +7,11 @@ import { guardarEnCasillero } from '@/lib/casillero'
 const domain     = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN!
 const adminToken = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN
 
+/** El `id` que guardamos en original_items ya es el handle, pero los pedidos
+ *  hechos a mano en Shopify caen al fallback y traen el título. */
+const handleDe = (id: string) =>
+  id.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+
 async function adjustInventory(handle: string, qty: number) {
   if (!adminToken) return
   try {
@@ -235,6 +240,13 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    // Bajar del inventario lo apartado. El pedido de apartado se arma con
+    // renglones sueltos (título + el anticipo), sin variante de Shopify
+    // detrás, así que Shopify no tiene qué descontar: hay que hacerlo aquí.
+    for (const item of apItems) {
+      await adjustInventory(handleDe(item.id), item.qty)
+    }
+
     return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
   }
 
@@ -442,64 +454,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
   }
 
-  if (attr('tipo') === 'apartado') {
-    const subtotal = parseInt(attr('subtotal_original') ?? '0', 10)
-    const deposit  = parseInt(attr('anticipo_monto')    ?? '0', 10)
-    const balance  = parseInt(attr('saldo_pendiente')   ?? '0', 10)
-    const plazo    = attr('plazo_liquidar') ?? '15 días'
-
-    const days = plazo.includes('semana') ? 7 : plazo.includes('mes') ? 30 : 15
-    const deadline = new Date(order.created_at ?? Date.now())
-    deadline.setDate(deadline.getDate() + days)
-
-    // Parse original items (saved when draft order was created)
-    let items: { id: string; name: string; price: number; qty: number }[] = []
-    const originalItemsStr = attr('original_items')
-    if (originalItemsStr) {
-      try { items = JSON.parse(originalItemsStr) } catch { /* ignore */ }
-    }
-    if (!items.length) {
-      // Fallback: derive from line_items (strips "— Apartado (40%)" suffix)
-      items = (order.line_items ?? []).map(li => ({
-        id:    li.title.toLowerCase().replace(/\s+/g, '-').replace(/—.*/,'').trim(),
-        name:  li.title.replace(/\s*—.*$/, '').trim(),
-        price: parseFloat(li.price) / 0.40,
-        qty:   li.quantity,
-      }))
-    }
-
-    if (subtotal > 0 && authUser) {
-      await supabase.from('apartados').insert({
-        user_id:    authUser.id,
-        items,
-        subtotal,
-        deposit,
-        balance,
-        deadline_at: deadline.toISOString(),
-        status:     'active',
-      })
-    }
-
-    // Saldo parcial usado en el anticipo → descontarlo ahora
-    const aptBalanceUsed = parseFloat(attr('balance_used') ?? '0')
-    const aptUserId      = attr('user_id')
-    if (aptBalanceUsed > 0 && aptUserId) {
-      const { data: prof } = await supabase.from('profiles').select('balance').eq('id', aptUserId).single()
-      const newBalance = Math.max(0, (prof?.balance ?? 0) - aptBalanceUsed)
-      await supabase.from('profiles').update({ balance: newBalance }).eq('id', aptUserId)
-      await supabase.from('balance_transactions').insert({
-        user_id: aptUserId, type: 'spent', amount: aptBalanceUsed,
-        description: `Saldo en anticipo de apartado — Orden #${orderNum ?? orderId}`,
-        reference_id: orderId,
-      })
-    }
-
-    // Mark original products out of stock
-    for (const item of items) {
-      const handle = item.id.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-      await adjustInventory(handle, item.qty)
-    }
-  }
 
   return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })
 }

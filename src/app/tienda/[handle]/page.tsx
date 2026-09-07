@@ -10,6 +10,7 @@ import { useCart } from '@/components/cart/CartProvider'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { getProducts, getProductByHandle, shopifyToProduct } from '@/lib/shopify'
 import { PREVENTAS_PUBLIC, LLEGADA_TENTATIVA } from '@/lib/preventa'
+import { APARTADO_LABEL, anticipoDe } from '@/lib/apartado'
 import type { Product } from '@/types'
 
 const STATE_LABEL: Record<string, string> = {
@@ -340,7 +341,7 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
                 ) : (
                   <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                     <Icon name="clock" size={15} />
-                    Apartar con 40% — ${Math.round(product.price * 0.4).toLocaleString('es-MX')} MXN
+                    Apartar con {APARTADO_LABEL} — ${anticipoDe(product.price).toLocaleString('es-MX')} MXN
                   </span>
                 )}
               </button>

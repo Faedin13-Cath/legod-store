@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
 import SaldoConfirmModal, { type ShippingData } from '@/components/cart/SaldoConfirmModal'
+import { APARTADO_LABEL, anticipoTotal } from '@/lib/apartado'
 import type { CartItem } from '@/types'
 
 interface Props {
@@ -39,7 +40,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
 
   const subtotal = items.reduce((s, it) => s + it.price * it.qty, 0)
   const count    = items.reduce((s, it) => s + it.qty, 0)
-  const deposit  = Math.round(subtotal * 0.40)
+  const deposit  = anticipoTotal(items)
   const balance  = subtotal - deposit
 
   /* ── close info popup on outside click ── */
@@ -119,7 +120,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
     }
   }
 
-  // Saldo aplicable al anticipo del 40%
+  // Saldo aplicable al anticipo
   const aptApplied  = useBalance ? Math.min(userBalance, deposit) : 0
 
   function handleApartado() {
@@ -446,7 +447,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
                 >
                   {loadingApt ? 'Procesando…' : (
                     <>
-                      Apartar con 40%
+                      Apartar con {APARTADO_LABEL}
                       <span style={{ fontSize: 12, fontWeight: 500, opacity: 0.85 }}>
                         (${deposit.toLocaleString('es-MX')} MXN)
                       </span>
@@ -487,7 +488,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
                     ¿Cómo funciona el apartado?
                   </div>
                   <p style={{ fontSize: 12, color: 'var(--ink-2)', margin: '0 0 12px', lineHeight: 1.6 }}>
-                    Pagas el <strong>40%</strong> hoy para reservar tus figuras. Tienes plazo para liquidar el resto según el monto total:
+                    Pagas el <strong>{APARTADO_LABEL}</strong> hoy para reservar tus figuras. Tienes plazo para liquidar el resto según el monto total:
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
                     {[
@@ -513,7 +514,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
                   {/* Current order summary */}
                   <div style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ink-3)', marginBottom: 3 }}>
-                      <span>Tu anticipo (40%)</span>
+                      <span>Tu anticipo ({APARTADO_LABEL})</span>
                       <span style={{ fontWeight: 600, color: 'var(--ink-2)' }}>${deposit.toLocaleString('es-MX')} MXN</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ink-3)' }}>

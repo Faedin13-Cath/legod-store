@@ -80,7 +80,7 @@ export default function HomePage() {
               </h1>
 
               <p className="anim-fade-up d-2 hero-desc" style={{ fontSize:17, color:'rgba(255,255,255,0.55)', lineHeight:1.65, maxWidth:400, margin:'0 0 36px' }}>
-                Star Wars, Marvel, sports y más. Nuevos ingresos cada semana. Apartas con 40% y liquidas en 7 días.
+                Star Wars, Marvel, sports y más. Nuevos ingresos cada semana. Apartas con 60% y liquidas en 7 días.
               </p>
 
               {/* CTAs */}
@@ -334,7 +334,7 @@ export default function HomePage() {
         <div className="benefits-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:16 }}>
           {[
             { icon:'truck',   title:'envíos seguros',  desc:'Burbuja + caja rígida. Correos, Estafeta o FedEx.' },
-            { icon:'clock',   title:'apartado 40%',    desc:'Aparta con 40% de anticipo y liquida en 7 días.' },
+            { icon:'clock',   title:'apartado 60%',    desc:'Aparta con 60% de anticipo y liquida en 7 días.' },
             { icon:'shield',  title:'compra segura',   desc:'MercadoPago, Stripe o transferencia. Garantía 7 días.' },
           ].map((b, i) => (
             <Reveal key={b.icon} delay={i * 80} animation="fade-up" style={{ height:'100%' }}>

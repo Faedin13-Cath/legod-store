@@ -298,7 +298,7 @@ export default function ApartadosPage() {
 
       <div style={{ marginTop: 24, padding: '14px 18px', background: 'var(--cream)', border: '1px solid var(--line)', borderRadius: 12, fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.6 }}>
         <strong>¿Cómo funciona el apartado?</strong><br />
-        Reservas con 40% de anticipo. El plazo para liquidar depende del total: hasta $1,000 tienes 1 semana; de $1,001 a $4,000 tienes 15 días; más de $4,000 tienes 1 mes. Si no liquidas a tiempo, el anticipo no es reembolsable.{' '}
+        Reservas con 60% de anticipo. El plazo para liquidar depende del total: hasta $1,000 tienes 1 semana; de $1,001 a $4,000 tienes 15 días; más de $4,000 tienes 1 mes. Si no liquidas a tiempo, el anticipo no es reembolsable.{' '}
         <a href={`https://wa.me/${WHATSAPP}`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 500 }}>
           Escríbenos si necesitas una extensión.
         </a>
