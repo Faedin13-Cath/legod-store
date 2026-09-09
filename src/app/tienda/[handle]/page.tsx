@@ -16,6 +16,7 @@ import type { Product } from '@/types'
 const STATE_LABEL: Record<string, string> = {
   new:        'Nuevo · sin uso',
   perfect:    'Perfecto · sin marcas',
+  usado:      'Usado · completo',
   crack:      'Con detalle · ver descripción',
   'no-acc':   'Sin accesorios',
   incomplete: 'Incompleto',

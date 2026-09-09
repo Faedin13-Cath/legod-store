@@ -131,7 +131,10 @@ export function shopifyToProduct(p: ShopifyProduct): Product {
       const ahora = parseFloat(p.priceRange.minVariantPrice.amount)
       return antes > ahora ? { priceAntes: Math.round(antes) } : {}
     })(),
-    state:  p.tags.includes('detalle') ? 'crack' : 'new',
+    // Sin esto, un set usado se anunciaba como "Nuevo · sin uso".
+    state:  p.tags.includes('detalle') ? 'crack'
+          : p.tags.includes('usado')   ? 'usado'
+          : 'new',
     rarity: p.tags.includes('legendaria') ? 'legendaria'
           : p.tags.includes('unica')    ? 'unica'
           : p.tags.includes('limitada') ? 'limitada'
