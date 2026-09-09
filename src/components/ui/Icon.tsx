@@ -68,6 +68,10 @@ const paths: Record<string, React.ReactNode> = {
   'cat-espacio':  <><path d="M12 2.5c2.6 2.3 4 5.5 4 9v4H8v-4c0-3.5 1.4-6.7 4-9z"/><circle cx="12" cy="9" r="1.8"/><path d="M8 13.5 5 16v3l3-1.7"/><path d="M16 13.5 19 16v3l-3-1.7"/><path d="M10.5 15.5v4l1.5 2 1.5-2v-4"/></>,
   // Piratas — calavera
   'cat-piratas':  <><path d="M12 3a7 7 0 0 1 7 7v2.5l-2 1.5v3H7v-3l-2-1.5V10a7 7 0 0 1 7-7z"/><circle cx="9.5" cy="10.5" r="1.5"/><circle cx="14.5" cy="10.5" r="1.5"/><path d="M11 14.5h2"/></>,
+  // Películas — claqueta
+  'cat-peliculas': <><rect x="3" y="9" width="18" height="11" rx="2"/><path d="M3.6 9 5.4 4.6l3.1 1.4 2.9-1.9 3.1 1.4 2.9-1.9 2 3.6"/><path d="M3 13.5h18"/></>,
+  // Videojuegos — control
+  'cat-videojuegos': <><rect x="2.5" y="7.5" width="19" height="9.5" rx="4.5"/><path d="M7 10.5v3"/><path d="M5.5 12h3"/><circle cx="16" cy="11.4" r="1"/><circle cx="18.2" cy="13.4" r="1"/></>,
   // Piezas y accesorios — brick suelto con studs
   'cat-piezas':   <><path d="M4 10.5h16v7.5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 10.5V8.8a1 1 0 0 1 1-1h1.5a1 1 0 0 1 1 1v1.7"/><path d="M13.5 10.5V8.8a1 1 0 0 1 1-1H16a1 1 0 0 1 1 1v1.7"/><path d="M4 14.2h16"/></>,
   // Aventureros — sombrero de explorador
