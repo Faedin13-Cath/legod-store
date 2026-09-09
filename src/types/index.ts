@@ -1,7 +1,7 @@
 export type ProductCat = 'starwars' | 'marvel' | 'dc' | 'harry' | 'stranger' | 'castle' | 'sports' | 'custom' | 'pixar' | 'series' | 'animales' | 'city' | 'lotr' | 'ninjago' | 'bionicle' | 'espacio' | 'piratas' | 'aventureros' | 'piezas'
 export type ProductType = 'minifig' | 'set-sealed' | 'set-used'
 export type ProductState = 'perfect' | 'new' | 'crack' | 'no-acc' | 'incomplete'
-export type ProductRarity = 'comun' | 'rara' | 'limitada' | 'unica'
+export type ProductRarity = 'comun' | 'rara' | 'limitada' | 'unica' | 'legendaria'
 export type ProductTag = 'nuevo' | 'restock' | 'oferta' | 'edicion-limitada' | 'sellado' | 'usado' | 'popular' | 'agotado' | 'limitada' | 'custom' | 'promo'
 
 export interface Product {
@@ -12,6 +12,8 @@ export interface Product {
   type: ProductType
   tag: string
   price: number
+  /** Precio anterior tachado. Solo existe si es mayor que `price`. */
+  priceAntes?: number
   stock: number
   state: ProductState
   rarity: ProductRarity

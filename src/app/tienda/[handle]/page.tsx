@@ -26,6 +26,7 @@ const RARITY_LABEL: Record<string, { label: string; color: string }> = {
   rara:     { label: 'Rara',     color: 'var(--accent)' },
   limitada: { label: 'Limitada', color: 'var(--gold)' },
   unica:    { label: 'Única',    color: '#E5632A' },
+  legendaria: { label: 'Legendaria', color: '#B8860B' },
 }
 
 const DETALLE_CHIP = { label: 'Con detalle', color: '#B45309' }
@@ -226,6 +227,11 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
           {(!pv || canSeePreventa) && (
             <div style={{ fontSize: 38, fontWeight: 700, color: 'var(--ink)', margin: '0 0 20px' }}>
               {pv && <small style={{ fontSize: 15, fontWeight: 500, color: 'var(--ink-3)', marginRight: 8 }}>Desde</small>}
+              {!pv && product.priceAntes && (
+                <small style={{ fontSize: 22, fontWeight: 500, color: 'var(--ink-3)', textDecoration: 'line-through', marginRight: 12 }}>
+                  ${product.priceAntes.toLocaleString('es-MX')}
+                </small>
+              )}
               ${(pv ? pv.full : product.price).toLocaleString('es-MX')}
               <small style={{ fontSize: 16, fontWeight: 400, color: 'var(--ink-3)', marginLeft: 6 }}>MXN</small>
             </div>

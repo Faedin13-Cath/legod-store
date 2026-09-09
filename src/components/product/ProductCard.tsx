@@ -102,6 +102,14 @@ export default function ProductCard({ product, wished, onView, onAdd, onWish }: 
         <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--ink-4)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>{product.tag}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: 19, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>
+            {product.priceAntes && (
+              <span style={{
+                fontSize: 13, fontWeight: 500, color: 'var(--ink-3)',
+                textDecoration: 'line-through', marginRight: 6, letterSpacing: 0,
+              }}>
+                ${product.priceAntes.toLocaleString('es-MX')}
+              </span>
+            )}
             ${product.price.toLocaleString('es-MX')} <small style={{ fontSize: 11, fontWeight: 400, color: 'var(--ink-3)', letterSpacing: 0 }}>MXN</small>
           </div>
           <button

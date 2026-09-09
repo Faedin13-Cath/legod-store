@@ -32,7 +32,7 @@ export interface ShopifyProduct {
   images: { edges: { node: { url: string; altText: string | null } }[] }
   tags: string[]
   availableForSale: boolean
-  variants: { edges: { node: { id: string; title: string; price: { amount: string }; quantityAvailable: number | null } }[] }
+  variants: { edges: { node: { id: string; title: string; price: { amount: string }; compareAtPrice: { amount: string } | null; quantityAvailable: number | null } }[] }
 }
 
 /* ── Queries ─────────────────────────────────────────────────── */
@@ -40,7 +40,7 @@ const PRODUCT_FIELDS = `
   id handle title description availableForSale tags
   priceRange { minVariantPrice { amount } }
   images(first: 3) { edges { node { url altText } } }
-  variants(first: 5) { edges { node { id title price { amount } quantityAvailable } } }
+  variants(first: 5) { edges { node { id title price { amount } compareAtPrice { amount } quantityAvailable } } }
 `
 
 /* ── Cache en memoria (60s) — evita repegar a Shopify al navegar ── */
@@ -121,8 +121,17 @@ export function shopifyToProduct(p: ShopifyProduct): Product {
       const qty = p.variants.edges.reduce((s, e) => s + (e.node.quantityAvailable ?? 0), 0)
       return qty > 0 ? qty : (p.availableForSale ? 1 : 0)
     })(),
+    // El "precio de comparación" de Shopify. Solo se pasa si de verdad es más
+    // alto: si alguien lo deja igual o por debajo, tachar ese número sería
+    // inventarle un descuento al cliente.
+    ...(() => {
+      const antes = parseFloat(p.variants.edges[0]?.node.compareAtPrice?.amount ?? '0')
+      const ahora = parseFloat(p.priceRange.minVariantPrice.amount)
+      return antes > ahora ? { priceAntes: Math.round(antes) } : {}
+    })(),
     state:  p.tags.includes('detalle') ? 'crack' : 'new',
-    rarity: p.tags.includes('unica')    ? 'unica'
+    rarity: p.tags.includes('legendaria') ? 'legendaria'
+          : p.tags.includes('unica')    ? 'unica'
           : p.tags.includes('limitada') ? 'limitada'
           : p.tags.includes('rara')     ? 'rara'
           : 'comun',
