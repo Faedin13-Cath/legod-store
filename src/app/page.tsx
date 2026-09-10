@@ -18,20 +18,17 @@ import type React from 'react'
 const TICKER = 'Star Wars · Marvel · DC · Harry Potter · Stranger Things · Deportes · Castle · Pixar · Custom · '
 
 /**
- * La pieza que va en la banda destacada de la portada.
- *
- * Escrita aquí y no leída del catálogo a propósito: es de las imágenes más
- * grandes de la página y sale antes de que responda Shopify. Si dependiera de
- * esa petición, la banda aparecería vacía el primer segundo.
+ * La figura del hero. Va escrita aquí y no leída del catálogo a propósito: es
+ * la imagen más grande de la página y la que marca la velocidad de carga. Si
+ * dependiera de la petición a Shopify, el hero saldría vacío el primer segundo.
  */
-const DESTACADA = {
-  handle:   'the-kraang-battle-damage-suit',
-  nombre:   'the kraang',
-  sub:      'Battle Damage Suit · Teenage Mutant Ninja Turtles. Una sola pieza disponible.',
-  precio:   '$15,000 MXN',
-  etiqueta: 'Pieza única',
-  foto:     'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/kraang-v2.png',
-  alt:      'The Kraang - Battle Damage Suit',
+const HERO = {
+  handle: 'the-kraang-battle-damage-suit',
+  nombre: 'The Kraang · TMNT',
+  precio: '$15,000 MXN',
+  nota:   '⭐ Pieza única · NYCC',
+  foto:   'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/kraang-v2.png',
+  alt:    'The Kraang - Battle Damage Suit',
 }
 
 export default function HomePage() {
@@ -113,7 +110,7 @@ export default function HomePage() {
               <div className="anim-scale-in d-2" style={{ position:'absolute', inset:0, borderRadius:32, overflow:'hidden', boxShadow:'0 48px 96px -24px rgba(0,0,0,0.7)', background:'#fff' }}>
                 <div className="anim-float" style={{ position:'absolute', inset:0 }}>
                   <div style={{ position:'absolute', inset:0, transform:'scale(0.82)', transformOrigin:'center' }}>
-                    <Image src="https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh1132.png" alt="Winter Soldier (Bucky) Minifig" fill style={{ objectFit:'contain', objectPosition:'center' }} sizes="45vw" priority />
+                    <Image src={HERO.foto} alt={HERO.alt} fill style={{ objectFit:'contain', objectPosition:'center' }} sizes="45vw" priority />
                   </div>
                 </div>
                 <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, transparent 55%, rgba(15,18,64,0.55) 100%)' }} />
@@ -121,9 +118,9 @@ export default function HomePage() {
 
               {/* Glass badge — promo */}
               <div className="anim-fade-up d-5" style={{ position:'absolute', bottom:28, left:-36, background:'rgba(15,18,64,0.72)', backdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.18)', borderRadius:20, padding:'14px 18px', zIndex:2, minWidth:184 }}>
-                <div style={{ fontSize:11, color:'rgba(255,255,255,0.55)', fontWeight:600, marginBottom:5, letterSpacing:'0.04em' }}>🔥 Promo activa</div>
-                <div style={{ fontSize:15, fontWeight:700, color:'#fff', marginBottom:3 }}>Bucky (Winter Soldier) · Marvel</div>
-                <div style={{ fontSize:20, fontWeight:800, color:'#F5C84A', letterSpacing:'-0.02em' }}>$1,050 MXN</div>
+                <div style={{ fontSize:11, color:'rgba(255,255,255,0.55)', fontWeight:600, marginBottom:5, letterSpacing:'0.04em' }}>{HERO.nota}</div>
+                <div style={{ fontSize:15, fontWeight:700, color:'#fff', marginBottom:3 }}>{HERO.nombre}</div>
+                <div style={{ fontSize:20, fontWeight:800, color:'#F5C84A', letterSpacing:'-0.02em' }}>{HERO.precio}</div>
               </div>
 
               {/* Gold star badge */}
@@ -147,67 +144,6 @@ export default function HomePage() {
           <span className="ticker-text">{TICKER}</span>
         </div>
       </div>
-
-      {/* ═══════════════════════════════════════════════════════
-          PIEZA DESTACADA — banda ancha
-          Una figura de $15,000 no cabe en una tarjeta del tamaño de una de
-          $150: al lado de las demás se lee como una más de la fila. Va en su
-          propia banda, a lo ancho, rompiendo el crema de la página.
-          Para cambiar la figura, cambia DESTACADA arriba.
-      ═══════════════════════════════════════════════════════ */}
-      <Sec top={40}>
-        <Reveal animation="scale-in">
-          <Link href={`/tienda/${DESTACADA.handle}`} className="destacada" style={{
-            display:'grid', gridTemplateColumns:'1fr 340px', gap:32, alignItems:'center',
-            background:'linear-gradient(135deg, #12103F 0%, #2D1869 55%, #5526AD 100%)',
-            borderRadius:28, padding:'44px 48px', textDecoration:'none',
-            position:'relative', overflow:'hidden',
-          }}>
-            {/* Halo detrás de la figura */}
-            <div style={{
-              position:'absolute', right:'8%', top:'50%', transform:'translateY(-50%)',
-              width:420, height:420, borderRadius:'50%',
-              background:'radial-gradient(circle, rgba(226,169,26,0.22) 0%, transparent 68%)',
-              filter:'blur(50px)', pointerEvents:'none',
-            }} />
-
-            <div style={{ position:'relative', zIndex:1 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
-                <div style={{ width:22, height:2, background:'var(--gold)', borderRadius:1 }} />
-                <span style={{ fontSize:11, fontWeight:700, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--gold)' }}>
-                  {DESTACADA.etiqueta}
-                </span>
-              </div>
-              <h2 className="destacada-h" style={{
-                fontSize:'clamp(40px, 5vw, 68px)', lineHeight:0.92, fontWeight:900,
-                letterSpacing:'-0.04em', textTransform:'lowercase', color:'#fff', margin:'0 0 12px',
-              }}>
-                {DESTACADA.nombre}
-              </h2>
-              <p style={{ fontSize:15, color:'rgba(255,255,255,0.62)', margin:'0 0 22px', maxWidth:380, lineHeight:1.6 }}>
-                {DESTACADA.sub}
-              </p>
-              <div style={{ display:'flex', alignItems:'center', gap:18, flexWrap:'wrap' }}>
-                <span style={{ fontSize:34, fontWeight:800, color:'var(--gold)', letterSpacing:'-0.02em' }}>
-                  {DESTACADA.precio}
-                </span>
-                <span className="btn-hero-primary" style={{ padding:'11px 22px', fontSize:14 }}>verla →</span>
-              </div>
-            </div>
-
-            {/* La foto va en tarjeta blanca: el catálogo trae fondo blanco, así
-                que recortarla dejaba un halo gris sobre el morado. */}
-            <div className="destacada-foto" style={{
-              position:'relative', zIndex:1, background:'#fff', borderRadius:22,
-              padding:18, boxShadow:'0 32px 64px -20px rgba(0,0,0,0.55)',
-              display:'flex', alignItems:'center', justifyContent:'center', minHeight:300,
-            }}>
-              <Image src={DESTACADA.foto} alt={DESTACADA.alt} width={220} height={340}
-                     style={{ objectFit:'contain' }} sizes="340px" />
-            </div>
-          </Link>
-        </Reveal>
-      </Sec>
 
       {/* ═══════════════════════════════════════════════════════
           PROMOS — bento grid

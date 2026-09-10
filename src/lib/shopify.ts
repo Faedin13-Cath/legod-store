@@ -87,7 +87,7 @@ import type { Product, ProductCat, ProductType, ProductTag } from '@/types'
 import { parsePreventa } from '@/lib/preventa'
 
 const CAT_TAGS = ['starwars','marvel','dc','harry','stranger','castle','sports','pixar','series','city','ninjago','lotr','bionicle','animales','espacio','piratas','aventureros','piezas','peliculas','videojuegos','custom']
-const PRODUCT_TAGS = ['nuevo','restock','oferta','edicion-limitada','sellado','usado','agotado','popular','limitada','custom','promo']
+const PRODUCT_TAGS = ['nuevo','restock','oferta','edicion-limitada','sellado','usado','agotado','popular','limitada','custom','promo','nycc']
 const BL_ID_RE = /^[a-z]{2,4}\d{3,}/i   // sh0276, sw0123, hp001, etc.
 const CAT_LABELS: Record<string, string> = {
   starwars: 'Star Wars', marvel: 'Marvel', dc: 'DC Comics',

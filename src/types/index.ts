@@ -2,7 +2,7 @@ export type ProductCat = 'starwars' | 'marvel' | 'dc' | 'harry' | 'stranger' | '
 export type ProductType = 'minifig' | 'set-sealed' | 'set-used'
 export type ProductState = 'perfect' | 'new' | 'usado' | 'crack' | 'no-acc' | 'incomplete'
 export type ProductRarity = 'comun' | 'rara' | 'limitada' | 'unica' | 'legendaria'
-export type ProductTag = 'nuevo' | 'restock' | 'oferta' | 'edicion-limitada' | 'sellado' | 'usado' | 'popular' | 'agotado' | 'limitada' | 'custom' | 'promo'
+export type ProductTag = 'nuevo' | 'restock' | 'oferta' | 'edicion-limitada' | 'sellado' | 'usado' | 'popular' | 'agotado' | 'limitada' | 'custom' | 'promo' | 'nycc'
 
 export interface Product {
   id: string

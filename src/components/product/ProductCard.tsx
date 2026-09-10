@@ -24,6 +24,9 @@ interface Props {
 
 export default function ProductCard({ product, wished, onView, onAdd, onWish }: Props) {
   const out = product.stock === 0
+  // Exclusivas de convención: se distinguen con el borde en oro para que se
+  // note en la reja que no son una figura de catálogo más.
+  const nycc = product.tags.includes('nycc')
 
   const visibleTags = product.tags.filter(t => tagPill[t])
   if (out && !visibleTags.includes('agotado')) visibleTags.push('agotado')
@@ -34,10 +37,11 @@ export default function ProductCard({ product, wished, onView, onAdd, onWish }: 
       onClick={() => onView?.(product)}
       style={{
         background: 'var(--paper)',
-        border: '1px solid var(--line)',
+        border: nycc ? '2px solid var(--gold)' : '1px solid var(--line)',
         borderRadius: 24,
         overflow: 'hidden',
         transition: 'border-color .15s, box-shadow .15s',
+        ...(nycc ? { boxShadow: '0 0 0 4px rgba(226,169,26,0.14)' } : {}),
       }}
     >
       {/* Image */}
@@ -57,6 +61,16 @@ export default function ProductCard({ product, wished, onView, onAdd, onWish }: 
 
         {/* Badges */}
         <div style={{ position: 'absolute', top: 10, left: 10, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          {nycc && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '4px 9px', borderRadius: 999,
+              background: 'var(--gold)', color: '#3A2A00',
+              fontSize: 10, fontWeight: 800, letterSpacing: '0.08em',
+            }}>
+              NYCC
+            </span>
+          )}
           {product.state === 'crack' && (
             <span className="pill detalle">Con detalle</span>
           )}

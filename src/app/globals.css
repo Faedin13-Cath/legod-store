@@ -614,11 +614,6 @@ a[href*="/tienda"].more-link,
   /* Tienda product grid */
   .tienda-grid { grid-template-columns: repeat(2, 1fr) !important; }
 
-  /* Banda de pieza destacada: en celular la foto va arriba y el texto abajo. */
-  .destacada { grid-template-columns: 1fr !important; padding: 28px 24px !important; gap: 22px !important; }
-  .destacada-h { font-size: 40px !important; }
-  .destacada-foto { order: -1; min-height: 240px !important; }
-
   /* Tienda filter bar */
   /* Las categorías estaban en display:none "porque ya están las pestañas", pero
      esas pestañas son Todos / Minifiguras / Sets: en celular no había forma de

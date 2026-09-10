@@ -95,6 +95,8 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
   // En preventa no se vende desde aquí: el cobro va por /preventas, que usa
   // draft orders (sin campo de código de descuento).
   const pv = product.preventa
+  // Exclusiva de convención: se marca en oro, igual que en la reja de la tienda.
+  const nycc = product.tags.includes('nycc')
   const canSeePreventa = PREVENTAS_PUBLIC || !!profile?.is_admin
 
   function handleAdd() {
@@ -141,7 +143,8 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
           <div style={{
             borderRadius: 24, overflow: 'hidden',
             background: '#fff',
-            border: '1px solid var(--line)',
+            border: nycc ? '2px solid var(--gold)' : '1px solid var(--line)',
+            ...(nycc ? { boxShadow: '0 0 0 5px rgba(226,169,26,0.14)' } : {}),
             flex: 1, minHeight: 420,
             position: 'relative',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -150,7 +153,12 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
 
             {/* Tags overlay */}
             <div style={{ position: 'absolute', top: 16, left: 16, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {product.tags.slice(0, 3).map(t => (
+              {nycc && (
+                <span style={{ padding: '4px 11px', borderRadius: 999, background: 'var(--gold)', color: '#3A2A00', fontSize: 11, fontWeight: 800, letterSpacing: '0.08em' }}>
+                  NYCC
+                </span>
+              )}
+              {product.tags.filter(t => t !== 'nycc').slice(0, 3).map(t => (
                 <span key={t} className={
                   t === 'nuevo' ? 'pill gold' :
                   t === 'restock' ? 'pill violet' :
