@@ -140,11 +140,10 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
             height:100%, que la hacía ocupar todo y empujaba el aviso de estado
             fuera de la columna, encimándose sobre el bloque de al lado. */}
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
-          <div style={{
+          <div className={nycc ? 'nycc-oro' : undefined} style={{
             borderRadius: 24, overflow: 'hidden',
             background: '#fff',
-            border: nycc ? '2px solid var(--gold)' : '1px solid var(--line)',
-            ...(nycc ? { boxShadow: '0 0 0 5px rgba(226,169,26,0.14)' } : {}),
+            border: '1px solid var(--line)',
             flex: 1, minHeight: 420,
             position: 'relative',
             display: 'flex', alignItems: 'center', justifyContent: 'center',

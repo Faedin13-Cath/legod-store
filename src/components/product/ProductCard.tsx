@@ -33,15 +33,14 @@ export default function ProductCard({ product, wished, onView, onAdd, onWish }: 
 
   return (
     <article
-      className="prod-card cursor-pointer"
+      className={'prod-card cursor-pointer' + (nycc ? ' nycc-oro' : '')}
       onClick={() => onView?.(product)}
       style={{
         background: 'var(--paper)',
-        border: nycc ? '2px solid var(--gold)' : '1px solid var(--line)',
+        border: '1px solid var(--line)',
         borderRadius: 24,
         overflow: 'hidden',
         transition: 'border-color .15s, box-shadow .15s',
-        ...(nycc ? { boxShadow: '0 0 0 4px rgba(226,169,26,0.14)' } : {}),
       }}
     >
       {/* Image */}

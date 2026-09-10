@@ -142,6 +142,37 @@ html, body {
 .pill.danger  { background:#FCE3E3; border-color:#F2BFBF; color:#A23030; }
 .pill.detalle { background:#FEF3C7; border-color:#F5C88C; color:#B45309; font-weight:600; }
 
+/* ── Exclusivas de convención ──────────────────────────────── */
+/* El oro se pinta encima con un anillo, no con un borde más grueso: con
+   border:2px la tarjeta quedaba 2px más angosta que sus vecinas y la reja se
+   desalineaba. Así el modelo de caja es idéntico al de cualquier otra. */
+.nycc-oro { position: relative; }
+.nycc-oro::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 3;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(105deg,
+    #C8920E 0%, #E2A91A 34%, #FFF1BE 46%, #FFFFFF 50%,
+    #FFF1BE 54%, #E2A91A 66%, #C8920E 100%);
+  background-size: 320% 100%;
+  /* Deja ver solo el anillo: pinta el relleno y lo resta de sí mismo. */
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask-composite: exclude;
+  animation: nycc-brillo 5s linear infinite;
+  pointer-events: none;
+}
+@keyframes nycc-brillo {
+  0%   { background-position: 160% 0; }
+  100% { background-position: -60% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Sin barrido: el anillo se queda en oro plano. */
+  .nycc-oro::before { animation: none; background: var(--gold); }
+}
+
 /* ── Card ──────────────────────────────────────────────────── */
 .card {
   background: var(--paper);
