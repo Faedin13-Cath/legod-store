@@ -27,7 +27,7 @@ const HERO = {
   nombre: 'The Kraang · TMNT',
   precio: '$15,000 MXN',
   nota:   '⭐ Pieza única · NYCC',
-  foto:   'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/kraang-v2.png',
+  foto:   'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/kraang-be.png',
   alt:    'The Kraang - Battle Damage Suit',
 }
 
@@ -44,6 +44,10 @@ export default function HomePage() {
   }, [])
 
   const nav     = (p2: Product) => router.push(`/tienda/${p2.id}`)
+  // La foto escrita en HERO sale de inmediato; en cuanto responde el catálogo
+  // manda la del producto. Así el hero sigue pintando rápido, pero si alguien
+  // reemplaza la imagen en Shopify el enlace viejo no deja el hueco en blanco.
+  const heroFoto = allProducts.find(p => p.id === HERO.handle)?.photo ?? HERO.foto
   const cargando = allProducts.length === 0
   // "Nuevos ingresos" va por fecha de alta, no por la etiqueta `nuevo`: Shopify
   // ya devuelve el catálogo del más reciente al más viejo. Con la etiqueta había
@@ -110,7 +114,7 @@ export default function HomePage() {
               <div className="anim-scale-in d-2" style={{ position:'absolute', inset:0, borderRadius:32, overflow:'hidden', boxShadow:'0 48px 96px -24px rgba(0,0,0,0.7)', background:'#fff' }}>
                 <div className="anim-float" style={{ position:'absolute', inset:0 }}>
                   <div style={{ position:'absolute', inset:0, transform:'scale(0.82)', transformOrigin:'center' }}>
-                    <Image src={HERO.foto} alt={HERO.alt} fill style={{ objectFit:'contain', objectPosition:'center' }} sizes="45vw" priority />
+                    <Image src={heroFoto} alt={HERO.alt} fill style={{ objectFit:'contain', objectPosition:'center' }} sizes="45vw" priority />
                   </div>
                 </div>
                 <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, transparent 55%, rgba(15,18,64,0.55) 100%)' }} />
