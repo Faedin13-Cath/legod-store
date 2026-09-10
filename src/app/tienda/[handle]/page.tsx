@@ -403,13 +403,20 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
           <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', marginBottom: 20 }}>
             Más de {product.cat === 'starwars' ? 'Star Wars' : product.cat === 'marvel' ? 'Marvel' : product.cat === 'dc' ? 'DC' : product.cat === 'harry' ? 'Harry Potter' : product.cat === 'stranger' ? 'Stranger Things' : product.cat === 'sports' ? 'Deportes' : product.cat}
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 }}>
-            {related.map(p => (
-              <ProductCard
-                key={p.id} product={p}
-                onView={p2 => router.push(`/tienda/${p2.id}`)}
-              />
-            ))}
+          {/* Tira que se desliza, no cinco columnas fijas: en un teléfono
+              esas columnas dejaban cada tarjeta en 60px de ancho, con el título
+              partido en cuatro renglones y el precio cortado a la mitad. */}
+          <div className="h-scroll-wrap">
+            <div className="h-scroll" style={{ gap: 16 }}>
+              {related.map(p => (
+                <div key={p.id} style={{ flexShrink: 0, width: 210 }}>
+                  <ProductCard
+                    product={p}
+                    onView={p2 => router.push(`/tienda/${p2.id}`)}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
