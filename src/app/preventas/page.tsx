@@ -268,7 +268,13 @@ export default function PreventasPage() {
     getProducts()
       // Las agotadas se esconden: una tarjeta que ya no se puede apartar solo
       // le roba atención a las que sí. Vuelven solas si se repone inventario.
-      .then(ps => setItems(ps.map(shopifyToProduct).filter(p => p.preventa && p.stock > 0)))
+      .then(ps => {
+        const lista = ps.map(shopifyToProduct).filter(p => p.preventa && p.stock > 0)
+        // Las marcadas con pv-top van primero. El sort de JS es estable, así que
+        // dentro de cada grupo se mantiene el orden de Shopify (más nuevas antes).
+        lista.sort((a, b) => Number(b.preventa!.top) - Number(a.preventa!.top))
+        setItems(lista)
+      })
       .catch(() => setItems([]))
       .finally(() => setLoading(false))
   }, [allowed])

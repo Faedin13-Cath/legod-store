@@ -9,6 +9,7 @@
  *   pv-full-800         → precio pagando el total de una vez  (obligatorio)
  *   pv-split-1000       → precio total pagando en dos partes   (opcional)
  *   pv-dep-70           → % de anticipo de esa figura          (opcional)
+ *   pv-top              → la fija hasta arriba del listado       (opcional)
  *   pv-badge-mega-oferta → distintivo que se pinta sobre la foto (opcional)
  *
  * Sin `pv-split-*` la figura solo se puede pagar completa. Cuando existe,
@@ -24,6 +25,7 @@ export const PREVENTA_TAG = 'preventa'
 const FULL_RE  = /^pv-full-(\d+)$/i
 const SPLIT_RE = /^pv-split-(\d+)$/i
 const DEP_RE   = /^pv-dep-(\d+)$/i
+const TOP_RE   = /^pv-top$/i
 const BADGE_RE = /^pv-badge-(.+)$/i
 
 export type PreventaSplit = {
@@ -46,6 +48,8 @@ export type PreventaPricing = {
   split: PreventaSplit | null
   /** Texto del distintivo, ya legible (p.ej. "Mega oferta"). */
   badge: string | null
+  /** Va hasta arriba del listado, antes que el resto. */
+  top: boolean
 }
 
 /**
@@ -88,7 +92,7 @@ export function parsePreventa(tags: string[]): PreventaPricing | null {
     ? badgeTag.replace(/-/g, ' ').replace(/^./, c => c.toUpperCase())
     : null
 
-  return { full, split, badge }
+  return { full, split, badge, top: lower.some(t => TOP_RE.test(t)) }
 }
 
 /** Lo que se cobra hoy y lo que queda pendiente, según la modalidad elegida. */
