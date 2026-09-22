@@ -31,7 +31,10 @@ function categoriaGoogle(p: Product): string {
 }
 
 /** Un producto con opciones sale como un artículo por opción, agrupados. */
-function articulos(p: Product): string[] {
+/** `shopifyId`: el número del producto en Shopify. Google acepta ids de hasta
+ *  50 caracteres y varios handles son más largos; el número es corto, único
+ *  y no cambia aunque se renombre el producto. */
+function articulos(p: Product, shopifyId: string): string[] {
   const link = `${BASE}/tienda/${p.id}`
   const foto = shopifyImg(p.photo, 1000)
   const usado = p.state === 'usado' || p.state === 'crack'
@@ -51,11 +54,11 @@ function articulos(p: Product): string[] {
     const numId = v.id ? v.id.split('/').pop()! : ''
     return [
     '<item>',
-    tag('id', numId || p.id),
+    tag('id', numId || shopifyId),
     // Con opciones, la ficha abre ya en la del anuncio: Google compara el
     // precio del feed con el de la página y rechaza si no cuadran.
     numId ? tag('link', `${link}?variante=${numId}`) : '',
-    p.variants ? tag('item_group_id', p.id) : '',
+    p.variants ? tag('item_group_id', shopifyId) : '',
     tag('title', v.title ? `${titulo(p)} (${v.title})` : titulo(p)),
     tag('description', [p.desc, descripcion(p)].filter(Boolean).join(' ')),
     tag('price', `${v.price.toFixed(2)} MXN`),
@@ -68,17 +71,17 @@ function articulos(p: Product): string[] {
 
 export async function GET() {
   const productos = (await getProductsForSeo())
-    .map(shopifyToProduct)
+    .map(raw => ({ p: shopifyToProduct(raw), shopifyId: raw.id.split('/').pop()! }))
     // Las preventas se cobran desde /preventas con otro precio; sin foto,
     // Google rechaza el artículo.
-    .filter(p => !isPreventa(p) && p.photo)
+    .filter(({ p }) => !isPreventa(p) && p.photo)
 
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0"><channel>',
     `<title>Jango's Store</title><link>${BASE}</link>`,
     '<description>Minifiguras y sets LEGO originales</description>',
-    ...productos.flatMap(articulos),
+    ...productos.flatMap(({ p, shopifyId }) => articulos(p, shopifyId)),
     '</channel></rss>',
   ].join('\n')
 
