@@ -45,6 +45,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es-MX">
       <head>
+        {/* El catálogo y las fotos vienen de Shopify: abrir la conexión desde
+            el principio ahorra ~300 ms en la primera consulta. */}
+        <link rel="preconnect" href={`https://${process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN}`} crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://cdn.shopify.com" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

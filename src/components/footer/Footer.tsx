@@ -68,7 +68,7 @@ export default function Footer() {
 
         {/* Tienda */}
         <div>
-          <h5 style={colHead}>Tienda</h5>
+          <h2 style={colHead}>Tienda</h2>
           <ul style={ulStyle}>
             <li><Link href="/tienda" style={linkStyle}>Todas las minifiguras</Link></li>
             <li><Link href="/tienda?tipo=set-sealed" style={linkStyle}>Sets sellados</Link></li>
@@ -81,7 +81,7 @@ export default function Footer() {
 
         {/* Cuenta */}
         <div>
-          <h5 style={colHead}>Cuenta</h5>
+          <h2 style={colHead}>Cuenta</h2>
           <ul style={ulStyle}>
             <li><Link href="/login" style={linkStyle}>Mi perfil</Link></li>
             <li><Link href="/coleccion" style={linkStyle}>Mi colección</Link></li>
@@ -93,7 +93,7 @@ export default function Footer() {
 
         {/* Ayuda */}
         <div>
-          <h5 style={colHead}>Ayuda</h5>
+          <h2 style={colHead}>Ayuda</h2>
           <ul style={ulStyle}>
             <li><Link href="/faq" style={linkStyle}>Preguntas frecuentes</Link></li>
             <li><Link href="/contacto" style={linkStyle}>Contacto</Link></li>

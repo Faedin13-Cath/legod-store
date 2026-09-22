@@ -366,6 +366,7 @@ export default function ProductoCliente({ handle, initial }: { handle: string; i
                 }}>
                   <button
                     onClick={() => setQty(q => Math.max(1, q - 1))}
+                    aria-label="Quitar una pieza"
                     disabled={qty <= 1}
                     style={{
                       width: 38, height: 44, background: 'none', border: 'none',
@@ -377,6 +378,7 @@ export default function ProductoCliente({ handle, initial }: { handle: string; i
                   <span style={{ width: 36, textAlign: 'center', fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{qty}</span>
                   <button
                     onClick={() => setQty(q => Math.min(stock, q + 1))}
+                    aria-label="Agregar una pieza"
                     disabled={qty >= stock}
                     style={{
                       width: 38, height: 44, background: 'none', border: 'none',

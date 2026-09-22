@@ -274,6 +274,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
                       <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--paper)', overflow: 'hidden' }}>
                         <button
                           onClick={() => item.qty <= 1 ? onRemove(cartKey(item)) : onChangeQty(cartKey(item), item.qty - 1)}
+                          aria-label={item.qty <= 1 ? `Quitar ${item.name} del carrito` : 'Quitar una pieza'}
                           style={{ width: 28, height: 28, background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
                           <Icon name="minus" size={12} />
@@ -281,6 +282,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
                         <span style={{ width: 24, textAlign: 'center', fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{item.qty}</span>
                         <button
                           onClick={() => onChangeQty(cartKey(item), item.qty + 1)}
+                          aria-label="Agregar una pieza"
                           disabled={item.qty >= item.stock}
                           style={{ width: 28, height: 28, background: 'none', border: 'none', color: item.qty >= item.stock ? 'var(--ink-4)' : 'var(--ink-2)', cursor: item.qty >= item.stock ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
@@ -289,6 +291,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
                       </div>
                       <button
                         onClick={() => onRemove(cartKey(item))}
+                        aria-label={`Quitar ${item.name} del carrito`}
                         style={{ width: 28, height: 28, borderRadius: 6, background: 'none', border: '1px solid transparent', color: 'var(--ink-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
                         <Icon name="close" size={13} />
