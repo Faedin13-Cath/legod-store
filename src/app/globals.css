@@ -604,10 +604,18 @@ a[href*="/tienda"].more-link,
   .logo-text { display: none; } /* just show icon on very small */
 
   /* Hero */
-  .hero-section { min-height: 92svh !important; }
-  .hero-inner  { padding: 72px 20px 52px !important; }
-  .hero-grid   { grid-template-columns: 1fr !important; gap: 0 !important; }
-  .hero-img-col { display: none !important; }
+  /* Sin altura mínima: con la foto abajo, el alto lo da el contenido. Antes
+     la foto se ocultaba y el 92svh dejaba un hueco vacío arriba del texto. */
+  .hero-section { min-height: 0 !important; }
+  .hero-inner  { padding: 40px 20px 44px !important; }
+  .hero-grid   { grid-template-columns: 1fr !important; gap: 32px !important; }
+  .hero-img-col { height: 340px !important; }
+  /* La figura se sube para que la etiqueta de precio no le tape las piernas. */
+  .hero-img-col .anim-float { bottom: 76px !important; top: 8px !important; }
+  /* En escritorio las etiquetas sobresalen a la izquierda de la tarjeta; en
+     celular se saldrían de la pantalla, así que van por dentro. */
+  .hero-badge-promo { left: 12px !important; bottom: 12px !important; padding: 10px 14px !important; min-width: 0 !important; }
+  .hero-badge-star  { left: 12px !important; top: 12px !important; }
   .hero-h1     { font-size: clamp(48px, 12vw, 80px) !important; margin-bottom: 20px !important; }
   .hero-eyebrow { font-size: 10px !important; }
   .hero-desc   { font-size: 15px !important; max-width: 100% !important; margin-bottom: 28px !important; }

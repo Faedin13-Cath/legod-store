@@ -121,14 +121,14 @@ export default function HomePage() {
               </div>
 
               {/* Glass badge — promo */}
-              <div className="anim-fade-up d-5" style={{ position:'absolute', bottom:28, left:-36, background:'rgba(15,18,64,0.72)', backdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.18)', borderRadius:20, padding:'14px 18px', zIndex:2, minWidth:184 }}>
+              <div className="anim-fade-up d-5 hero-badge-promo" style={{ position:'absolute', bottom:28, left:-36, background:'rgba(15,18,64,0.72)', backdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.18)', borderRadius:20, padding:'14px 18px', zIndex:2, minWidth:184 }}>
                 <div style={{ fontSize:11, color:'rgba(255,255,255,0.55)', fontWeight:600, marginBottom:5, letterSpacing:'0.04em' }}>{HERO.nota}</div>
                 <div style={{ fontSize:15, fontWeight:700, color:'#fff', marginBottom:3 }}>{HERO.nombre}</div>
                 <div style={{ fontSize:20, fontWeight:800, color:'#F5C84A', letterSpacing:'-0.02em' }}>{HERO.precio}</div>
               </div>
 
               {/* Gold star badge */}
-              <div className="anim-pop-in d-6 anim-float-soft" style={{ position:'absolute', top:24, left:-20, background:'#F5C84A', color:'#1A1E5A', borderRadius:14, padding:'9px 15px', fontWeight:800, fontSize:15, zIndex:2, boxShadow:'0 10px 28px -4px rgba(245,200,74,0.55)' }}>
+              <div className="anim-pop-in d-6 anim-float-soft hero-badge-star" style={{ position:'absolute', top:24, left:-20, background:'#F5C84A', color:'#1A1E5A', borderRadius:14, padding:'9px 15px', fontWeight:800, fontSize:15, zIndex:2, boxShadow:'0 10px 28px -4px rgba(245,200,74,0.55)' }}>
                 ⭐ 4.9
               </div>
             </div>
