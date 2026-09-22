@@ -17,6 +17,11 @@ export default function LegalPage({ title, updated, children }: {
   )
 }
 
-export function H2({ children }: { children: React.ReactNode }) {
-  return <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)', margin: '28px 0 10px' }}>{children}</h2>
+/** `id` permite enlazar directo a la sección, p. ej. /envios-devoluciones#devoluciones. */
+export function H2({ children, id }: { children: React.ReactNode; id?: string }) {
+  return <h2 id={id} style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)', margin: '28px 0 10px', scrollMarginTop: 80 }}>{children}</h2>
+}
+
+export function H3({ children }: { children: React.ReactNode }) {
+  return <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', margin: '22px 0 8px' }}>{children}</h3>
 }
