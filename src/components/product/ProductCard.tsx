@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import Icon from '@/components/ui/Icon'
 import MinifigImage from './MinifigImage'
 import type { Product } from '@/types'
@@ -16,13 +17,17 @@ const tagPill: Record<string, string> = {
 
 interface Props {
   product: Product
+  /** Enlace real a la ficha en el nombre. La tarjeta ya navega con clic, pero
+   *  Google solo sigue `<a href>`: sin esto no llega de una categoría a sus
+   *  productos. */
+  href?: string
   wished?: boolean
   onView?: (p: Product) => void
   onAdd?: (p: Product) => void
   onWish?: (p: Product) => void
 }
 
-export default function ProductCard({ product, wished, onView, onAdd, onWish }: Props) {
+export default function ProductCard({ product, href, wished, onView, onAdd, onWish }: Props) {
   const out = product.stock === 0
   // Exclusivas de convención: se distinguen con el borde en oro para que se
   // note en la reja que no son una figura de catálogo más.
@@ -115,7 +120,15 @@ export default function ProductCard({ product, wished, onView, onAdd, onWish }: 
 
       {/* Body */}
       <div style={{ padding: '12px 14px 14px' }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', marginBottom: 2, lineHeight: 1.3, letterSpacing: '-0.01em' }}>{product.name}</div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', marginBottom: 2, lineHeight: 1.3, letterSpacing: '-0.01em' }}>
+          {href ? (
+            // El enlace navega solo (y abre en otra pestaña con Ctrl+clic);
+            // stopPropagation evita que la tarjeta navegue una segunda vez.
+            <Link href={href} onClick={e => e.stopPropagation()} style={{ color: 'inherit', textDecoration: 'none' }}>
+              {product.name}
+            </Link>
+          ) : product.name}
+        </div>
         <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--ink-4)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>{product.tag}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: 19, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>

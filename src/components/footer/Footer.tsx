@@ -63,6 +63,8 @@ export default function Footer() {
           <div style={{ display: 'flex', gap: 8 }}>
             <a href="https://chat.whatsapp.com/LklBq0iXRJvIFUiM8eUULH?mode=gi_t" target="_blank" rel="noreferrer" style={socialBtn} aria-label="Grupo de WhatsApp" title="Grupo de WhatsApp"><Icon name="chat" size={15} /></a>
             <a href="https://wa.me/525574777350" target="_blank" rel="noreferrer" style={socialBtn} aria-label="WhatsApp" title="WhatsApp"><Icon name="whatsapp" size={15} /></a>
+            <a href="https://www.instagram.com/jangos.store/" target="_blank" rel="noreferrer me" style={socialBtn} aria-label="Instagram" title="Instagram"><Icon name="instagram" size={15} /></a>
+            <a href="https://www.tiktok.com/@legod0" target="_blank" rel="noreferrer me" style={socialBtn} aria-label="TikTok" title="TikTok"><Icon name="tiktok" size={15} /></a>
           </div>
         </div>
 
@@ -71,8 +73,9 @@ export default function Footer() {
           <h2 style={colHead}>Tienda</h2>
           <ul style={ulStyle}>
             <li><Link href="/tienda" style={linkStyle}>Todas las minifiguras</Link></li>
-            <li><Link href="/tienda?tipo=set-sealed" style={linkStyle}>Sets sellados</Link></li>
-            <li><Link href="/tienda?tipo=set-used" style={linkStyle}>Sets usados</Link></li>
+            <li><Link href="/minifiguras/star-wars" style={linkStyle}>Star Wars</Link></li>
+            <li><Link href="/minifiguras/marvel" style={linkStyle}>Marvel</Link></li>
+            <li><Link href="/sets-lego" style={linkStyle}>Sets LEGO</Link></li>
             <li><Link href="/preventas" style={linkStyle}>Preventas</Link></li>
             <li><Link href="/gift-cards" style={linkStyle}>Gift cards</Link></li>
             <li><Link href="/promos" style={linkStyle}>Promos</Link></li>

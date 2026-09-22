@@ -303,6 +303,7 @@ function TiendaContent() {
                 <ProductCard
                   key={p.id}
                   product={p}
+                  href={`/tienda/${p.id}`}
                   wished={wishlist.has(p.id)}
                   onView={viewProduct}
                   onAdd={addToCart}

@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
-import { getProducts } from '@/lib/shopify'
+import { getProductsForSeo, shopifyToProduct } from '@/lib/shopify'
+import { CATEGORIAS, MIN_PARA_INDEXAR } from '@/lib/categorias'
 import { parsePreventa } from '@/lib/preventa'
 
 const BASE = 'https://www.jangos-store.com'
@@ -21,7 +22,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let productPages: MetadataRoute.Sitemap = []
   try {
-    const products = await getProducts()
+    const products = await getProductsForSeo()
     productPages = products
       // Las fichas de preventa no se indexan por separado: no se compran desde
       // ahí y son temporales. /preventas es la página que sí queremos posicionar.
@@ -35,5 +36,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Si Shopify falla, el sitemap sale solo con las páginas estáticas
   }
 
-  return [...staticPages, ...productPages]
+  // Categorías con suficientes productos (las casi vacías llevan noindex)
+  // y la página de sets.
+  let categoryPages: MetadataRoute.Sitemap = []
+  try {
+    const todos = (await getProductsForSeo()).map(shopifyToProduct).filter(p => !p.preventa)
+    categoryPages = CATEGORIAS
+      .filter(c => todos.filter(p => p.cat === c.cat).length >= MIN_PARA_INDEXAR)
+      .map(c => ({ url: `${BASE}/minifiguras/${c.slug}`, changeFrequency: 'daily' as const, priority: 0.8 }))
+    if (todos.some(p => p.type !== 'minifig')) {
+      categoryPages.push({ url: `${BASE}/sets-lego`, changeFrequency: 'daily', priority: 0.8 })
+    }
+  } catch {
+    // sin Shopify, sin categorías: el resto del sitemap sale igual
+  }
+
+  return [...staticPages, ...categoryPages, ...productPages]
 }

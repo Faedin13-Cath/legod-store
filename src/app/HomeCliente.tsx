@@ -12,6 +12,7 @@ import Reveal from '@/components/ui/Reveal'
 import { useCart } from '@/components/cart/CartProvider'
 import { getProducts, shopifyToProduct, shopifyImg } from '@/lib/shopify'
 import { cats } from '@/lib/data'
+import { categoriaPorCat } from '@/lib/categorias'
 import type { Product } from '@/types'
 import type React from 'react'
 
@@ -198,7 +199,7 @@ export default function HomePage() {
               {cats.map(c => {
                 const count = allProducts.filter(p => p.cat === c.id).length
                 return (
-                  <Link key={c.id} href={`/tienda?cat=${c.id}`} className="cat-card" style={{ flexShrink:0, width:134, borderRadius:20, padding:'18px 16px', textDecoration:'none', background:'var(--paper)', border:'1px solid var(--line)', display:'flex', flexDirection:'column', gap:10 }}>
+                  <Link key={c.id} href={categoriaPorCat(c.id) ? `/minifiguras/${categoriaPorCat(c.id)!.slug}` : `/tienda?cat=${c.id}`} className="cat-card" style={{ flexShrink:0, width:134, borderRadius:20, padding:'18px 16px', textDecoration:'none', background:'var(--paper)', border:'1px solid var(--line)', display:'flex', flexDirection:'column', gap:10 }}>
                     <span style={{ width:44, height:44, borderRadius:12, background:'var(--accent-soft)', color:'var(--accent)', display:'flex', alignItems:'center', justifyContent:'center' }}><Icon name={c.icon} size={24} /></span>
                     <div>
                       <div style={{ fontSize:14, fontWeight:600, color:'var(--ink)', lineHeight:1.2 }}>{c.label}</div>
@@ -232,7 +233,7 @@ export default function HomePage() {
                   ))
                 : nuevos.map(p => (
                     <div key={p.id} style={{ flexShrink:0, width:210 }}>
-                      <ProductCard product={p} onView={nav} onAdd={addItem} />
+                      <ProductCard product={p} href={`/tienda/${p.id}`} onView={nav} onAdd={addItem} />
                     </div>
                   ))}
             </div>
@@ -254,7 +255,7 @@ export default function HomePage() {
             ? Array.from({ length: 7 }).map((_, i) => <ProductCardSkeleton key={i} />)
             : restock.map((p, i) => (
                 <Reveal key={p.id} delay={i * 60} animation="fade-up">
-                  <ProductCard product={p} onView={nav} onAdd={addItem} />
+                  <ProductCard product={p} href={`/tienda/${p.id}`} onView={nav} onAdd={addItem} />
                 </Reveal>
               ))}
         </div>
@@ -272,7 +273,7 @@ export default function HomePage() {
         <div className="sets-grid" style={{ display:'grid', gridTemplateColumns:`repeat(${sets.length + 1}, 1fr)`, gap:16 }}>
           {sets.map((p, i) => (
             <Reveal key={p.id} delay={i * 80} animation="scale-in">
-              <ProductCard product={p} onView={nav} onAdd={addItem} />
+              <ProductCard product={p} href={`/tienda/${p.id}`} onView={nav} onAdd={addItem} />
             </Reveal>
           ))}
           <Reveal delay={sets.length * 80} animation="scale-in">

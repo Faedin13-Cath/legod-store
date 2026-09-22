@@ -39,6 +39,12 @@ const jsonLd = {
   description: 'Minifiguras LEGO, sets sellados, segunda mano y customs. Apartados, gift cards y envíos a todo México.',
   address: { '@type': 'PostalAddress', addressLocality: 'CDMX', addressCountry: 'MX' },
   priceRange: '$$',
+  // Le dice a Google que estas cuentas son de la misma tienda: ayuda a que
+  // al buscar "jangos" salgan juntas y el sitio arriba.
+  sameAs: [
+    'https://www.instagram.com/jangos.store/',
+    'https://www.tiktok.com/@legod0',
+  ],
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

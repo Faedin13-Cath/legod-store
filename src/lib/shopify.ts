@@ -51,23 +51,34 @@ let _productsCache: { data: ShopifyProduct[]; at: number } | null = null
 const _handleCache = new Map<string, { data: ShopifyProduct | null; at: number }>()
 const fresh = (at: number) => Date.now() - at < TTL
 
-export async function getProducts(): Promise<ShopifyProduct[]> {
-  if (_productsCache && fresh(_productsCache.at)) return _productsCache.data
-  // Storefront API tope: 250 por página. Paginamos hasta 500 en dos requests.
+/** Todo el catálogo, del más nuevo al más viejo. La Storefront API da 250 por
+ *  página; se piden hasta 4 (1,000 productos), que es de sobra por ahora. */
+async function traerCatalogo(revalidate?: number): Promise<ShopifyProduct[]> {
   const list: ShopifyProduct[] = []
   let after: string | null = null
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 4; i++) {
     const cursor: string = after ? `, after: "${after}"` : ''
     const data = await shopifyFetch<{ products: { edges: { node: ShopifyProduct }[]; pageInfo: { hasNextPage: boolean; endCursor: string } } }>(`
       { products(first: 250, sortKey: CREATED_AT, reverse: true${cursor}) {
           edges { node { ${PRODUCT_FIELDS} } }
           pageInfo { hasNextPage endCursor }
       }}
-    `)
+    `, undefined, revalidate)
     list.push(...data.products.edges.map(e => e.node))
     if (!data.products.pageInfo.hasNextPage) break
     after = data.products.pageInfo.endCursor
   }
+  return list
+}
+
+/** Para el servidor (páginas de categoría, sitemap): cachea 5 minutos. */
+export function getProductsForSeo(): Promise<ShopifyProduct[]> {
+  return traerCatalogo(300)
+}
+
+export async function getProducts(): Promise<ShopifyProduct[]> {
+  if (_productsCache && fresh(_productsCache.at)) return _productsCache.data
+  const list = await traerCatalogo()
   _productsCache = { data: list, at: Date.now() }
   // aprovecha para llenar el cache por handle
   for (const p of list) _handleCache.set(p.handle, { data: p, at: Date.now() })
