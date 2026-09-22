@@ -8,6 +8,7 @@ import { useAuth } from '@/components/auth/AuthProvider'
 import SaldoConfirmModal, { type ShippingData } from '@/components/cart/SaldoConfirmModal'
 import { APARTADO_LABEL, anticipoTotal } from '@/lib/apartado'
 import { cartKey, lineName } from '@/lib/cart'
+import { shopifyImg } from '@/lib/shopify'
 import type { CartItem } from '@/types'
 
 interface Props {
@@ -254,7 +255,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
                   }}>
                     {item.photo ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.photo} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 3 }} />
+                      <img src={shopifyImg(item.photo, 120)} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 3 }} />
                     ) : (
                       <span style={{ fontSize: 12, color: '#fff', fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
                         {item.name.slice(0, 2).toUpperCase()}

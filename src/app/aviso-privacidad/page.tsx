@@ -1,6 +1,11 @@
 import LegalPage, { H2 } from '@/components/legal/LegalPage'
+import { seo } from '@/lib/seo'
 
-export const metadata = { title: 'Aviso de Privacidad — Jango\'s Store' }
+export const metadata = seo({
+  titulo: 'Aviso de Privacidad',
+  descripcion: 'Cómo Jango\'s Store recaba, usa y protege tus datos personales.',
+  ruta: '/aviso-privacidad',
+})
 
 export default function AvisoPrivacidadPage() {
   return (

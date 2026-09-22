@@ -54,7 +54,7 @@ export default function Footer() {
         {/* Brand */}
         <div className="footer-brand">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-            <Image src="/assets/logo/legod-logo-violet.png" alt="LEGOD" width={40} height={40} style={{ borderRadius: '50%' }} />
+            <Image src="/assets/logo/legod-logo-violet-128.webp" alt="LEGOD" width={40} height={40} style={{ borderRadius: '50%' }} />
             <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--ink)' }}>Jango&apos;s Store</div>
           </div>
           <p style={{ fontSize: 14, lineHeight: 1.65, color: 'var(--ink-2)', maxWidth: 320, margin: '0 0 16px' }}>

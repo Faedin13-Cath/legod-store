@@ -1,6 +1,11 @@
 import LegalPage, { H2 } from '@/components/legal/LegalPage'
+import { seo } from '@/lib/seo'
 
-export const metadata = { title: 'Envíos y Devoluciones — Jango\'s Store' }
+export const metadata = seo({
+  titulo: 'Envíos y Devoluciones',
+  descripcion: 'Paqueterías, costos y tiempos de envío a todo México, y cómo funcionan las devoluciones en Jango\'s Store.',
+  ruta: '/envios-devoluciones',
+})
 
 export default function EnviosPage() {
   return (

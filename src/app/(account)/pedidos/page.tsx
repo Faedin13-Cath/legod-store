@@ -6,7 +6,7 @@ import Image from 'next/image'
 import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
-import { getProducts, shopifyToProduct } from '@/lib/shopify'
+import { getProducts, shopifyToProduct, shopifyImg } from '@/lib/shopify'
 import { CASILLERO } from '@/lib/shipping'
 import { LLEGADA_TENTATIVA } from '@/lib/preventa'
 
@@ -148,7 +148,7 @@ export default function MisPedidosPage() {
                 overflow: 'hidden', position: 'relative',
               }}>
                 {foto
-                  ? <Image src={foto} alt="" fill sizes="46px" style={{ objectFit: 'contain', padding: 4 }} />
+                  ? <Image src={shopifyImg(foto, 100)!} alt="" fill sizes="46px" style={{ objectFit: 'contain', padding: 4 }} />
                   : <span style={{ color: 'var(--ink-4)' }}><Icon name="package" size={18} /></span>}
               </div>
               <div style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.35 }}>

@@ -1,0 +1,482 @@
+'use client'
+// v2 — shopify
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import Icon from '@/components/ui/Icon'
+import MinifigImage from '@/components/product/MinifigImage'
+import ProductCard from '@/components/product/ProductCard'
+import { useCart } from '@/components/cart/CartProvider'
+import { useAuth } from '@/components/auth/AuthProvider'
+import { getProducts, getProductByHandle, shopifyToProduct } from '@/lib/shopify'
+import { PREVENTAS_PUBLIC, LLEGADA_TENTATIVA } from '@/lib/preventa'
+import { APARTADO_LABEL, anticipoDe } from '@/lib/apartado'
+import { defaultVariant } from '@/lib/cart'
+import type { Product } from '@/types'
+
+const STATE_LABEL: Record<string, string> = {
+  new:        'Nuevo · sin uso',
+  perfect:    'Perfecto · sin marcas',
+  usado:      'Usado · completo',
+  crack:      'Con detalle · ver descripción',
+  'no-acc':   'Sin accesorios',
+  incomplete: 'Incompleto',
+}
+
+const RARITY_LABEL: Record<string, { label: string; color: string }> = {
+  comun:    { label: 'Común',    color: 'var(--ink-3)' },
+  rara:     { label: 'Rara',     color: 'var(--accent)' },
+  limitada: { label: 'Limitada', color: 'var(--gold)' },
+  unica:    { label: 'Única',    color: '#E5632A' },
+  legendaria: { label: 'Legendaria', color: '#B8860B' },
+}
+
+const DETALLE_CHIP = { label: 'Con detalle', color: '#B45309' }
+
+/** `initial` viene del servidor: con eso el HTML ya trae nombre, precio y
+ *  foto para Google. Al abrirse se vuelve a pedir a Shopify para tener el
+ *  precio y el stock al segundo. */
+export default function ProductoCliente({ handle, initial }: { handle: string; initial: Product }) {
+  const router = useRouter()
+  const { addItem, openCart } = useCart()
+  const { profile } = useAuth()
+
+  const [product,  setProduct]  = useState<Product | null | undefined>(initial)
+  const [related,  setRelated]  = useState<Product[]>([])
+  const [qty,      setQty]      = useState(1)
+  const [wished,   setWished]   = useState(false)
+  const [added,    setAdded]    = useState(false)
+  const [apartado, setApartado] = useState(false)
+  const [realStock, setRealStock] = useState<number | null>(null)
+  const [varId,    setVarId]    = useState<string | null>(defaultVariant(initial)?.id ?? null)
+
+  useEffect(() => {
+    getProductByHandle(handle)
+      .then(p => {
+        if (!p) { setProduct(null); return }
+        const converted = shopifyToProduct(p)
+        setProduct(converted)
+        // Conserva la opción que ya eligió si sigue existiendo; si no, la de entrada.
+        setVarId(prev => converted.variants?.some(v => v.id === prev) ? prev : defaultVariant(converted)?.id ?? null)
+        fetch(`/api/product-stock?handle=${handle}`)
+          .then(r => r.json())
+          .then(d => setRealStock(d.stock ?? null))
+          .catch(() => {})
+        return getProducts()
+      })
+      .then(all => {
+        if (!all) return
+        setRelated(
+          all.map(shopifyToProduct)
+             // Las preventas fuera: aquí saldrían con su precio de catálogo,
+             // que no es el que se paga en /preventas.
+             .filter(p => p.id !== handle && !p.preventa)
+             .slice(0, 5)
+        )
+      })
+      // Si falla la red, se queda lo que ya pintó el servidor.
+      .catch(() => {})
+  }, [handle])
+
+  if (product === undefined) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '120px 0', color: 'var(--ink-3)', fontSize: 15 }}>
+        Cargando…
+      </div>
+    )
+  }
+
+  if (!product) {
+    return (
+      <div style={{ maxWidth: 640, margin: '80px auto', textAlign: 'center', padding: '0 32px' }}>
+        <h1 style={{ color: 'var(--ink)', marginBottom: 12 }}>Producto no encontrado</h1>
+        <p style={{ color: 'var(--ink-3)', marginBottom: 24 }}>Puede que ya no esté disponible.</p>
+        <Link href="/tienda" style={{ color: 'var(--accent)', fontWeight: 500 }}>← Volver a la tienda</Link>
+      </div>
+    )
+  }
+
+  // Con opciones, precio y piezas son los de la opción elegida. El total del
+  // producto (realStock) sumaría las dos y dejaría pedir más de las que hay.
+  const variante = product.variants?.find(v => v.id === varId) ?? defaultVariant(product)
+  const precio = variante?.price ?? product.price
+  const stock = variante ? variante.stock : (realStock ?? product.stock)
+  const out = stock === 0
+  const rarity = RARITY_LABEL[product.rarity]
+  // En preventa no se vende desde aquí: el cobro va por /preventas, que usa
+  // draft orders (sin campo de código de descuento).
+  const pv = product.preventa
+  // Exclusiva de convención: se marca en oro, igual que en la reja de la tienda.
+  const nycc = product.tags.includes('nycc')
+  const canSeePreventa = PREVENTAS_PUBLIC || !!profile?.is_admin
+
+  function handleAdd() {
+    if (product) {
+      for (let i = 0; i < qty; i++) addItem(product, variante)
+    }
+    setAdded(true)
+    // El botón cambiaba 2 segundos y aparecía un 1 diminuto en el ícono:
+    // mirando la foto es fácil no notarlo y darle dos veces. Abrir el cajón
+    // confirma sin ambigüedad y de paso enseña la opción de casillero.
+    openCart()
+    setTimeout(() => setAdded(false), 2000)
+  }
+
+  function handleApartado() {
+    setApartado(true)
+    setTimeout(() => setApartado(false), 2000)
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
+      {/* Breadcrumb */}
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '20px 32px 0' }}>
+        <nav style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, color: 'var(--ink-3)' }}>
+          <Link href="/" style={{ color: 'var(--ink-3)', textDecoration: 'none' }}>Inicio</Link>
+          <span>/</span>
+          <Link href="/tienda" style={{ color: 'var(--ink-3)', textDecoration: 'none' }}>Tienda</Link>
+          <span>/</span>
+          <span style={{ color: 'var(--ink)' }}>{product.name}</span>
+        </nav>
+      </div>
+
+      {/* PDP layout */}
+      <div className="pdp-grid" style={{
+        maxWidth: 960, margin: '0 auto',
+        display: 'grid', gridTemplateColumns: '360px 1fr',
+        gap: 40, padding: '32px 32px 80px', alignItems: 'stretch',
+      }}>
+        {/* Left: image */}
+        {/* Columna en flex: la caja de la foto se estira con flex:1 en vez de
+            height:100%, que la hacía ocupar todo y empujaba el aviso de estado
+            fuera de la columna, encimándose sobre el bloque de al lado. */}
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+          <div className={nycc ? 'nycc-oro' : undefined} style={{
+            borderRadius: 24, overflow: 'hidden',
+            background: '#fff',
+            border: '1px solid var(--line)',
+            flex: 1, minHeight: 420,
+            position: 'relative',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <MinifigImage product={product} width={900} priority />
+
+            {/* Tags overlay */}
+            <div style={{ position: 'absolute', top: 16, left: 16, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {nycc && (
+                <span style={{ padding: '4px 11px', borderRadius: 999, background: 'var(--gold)', color: '#3A2A00', fontSize: 11, fontWeight: 800, letterSpacing: '0.08em' }}>
+                  NYCC
+                </span>
+              )}
+              {product.tags.filter(t => t !== 'nycc').slice(0, 3).map(t => (
+                <span key={t} className={
+                  t === 'nuevo' ? 'pill gold' :
+                  t === 'restock' ? 'pill violet' :
+                  t === 'agotado' ? 'pill danger' :
+                  t === 'edicion-limitada' ? 'pill warn' : 'pill'
+                }>
+                  {t === 'nuevo' ? 'Nuevo' : t === 'restock' ? 'Restock' : t === 'agotado' ? 'Agotado' : t === 'edicion-limitada' ? 'Limitada' : t}
+                </span>
+              ))}
+            </div>
+
+            {/* Wishlist */}
+            <button
+              onClick={() => setWished(!wished)}
+              aria-label="Wishlist"
+              style={{
+                position: 'absolute', top: 16, right: 16,
+                width: 40, height: 40, borderRadius: '50%',
+                background: 'rgba(255,255,255,0.95)', border: '1px solid var(--line)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: wished ? 'var(--gold)' : 'var(--ink-2)',
+                cursor: 'pointer',
+              }}
+            >
+              <Icon name={wished ? 'star-fill' : 'star'} size={18} />
+            </button>
+          </div>
+
+          {/* Condition note */}
+          {product.state === 'crack' && (
+            <div style={{
+              marginTop: 12, padding: '12px 16px', borderRadius: 10,
+              background: '#FFF8E1', border: '1px solid #F5C84A',
+              fontSize: 13, color: '#7A5B00', lineHeight: 1.5,
+            }}>
+              <strong>⚠ Atención:</strong> Esta pieza tiene un detalle. Está descrito abajo y se ve en las fotos. El precio ya lo refleja.
+            </div>
+          )}
+        </div>
+
+        {/* Right: info */}
+        <div>
+          {/* SKU + rarity */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <span style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              {product.sku}
+            </span>
+            <span style={{
+              fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase',
+              color: rarity.color, padding: '2px 8px', borderRadius: 999,
+              border: `1px solid ${rarity.color}`, opacity: 0.9,
+            }}>
+              {rarity.label}
+            </span>
+            {product.state === 'crack' && (
+              <span style={{
+                fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase',
+                color: DETALLE_CHIP.color, padding: '2px 8px', borderRadius: 999,
+                border: `1px solid ${DETALLE_CHIP.color}`, opacity: 0.9,
+              }}>
+                {DETALLE_CHIP.label}
+              </span>
+            )}
+          </div>
+
+          {/* Name */}
+          <h1 style={{ fontSize: 36, fontWeight: 700, color: 'var(--ink)', margin: '0 0 4px', lineHeight: 1.15 }}>
+            {product.name}
+          </h1>
+          <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink-3)', margin: '0 0 20px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            {product.tag}
+          </p>
+
+          {/* Price — en preventa el precio de catálogo no aplica */}
+          {(!pv || canSeePreventa) && (
+            <div style={{ fontSize: 38, fontWeight: 700, color: 'var(--ink)', margin: '0 0 20px' }}>
+              {pv && <small style={{ fontSize: 15, fontWeight: 500, color: 'var(--ink-3)', marginRight: 8 }}>Desde</small>}
+              {!pv && !variante && product.priceAntes && (
+                <small style={{ fontSize: 22, fontWeight: 500, color: 'var(--ink-3)', textDecoration: 'line-through', marginRight: 12 }}>
+                  ${product.priceAntes.toLocaleString('es-MX')}
+                </small>
+              )}
+              ${(pv ? pv.full : precio).toLocaleString('es-MX')}
+              <small style={{ fontSize: 16, fontWeight: 400, color: 'var(--ink-3)', marginLeft: 6 }}>MXN</small>
+            </div>
+          )}
+
+          {/* Opciones: cada una con su precio, para comparar sin tener que
+              darle clic a cada una. La agotada se ve pero no se elige. */}
+          {!pv && product.variants && (
+            <div role="radiogroup" aria-label="Opciones" style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 10 }}>
+                Elige una opción
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                {product.variants.map(v => {
+                  const activa  = v.id === variante?.id
+                  const agotada = v.stock <= 0
+                  return (
+                    <button
+                      key={v.id}
+                      role="radio"
+                      aria-checked={activa}
+                      aria-label={`${v.title}, ${agotada ? 'agotado' : `$${v.price.toLocaleString('es-MX')} MXN`}`}
+                      disabled={agotada}
+                      onClick={() => { setVarId(v.id); setQty(1) }}
+                      className="opcion-variante"
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2,
+                        minWidth: 132, padding: '10px 16px', borderRadius: 12,
+                        background: activa ? 'var(--paper)' : 'transparent',
+                        border: '1px solid ' + (activa ? 'var(--ink)' : 'var(--line)'),
+                        // El anillo va por sombra, no por borde más grueso: así
+                        // elegir una opción no empuja a las demás.
+                        boxShadow: activa ? 'inset 0 0 0 1px var(--ink)' : 'none',
+                        color: agotada ? 'var(--ink-4)' : 'var(--ink)',
+                        cursor: agotada ? 'not-allowed' : 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <span style={{ fontSize: 14, fontWeight: 600, textDecoration: agotada ? 'line-through' : 'none' }}>
+                        {v.title}
+                      </span>
+                      <span style={{ fontSize: 13, color: agotada ? 'var(--ink-4)' : 'var(--ink-3)' }}>
+                        {agotada ? 'Agotado' : `$${v.price.toLocaleString('es-MX')}`}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* State + stock — el inventario de una preventa aún no existe */}
+          <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ink-2)' }}>
+              <Icon name="check" size={14} />
+              {STATE_LABEL[product.state] ?? product.state}
+            </div>
+            {!pv && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: out ? 'var(--danger)' : 'var(--success)' }}>
+                <Icon name={out ? 'close' : 'check'} size={14} />
+                {out ? 'Agotado' : stock > 5 ? '+5 en stock' : `${stock} en stock`}
+              </div>
+            )}
+          </div>
+
+          {/* Description */}
+          <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--ink-2)', margin: '0 0 28px', maxWidth: 440 }}>
+            {product.desc}
+          </p>
+
+          {/* Preventa: reemplaza compra y apartado */}
+          {pv && (
+            <div style={{
+              padding: '18px 20px', borderRadius: 14, marginBottom: 20,
+              background: 'var(--accent-soft)', border: '1px solid var(--accent)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ color: 'var(--accent)' }}><Icon name="clock" size={16} /></span>
+                <strong style={{ fontSize: 15, color: 'var(--accent)' }}>Esta figura está en preventa</strong>
+              </div>
+              {canSeePreventa ? (
+                <>
+                  <p style={{ fontSize: 13, color: 'var(--ink-2)', margin: '0 0 14px', lineHeight: 1.6 }}>
+                    Pagando completo son <strong>${pv.full.toLocaleString('es-MX')} MXN</strong>.
+                    {pv.split
+                      ? <> Con anticipo, <strong>${pv.split.deposit.toLocaleString('es-MX')} MXN</strong> ahora y{' '}
+                          <strong>${pv.split.pending.toLocaleString('es-MX')} MXN</strong> al llegar.</>
+                      : ' Esta figura solo se puede pagar completa.'}
+                    {' '}Llegada tentativa: <strong>{LLEGADA_TENTATIVA}</strong> (puede tardar más).
+                  </p>
+                  <Link href="/preventas" className="btn btn-primary" style={{ textDecoration: 'none', display: 'inline-flex' }}>
+                    Reservar en preventa →
+                  </Link>
+                </>
+              ) : (
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', margin: 0, lineHeight: 1.6 }}>
+                  Todavía no la tenemos en mano. Muy pronto vas a poder reservarla desde
+                  la sección de preventas.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Quantity + actions */}
+          {!out && !pv && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                {/* Qty selector */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 0,
+                  border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden',
+                  background: 'var(--paper)',
+                }}>
+                  <button
+                    onClick={() => setQty(q => Math.max(1, q - 1))}
+                    disabled={qty <= 1}
+                    style={{
+                      width: 38, height: 44, background: 'none', border: 'none',
+                      cursor: qty <= 1 ? 'not-allowed' : 'pointer',
+                      color: qty <= 1 ? 'var(--ink-4)' : 'var(--ink)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  ><Icon name="minus" size={14} /></button>
+                  <span style={{ width: 36, textAlign: 'center', fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{qty}</span>
+                  <button
+                    onClick={() => setQty(q => Math.min(stock, q + 1))}
+                    disabled={qty >= stock}
+                    style={{
+                      width: 38, height: 44, background: 'none', border: 'none',
+                      cursor: qty >= stock ? 'not-allowed' : 'pointer',
+                      color: qty >= stock ? 'var(--ink-4)' : 'var(--ink)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  ><Icon name="plus" size={14} /></button>
+                </div>
+
+                {/* Add to cart */}
+                <button
+                  onClick={handleAdd}
+                  className="btn btn-primary"
+                  style={{ flex: 1, height: 44, fontSize: 15 }}
+                >
+                  {added ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="check" size={15} /> Añadido</span>
+                  ) : (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="cart" size={15} /> Añadir al carrito</span>
+                  )}
+                </button>
+              </div>
+
+              {/* Apartado */}
+              <button
+                onClick={handleApartado}
+                className="btn btn-secondary"
+                style={{ width: '100%', height: 44, fontSize: 14, marginBottom: 20 }}
+              >
+                {apartado ? (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon name="check" size={15} /> ¡Apartado!</span>
+                ) : (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <Icon name="clock" size={15} />
+                    Apartar con {APARTADO_LABEL} — ${anticipoDe(precio).toLocaleString('es-MX')} MXN
+                  </span>
+                )}
+              </button>
+            </>
+          )}
+
+          {out && !pv && (
+            <button
+              className="btn btn-secondary"
+              style={{ width: '100%', height: 44, fontSize: 14, marginBottom: 20 }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <Icon name="bell" size={15} />
+                Notificarme cuando llegue
+              </span>
+            </button>
+          )}
+
+          {/* Benefits */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
+            padding: '16px', borderRadius: 12,
+            background: 'var(--paper)', border: '1px solid var(--line)',
+          }}>
+            {[
+              { icon: 'truck',   text: 'Envío a todo México' },
+              { icon: 'shield',  text: 'Pago seguro' },
+              // En preventa no aplica el plazo de apartado: la figura no está aquí.
+              pv ? { icon: 'clock', text: `Llega aprox. ${LLEGADA_TENTATIVA}` }
+                 : { icon: 'clock', text: 'Apartado 7 días' },
+              { icon: 'sparkle', text: 'Puntos por cada compra' },
+            ].map(b => (
+              <div key={b.text} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--ink-2)' }}>
+                <span style={{ color: 'var(--accent)', flexShrink: 0 }}><Icon name={b.icon as never} size={14} /></span>
+                {b.text}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Related products */}
+      {related.length > 0 && (
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 80px' }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', marginBottom: 20 }}>
+            Más de {product.cat === 'starwars' ? 'Star Wars' : product.cat === 'marvel' ? 'Marvel' : product.cat === 'dc' ? 'DC' : product.cat === 'harry' ? 'Harry Potter' : product.cat === 'stranger' ? 'Stranger Things' : product.cat === 'sports' ? 'Deportes' : product.cat}
+          </h2>
+          {/* Tira que se desliza, no cinco columnas fijas: en un teléfono
+              esas columnas dejaban cada tarjeta en 60px de ancho, con el título
+              partido en cuatro renglones y el precio cortado a la mitad. */}
+          <div className="h-scroll-wrap">
+            <div className="h-scroll" style={{ gap: 16 }}>
+              {related.map(p => (
+                <div key={p.id} style={{ flexShrink: 0, width: 210 }}>
+                  <ProductCard
+                    product={p}
+                    onView={p2 => router.push(`/tienda/${p2.id}`)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

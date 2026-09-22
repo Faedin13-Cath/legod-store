@@ -1,14 +1,21 @@
 import Dragon from '@/components/ui/Dragon'
 import type { Product } from '@/types'
 import Image from 'next/image'
+import { shopifyImg } from '@/lib/shopify'
 
-export default function MinifigImage({ product }: { product: Product }) {
+/** `width`: ancho en px que se le pide al CDN (la tarjeta mide ~210px; 440
+ *  cubre pantallas de doble densidad). `priority` para la foto principal de
+ *  una página, que es lo primero que se ve y no debe esperar al lazy load. */
+export default function MinifigImage({ product, width = 440, priority = false }: {
+  product: Product; width?: number; priority?: boolean
+}) {
   if (product.photo) {
     return (
       <Image
-        src={product.photo}
+        src={shopifyImg(product.photo, width)!}
         alt={product.name}
         fill
+        priority={priority}
         className="object-contain"
         style={{ padding: '12px' }}
         sizes="(max-width: 640px) 50vw, 25vw"

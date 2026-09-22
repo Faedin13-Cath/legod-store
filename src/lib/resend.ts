@@ -43,7 +43,7 @@ export async function sendRestockEmail(to: string, name: string, product: {
     subject: `¡${product.name} está de vuelta! 🔔`,
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px">
-        <img src="${STORE}/assets/logo/legod-logo-violet.png" width="40" style="border-radius:50%;margin-bottom:16px" />
+        <img src="${STORE}/assets/logo/legod-logo-violet-128.png" width="40" style="border-radius:50%;margin-bottom:16px" />
         <h2 style="margin:0 0 8px;color:#1a1a2e">¡Hola ${name}! 👋</h2>
         <p style="color:#555;margin:0 0 20px">
           Una figura de tu wishlist volvió a estar disponible:
@@ -84,7 +84,7 @@ export async function sendNewArrivalEmail(to: string, name: string, products: {
     subject: `Nuevas figuras en LEGOD 🧱`,
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px">
-        <img src="${STORE}/assets/logo/legod-logo-violet.png" width="40" style="border-radius:50%;margin-bottom:16px" />
+        <img src="${STORE}/assets/logo/legod-logo-violet-128.png" width="40" style="border-radius:50%;margin-bottom:16px" />
         <h2 style="margin:0 0 8px;color:#1a1a2e">¡Hola ${name}! Llegaron novedades 🎉</h2>
         <p style="color:#555;margin:0 0 20px">Estas figuras acaban de llegar a la tienda:</p>
         ${items}

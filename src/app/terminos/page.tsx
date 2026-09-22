@@ -1,6 +1,11 @@
 import LegalPage, { H2 } from '@/components/legal/LegalPage'
+import { seo } from '@/lib/seo'
 
-export const metadata = { title: 'Términos y Condiciones — Jango\'s Store' }
+export const metadata = seo({
+  titulo: 'Términos y Condiciones',
+  descripcion: 'Términos y condiciones de compra en Jango\'s Store: pagos, apartados, preventas y uso del sitio.',
+  ruta: '/terminos',
+})
 
 export default function TerminosPage() {
   return (

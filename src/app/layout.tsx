@@ -6,13 +6,19 @@ import CartProvider from '@/components/cart/CartProvider'
 import { AuthProvider } from '@/components/auth/AuthProvider'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://jangos-store.com'),
-  title: 'Jango\'s Store — Minifiguras LEGO',
+  // El dominio sin www redirige al de www: las URLs absolutas (canonical,
+  // og:url) van directo al que Google indexa.
+  metadataBase: new URL('https://www.jangos-store.com'),
+  // Cada sección pone su propio título; la plantilla le agrega la marca.
+  // Aquí no va canonical: se heredaría y todas apuntarían a la home.
+  title: {
+    default: 'Jango\'s Store — Minifiguras LEGO',
+    template: '%s | Jango\'s Store',
+  },
   description: 'Minifiguras LEGO, sets sellados, segunda mano y customs. Apartados, gift cards y envíos a todo México e internacionales a cotizar.',
   openGraph: {
     title: 'Jango\'s Store — Minifiguras LEGO',
     description: 'Star Wars, Marvel, DC y más. Minifiguras que no consigues en tienda. Apartados, gift cards y envíos a todo México.',
-    url: 'https://jangos-store.com',
     siteName: 'Jango\'s Store',
     locale: 'es_MX',
     type: 'website',

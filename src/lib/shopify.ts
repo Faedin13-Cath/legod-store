@@ -2,7 +2,7 @@ const domain = process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN!
 const token  = process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_TOKEN!
 const endpoint = `https://${domain}/api/2024-01/graphql.json`
 
-async function shopifyFetch<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+async function shopifyFetch<T>(query: string, variables?: Record<string, unknown>, revalidate?: number): Promise<T> {
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
@@ -10,7 +10,9 @@ async function shopifyFetch<T>(query: string, variables?: Record<string, unknown
       'X-Shopify-Storefront-Access-Token': token,
     },
     body: JSON.stringify({ query, variables }),
-    cache: 'no-store',
+    // En el servidor, `revalidate` deja la respuesta en la caché de Next unos
+    // minutos; sin él, cada petición va directo a Shopify.
+    ...(revalidate ? { next: { revalidate } } : { cache: 'no-store' as const }),
   })
   const json = await res.json()
   if (json.errors) {
@@ -80,6 +82,27 @@ export async function getProductByHandle(handle: string): Promise<ShopifyProduct
   `)
   _handleCache.set(handle, { data: data.productByHandle, at: Date.now() })
   return data.productByHandle
+}
+
+/** Para el servidor (título, descripción y HTML que lee Google). Cachea 5
+ *  minutos: precio y stock exactos los vuelve a pedir la ficha al abrirse. */
+export async function getProductForSeo(handle: string): Promise<ShopifyProduct | null> {
+  const data = await shopifyFetch<{ productByHandle: ShopifyProduct | null }>(
+    `query($h: String!) { productByHandle(handle: $h) { ${PRODUCT_FIELDS} } }`,
+    { h: handle },
+    300,
+  )
+  return data.productByHandle
+}
+
+/** Foto del CDN de Shopify al ancho que se va a mostrar. Sin esto se baja el
+ *  original, que en las fotos subidas a mano puede pesar varios cientos de KB.
+ *  Otras URLs (BrickLink, locales) pasan igual. */
+export function shopifyImg(url: string | undefined, width: number): string | undefined {
+  if (!url || !url.includes('cdn.shopify.com')) return url
+  const u = new URL(url)
+  u.searchParams.set('width', String(width))
+  return u.toString()
 }
 
 /* ── Adapter: ShopifyProduct → local Product ─────────────────── */
