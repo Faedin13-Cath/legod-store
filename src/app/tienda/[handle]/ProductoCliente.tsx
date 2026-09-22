@@ -50,6 +50,15 @@ export default function ProductoCliente({ handle, initial }: { handle: string; i
   const [realStock, setRealStock] = useState<number | null>(null)
   const [varId,    setVarId]    = useState<string | null>(defaultVariant(initial)?.id ?? null)
 
+  // ?variante=<id> abre esa opción ya elegida. Lo usa el feed de Google
+  // Shopping: si el anuncio dice "Con mech $450", la ficha no debe abrir en la
+  // de $380. Se lee aquí y no en el servidor para no perder la caché (ISR).
+  useEffect(() => {
+    const pedida = new URLSearchParams(window.location.search).get('variante')
+    const v = pedida && initial.variants?.find(x => x.id.endsWith(`/${pedida}`))
+    if (v) setVarId(v.id)
+  }, [initial])
+
   useEffect(() => {
     getProductByHandle(handle)
       .then(p => {

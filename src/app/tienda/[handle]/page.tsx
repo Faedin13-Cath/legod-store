@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getProductForSeo, shopifyToProduct } from '@/lib/shopify'
 import { seo } from '@/lib/seo'
+import { titulo, descripcion, tema, precioVisible } from '@/lib/producto-seo'
 import type { Product } from '@/types'
 import ProductoCliente from './ProductoCliente'
 
@@ -21,45 +22,6 @@ export function generateStaticParams() {
 async function cargar(handle: string): Promise<Product | null> {
   const p = await getProductForSeo(handle)
   return p ? shopifyToProduct(p) : null
-}
-
-const esSet = (p: Product) => p.type !== 'minifig'
-
-/** "Marvel", "Star Wars"… Las categorías genéricas no aportan al título. */
-function tema(p: Product): string {
-  return p.cat === 'otros' || p.cat === 'custom' ? '' : p.tag
-}
-
-function titulo(p: Product): string {
-  const id = p.blId ? ` (${p.blId.toUpperCase()})` : ''
-  if (p.cat === 'custom') return `${p.name} — Minifigura custom`
-  const t = tema(p)
-  // Los sets ya se llaman "Nombre (Set 75017)": no repetir "Set".
-  const tipo = esSet(p) ? (/\bset\b/i.test(p.name) ? '' : 'Set ') : 'Minifigura '
-  return `${p.name}${id} — ${tipo}LEGO${t ? ` ${t}` : ''}`
-}
-
-function precioVisible(p: Product): number {
-  return p.preventa?.full ?? p.price
-}
-
-function descripcion(p: Product): string {
-  const t = tema(p)
-  const que = p.cat === 'custom'
-    ? 'minifigura custom'
-    : `${esSet(p) ? 'set' : 'minifigura'} LEGO original${t ? ` de ${t}` : ''}`
-  const estado =
-    p.type === 'set-sealed' ? ', sellado'
-    : p.state === 'usado'   ? ', usada'
-    : p.state === 'crack'   ? ', con detalle'
-    : ''
-  const precio = `$${precioVisible(p).toLocaleString('es-MX')} MXN`
-  const disp = p.preventa ? 'En preventa.' : p.stock > 0 ? '' : 'Agotada por ahora.'
-  return [
-    `${p.name}: ${que}${estado}. ${p.variants ? 'Desde ' : ''}${precio}.`,
-    disp,
-    'Envíos a todo México desde CDMX y apartado con 60%.',
-  ].filter(Boolean).join(' ')
 }
 
 export async function generateMetadata({ params }: { params: { handle: string } }): Promise<Metadata> {
