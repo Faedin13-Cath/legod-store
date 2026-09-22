@@ -27,6 +27,10 @@ export default function ProductCard({ product, wished, onView, onAdd, onWish }: 
   // Exclusivas de convención: se distinguen con el borde en oro para que se
   // note en la reja que no son una figura de catálogo más.
   const nycc = product.tags.includes('nycc')
+  // Con opciones de distinto precio no hay "un" precio: se anuncia el más
+  // bajo, y el + lleva a la ficha para elegir en vez de meter una al azar.
+  const conOpciones = !!product.variants
+  const variosPrecios = conOpciones && new Set(product.variants!.map(v => v.price)).size > 1
 
   const visibleTags = product.tags.filter(t => tagPill[t])
   if (out && !visibleTags.includes('agotado')) visibleTags.push('agotado')
@@ -115,7 +119,10 @@ export default function ProductCard({ product, wished, onView, onAdd, onWish }: 
         <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--ink-4)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>{product.tag}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: 19, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>
-            {product.priceAntes && (
+            {variosPrecios && (
+              <small style={{ fontSize: 11, fontWeight: 500, color: 'var(--ink-3)', letterSpacing: 0, marginRight: 4 }}>Desde</small>
+            )}
+            {!conOpciones && product.priceAntes && (
               <span style={{
                 fontSize: 13, fontWeight: 500, color: 'var(--ink-3)',
                 textDecoration: 'line-through', marginRight: 6, letterSpacing: 0,
@@ -128,9 +135,13 @@ export default function ProductCard({ product, wished, onView, onAdd, onWish }: 
           <button
             className="prod-add"
             disabled={out}
-            onClick={e => { e.stopPropagation(); onAdd?.(product) }}
-            aria-label="Añadir al carrito"
-            title={out ? 'Agotado' : 'Añadir al carrito'}
+            onClick={e => {
+              e.stopPropagation()
+              if (conOpciones) onView?.(product)
+              else onAdd?.(product)
+            }}
+            aria-label={conOpciones ? 'Elegir opción' : 'Añadir al carrito'}
+            title={out ? 'Agotado' : conOpciones ? 'Elegir opción' : 'Añadir al carrito'}
             style={{
               width: 32, height: 32, borderRadius: '50%',
               background: out ? 'var(--ink-4)' : 'var(--ink)',

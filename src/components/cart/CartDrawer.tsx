@@ -7,6 +7,7 @@ import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
 import SaldoConfirmModal, { type ShippingData } from '@/components/cart/SaldoConfirmModal'
 import { APARTADO_LABEL, anticipoTotal } from '@/lib/apartado'
+import { cartKey, lineName } from '@/lib/cart'
 import type { CartItem } from '@/types'
 
 interface Props {
@@ -91,12 +92,12 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
     try {
       const payload  = applied > 0
         ? {
-            items: items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+            items: items.map(i => ({ id: i.id, variantId: i.variantId, name: lineName(i), price: i.price, qty: i.qty })),
             useBalance: true, balanceToUse: applied, userId: user!.id,
             ...(user?.email ? { userEmail: user.email } : {}),
             ...(shipping ? { shipping } : {}),
           }
-        : { items: items.map(i => ({ id: i.id, qty: i.qty })), ...(user?.email ? { userEmail: user.email } : {}) }
+        : { items: items.map(i => ({ id: i.id, variantId: i.variantId, qty: i.qty })), ...(user?.email ? { userEmail: user.email } : {}) }
 
       const res  = await fetch('/api/checkout', {
         method: 'POST',
@@ -138,7 +139,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items:    items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+          items:    items.map(i => ({ id: i.id, variantId: i.variantId, name: lineName(i), price: i.price, qty: i.qty })),
           subtotal,
           ...(aptApplied > 0 ? { useBalance: true, balanceToUse: aptApplied, userId: user!.id } : {}),
         }),
@@ -241,7 +242,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {items.map(item => (
-                <div key={item.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 12, background: 'var(--cream)', border: '1px solid var(--line)' }}>
+                <div key={cartKey(item)} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 12, background: 'var(--cream)', border: '1px solid var(--line)' }}>
                   {/* Foto del artículo (o cuadro con iniciales si no hay) */}
                   <div style={{
                     width: 52, height: 52, borderRadius: 8, flexShrink: 0, overflow: 'hidden',
@@ -263,19 +264,22 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
 
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', marginBottom: 2 }}>{item.name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--ink-3)', marginBottom: 8 }}>{item.tag}</div>
+                    <div style={{ fontSize: 11, color: 'var(--ink-3)', marginBottom: 8 }}>
+                      {item.variantTitle ? <><strong style={{ color: 'var(--ink-2)', fontWeight: 600 }}>{item.variantTitle}</strong> · </> : null}
+                      {item.tag}
+                    </div>
                     {/* Qty controls */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--paper)', overflow: 'hidden' }}>
                         <button
-                          onClick={() => item.qty <= 1 ? onRemove(item.id) : onChangeQty(item.id, item.qty - 1)}
+                          onClick={() => item.qty <= 1 ? onRemove(cartKey(item)) : onChangeQty(cartKey(item), item.qty - 1)}
                           style={{ width: 28, height: 28, background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
                           <Icon name="minus" size={12} />
                         </button>
                         <span style={{ width: 24, textAlign: 'center', fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{item.qty}</span>
                         <button
-                          onClick={() => onChangeQty(item.id, item.qty + 1)}
+                          onClick={() => onChangeQty(cartKey(item), item.qty + 1)}
                           disabled={item.qty >= item.stock}
                           style={{ width: 28, height: 28, background: 'none', border: 'none', color: item.qty >= item.stock ? 'var(--ink-4)' : 'var(--ink-2)', cursor: item.qty >= item.stock ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
@@ -283,7 +287,7 @@ export default function CartDrawer({ open, items, onClose, onRemove, onChangeQty
                         </button>
                       </div>
                       <button
-                        onClick={() => onRemove(item.id)}
+                        onClick={() => onRemove(cartKey(item))}
                         style={{ width: 28, height: 28, borderRadius: 6, background: 'none', border: '1px solid transparent', color: 'var(--ink-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
                         <Icon name="close" size={13} />

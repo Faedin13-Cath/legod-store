@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import dynamic from 'next/dynamic'
-import type { CartItem, Product } from '@/types'
+import type { CartItem, Product, ProductVariant } from '@/types'
+import { cartKey, defaultVariant } from '@/lib/cart'
 
 const CartDrawer = dynamic(() => import('./CartDrawer'), { ssr: false })
 
@@ -14,9 +15,10 @@ interface CartCtx {
   open:      boolean
   openCart:  () => void
   closeCart: () => void
-  addItem:   (p: Product) => void
-  removeItem:(id: string) => void
-  changeQty: (id: string, qty: number) => void
+  addItem:   (p: Product, variant?: ProductVariant) => void
+  /** Reciben la clave del renglón (`cartKey`), no el id del producto. */
+  removeItem:(key: string) => void
+  changeQty: (key: string, qty: number) => void
 }
 
 const Ctx = createContext<CartCtx | null>(null)
@@ -48,23 +50,29 @@ export default function CartProvider({ children }: { children: React.ReactNode }
   const openCart  = useCallback(() => setOpen(true),  [])
   const closeCart = useCallback(() => setOpen(false), [])
 
-  const addItem = useCallback((p: Product) => {
-    setItems(prev => {
-      const exists = prev.find(it => it.id === p.id)
-      if (exists) {
-        return prev.map(it => it.id === p.id ? { ...it, qty: it.qty + 1 } : it)
-      }
-      return [...prev, { ...p, qty: 1 }]
-    })
+  const addItem = useCallback((p: Product, variant?: ProductVariant) => {
+    // Un producto con opciones nunca entra sin una elegida: sin variantId el
+    // checkout cobraría la primera, que puede no ser la del precio mostrado.
+    const v = variant ?? defaultVariant(p)
+    const item: CartItem = v
+      ? { ...p, price: v.price, stock: v.stock, priceAntes: undefined,
+          variantId: v.id, variantTitle: v.title, qty: 1 }
+      : { ...p, qty: 1 }
+    const key = cartKey(item)
+    setItems(prev =>
+      prev.some(it => cartKey(it) === key)
+        ? prev.map(it => cartKey(it) === key ? { ...it, qty: it.qty + 1 } : it)
+        : [...prev, item]
+    )
     setOpen(true)
   }, [])
 
-  const removeItem = useCallback((id: string) => {
-    setItems(prev => prev.filter(it => it.id !== id))
+  const removeItem = useCallback((key: string) => {
+    setItems(prev => prev.filter(it => cartKey(it) !== key))
   }, [])
 
-  const changeQty = useCallback((id: string, qty: number) => {
-    setItems(prev => prev.map(it => it.id === id ? { ...it, qty } : it))
+  const changeQty = useCallback((key: string, qty: number) => {
+    setItems(prev => prev.map(it => cartKey(it) === key ? { ...it, qty } : it))
   }, [])
 
   const count = items.reduce((s, it) => s + it.qty, 0)

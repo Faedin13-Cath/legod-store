@@ -5,7 +5,8 @@ const adminToken  = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN
 const WHATSAPP    = process.env.NEXT_PUBLIC_WHATSAPP ?? '525574777350'
 import { APARTADO_LABEL, anticipoDe, anticipoTotal } from '@/lib/apartado'
 
-type CartLine = { id: string; name: string; price: number; qty: number }
+/** `variantId` solo viene si el producto tiene opciones (con mech / sin mech). */
+type CartLine = { id: string; variantId?: string; name: string; price: number; qty: number }
 
 function deadlineLabel(total: number) {
   if (total <= 1000) return '1 semana'
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
 
     await supabase.from('apartados').insert({
       user_id:     userId,
-      items:       items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+      items:       items.map(i => ({ id: i.id, variantId: i.variantId, name: i.name, price: i.price, qty: i.qty })),
       subtotal, deposit, balance,
       deadline_at: deadline.toISOString(),
       status:      'active',
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
     }))
 
     const originalItemsJson = JSON.stringify(
-      items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty }))
+      items.map(i => ({ id: i.id, variantId: i.variantId, name: i.name, price: i.price, qty: i.qty }))
     )
 
     const note = [

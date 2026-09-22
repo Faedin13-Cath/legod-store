@@ -722,3 +722,8 @@ a[href*="/tienda"].more-link,
 @media (max-width: 480px) {
   .vendenos-photos  { grid-template-columns: repeat(2, 1fr) !important; }
 }
+
+/* Opciones de producto (con mech / sin mech) */
+.opcion-variante { transition: border-color .15s, background .15s; }
+.opcion-variante:not(:disabled):not([aria-checked="true"]):hover { border-color: var(--ink-3) !important; }
+.opcion-variante:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

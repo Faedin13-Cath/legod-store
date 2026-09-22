@@ -24,10 +24,25 @@ export interface Product {
   blId?: string
   /** Precios de preventa si el producto está etiquetado como tal. */
   preventa?: import('@/lib/preventa').PreventaPricing
+  /** Opciones a elegir (p. ej. con mech / sin mech). Solo existe si hay dos o
+   *  más; un producto normal no trae este campo. */
+  variants?: ProductVariant[]
+}
+
+export interface ProductVariant {
+  /** gid de la variante en Shopify: es lo que se manda a cobrar. */
+  id: string
+  title: string
+  price: number
+  stock: number
 }
 
 export interface CartItem extends Product {
   qty: number
+  /** Variante elegida. Con esto, dos opciones del mismo producto son dos
+   *  renglones distintos del carrito, cada uno con su precio. */
+  variantId?: string
+  variantTitle?: string
 }
 
 export interface Apartado {

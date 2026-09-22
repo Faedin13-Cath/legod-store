@@ -12,7 +12,7 @@ const adminToken = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN
 const handleDe = (id: string) =>
   id.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
 
-async function adjustInventory(handle: string, qty: number) {
+async function adjustInventory(handle: string, qty: number, variantGid?: string) {
   if (!adminToken) return
   try {
     // 1. Find product by handle
@@ -21,7 +21,11 @@ async function adjustInventory(handle: string, qty: number) {
       { headers: { 'X-Shopify-Access-Token': adminToken } }
     )
     const pData  = await pRes.json()
-    const variant = pData?.products?.[0]?.variants?.[0]
+    const variants: { id: number; inventory_item_id: number }[] = pData?.products?.[0]?.variants ?? []
+    // Con opciones (con mech / sin mech) se descuenta la que se apartó. La API
+    // REST da el id numérico; el carrito guarda el gid, que termina en él.
+    const numId   = variantGid?.split('/').pop()
+    const variant = variants.find(v => String(v.id) === numId) ?? variants[0]
     if (!variant?.inventory_item_id) return
 
     // 2. Get inventory level to find location_id
@@ -206,7 +210,7 @@ export async function POST(req: NextRequest) {
     const plazo       = attr('plazo_liquidar') ?? '15 días'
     const balanceUsed = parseInt(attr('balance_used') ?? '0', 10)
 
-    let apItems: { id: string; name: string; price: number; qty: number }[] = []
+    let apItems: { id: string; variantId?: string; name: string; price: number; qty: number }[] = []
     try { apItems = JSON.parse(attr('original_items') ?? '[]') } catch { /* cae al fallback de abajo */ }
     if (!apItems.length) {
       apItems = (order.line_items ?? []).map(li => ({
@@ -244,7 +248,7 @@ export async function POST(req: NextRequest) {
     // renglones sueltos (título + el anticipo), sin variante de Shopify
     // detrás, así que Shopify no tiene qué descontar: hay que hacerlo aquí.
     for (const item of apItems) {
-      await adjustInventory(handleDe(item.id), item.qty)
+      await adjustInventory(handleDe(item.id), item.qty, item.variantId)
     }
 
     return NextResponse.json({ ok: true, pointsAdded: pointsToAdd })

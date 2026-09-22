@@ -32,7 +32,7 @@ export interface ShopifyProduct {
   images: { edges: { node: { url: string; altText: string | null } }[] }
   tags: string[]
   availableForSale: boolean
-  variants: { edges: { node: { id: string; title: string; price: { amount: string }; compareAtPrice: { amount: string } | null; quantityAvailable: number | null } }[] }
+  variants: { edges: { node: { id: string; title: string; availableForSale: boolean; price: { amount: string }; compareAtPrice: { amount: string } | null; quantityAvailable: number | null } }[] }
 }
 
 /* ── Queries ─────────────────────────────────────────────────── */
@@ -40,7 +40,7 @@ const PRODUCT_FIELDS = `
   id handle title description availableForSale tags
   priceRange { minVariantPrice { amount } }
   images(first: 3) { edges { node { url altText } } }
-  variants(first: 5) { edges { node { id title price { amount } compareAtPrice { amount } quantityAvailable } } }
+  variants(first: 10) { edges { node { id title availableForSale price { amount } compareAtPrice { amount } quantityAvailable } } }
 `
 
 /* ── Cache en memoria (60s) — evita repegar a Shopify al navegar ── */
@@ -145,6 +145,19 @@ export function shopifyToProduct(p: ShopifyProduct): Product {
     desc:   p.description,
     blId,
     ...(parsePreventa(p.tags) ? { preventa: parsePreventa(p.tags)! } : {}),
+    ...(() => {
+      // Un producto sin opciones trae una sola variante "Default Title".
+      const opciones = p.variants.edges.map(e => e.node).filter(v => v.title !== 'Default Title')
+      if (opciones.length < 2) return {}
+      return {
+        variants: opciones.map(v => ({
+          id:    v.id,
+          title: v.title,
+          price: Math.round(parseFloat(v.price.amount)),
+          stock: v.quantityAvailable ?? (v.availableForSale ? 1 : 0),
+        })),
+      }
+    })(),
   }
 }
 

@@ -249,7 +249,7 @@ export async function POST(req: NextRequest) {
     return checkoutWithBalance(body.items, body.balanceToUse, body.userId, body.shipping, body.userEmail)
   }
 
-  const { items, userEmail }: { items: { id: string; qty: number }[]; userEmail?: string } = body
+  const { items, userEmail }: { items: { id: string; qty: number; variantId?: string }[]; userEmail?: string } = body
 
   // 1. Resolve variant IDs from Shopify using product handle
   const lines: string[] = []
@@ -257,10 +257,15 @@ export async function POST(req: NextRequest) {
     const handle = item.id.toLowerCase()
     const data = await gql(`
       { productByHandle(handle: "${handle}") {
-          variants(first: 1) { edges { node { id } } }
+          variants(first: 20) { edges { node { id } } }
       }}
     `)
-    const variantId = data?.data?.productByHandle?.variants?.edges?.[0]?.node?.id
+    const ids: string[] = (data?.data?.productByHandle?.variants?.edges ?? []).map(
+      (e: { node: { id: string } }) => e.node.id,
+    )
+    // La opción elegida solo se respeta si es de este producto; si no viene
+    // (producto sin opciones) o no cuadra, va la primera, como siempre.
+    const variantId = item.variantId && ids.includes(item.variantId) ? item.variantId : ids[0]
     if (variantId) {
       lines.push(`{ merchandiseId: "${variantId}", quantity: ${item.qty} }`)
     }

@@ -11,6 +11,7 @@ import { useAuth } from '@/components/auth/AuthProvider'
 import { getProducts, getProductByHandle, shopifyToProduct } from '@/lib/shopify'
 import { PREVENTAS_PUBLIC, LLEGADA_TENTATIVA } from '@/lib/preventa'
 import { APARTADO_LABEL, anticipoDe } from '@/lib/apartado'
+import { defaultVariant } from '@/lib/cart'
 import type { Product } from '@/types'
 
 const STATE_LABEL: Record<string, string> = {
@@ -45,6 +46,7 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
   const [added,    setAdded]    = useState(false)
   const [apartado, setApartado] = useState(false)
   const [realStock, setRealStock] = useState<number | null>(null)
+  const [varId,    setVarId]    = useState<string | null>(null)
 
   useEffect(() => {
     getProductByHandle(handle)
@@ -52,6 +54,7 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
         if (!p) { setProduct(null); return }
         const converted = shopifyToProduct(p)
         setProduct(converted)
+        setVarId(defaultVariant(converted)?.id ?? null)
         fetch(`/api/product-stock?handle=${handle}`)
           .then(r => r.json())
           .then(d => setRealStock(d.stock ?? null))
@@ -89,7 +92,11 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
     )
   }
 
-  const stock = realStock ?? product.stock
+  // Con opciones, precio y piezas son los de la opción elegida. El total del
+  // producto (realStock) sumaría las dos y dejaría pedir más de las que hay.
+  const variante = product.variants?.find(v => v.id === varId) ?? defaultVariant(product)
+  const precio = variante?.price ?? product.price
+  const stock = variante ? variante.stock : (realStock ?? product.stock)
   const out = stock === 0
   const rarity = RARITY_LABEL[product.rarity]
   // En preventa no se vende desde aquí: el cobro va por /preventas, que usa
@@ -101,7 +108,7 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
 
   function handleAdd() {
     if (product) {
-      for (let i = 0; i < qty; i++) addItem(product)
+      for (let i = 0; i < qty; i++) addItem(product, variante)
     }
     setAdded(true)
     // El botón cambiaba 2 segundos y aparecía un 1 diminuto en el ícono:
@@ -235,13 +242,59 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
           {(!pv || canSeePreventa) && (
             <div style={{ fontSize: 38, fontWeight: 700, color: 'var(--ink)', margin: '0 0 20px' }}>
               {pv && <small style={{ fontSize: 15, fontWeight: 500, color: 'var(--ink-3)', marginRight: 8 }}>Desde</small>}
-              {!pv && product.priceAntes && (
+              {!pv && !variante && product.priceAntes && (
                 <small style={{ fontSize: 22, fontWeight: 500, color: 'var(--ink-3)', textDecoration: 'line-through', marginRight: 12 }}>
                   ${product.priceAntes.toLocaleString('es-MX')}
                 </small>
               )}
-              ${(pv ? pv.full : product.price).toLocaleString('es-MX')}
+              ${(pv ? pv.full : precio).toLocaleString('es-MX')}
               <small style={{ fontSize: 16, fontWeight: 400, color: 'var(--ink-3)', marginLeft: 6 }}>MXN</small>
+            </div>
+          )}
+
+          {/* Opciones: cada una con su precio, para comparar sin tener que
+              darle clic a cada una. La agotada se ve pero no se elige. */}
+          {!pv && product.variants && (
+            <div role="radiogroup" aria-label="Opciones" style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 10 }}>
+                Elige una opción
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                {product.variants.map(v => {
+                  const activa  = v.id === variante?.id
+                  const agotada = v.stock <= 0
+                  return (
+                    <button
+                      key={v.id}
+                      role="radio"
+                      aria-checked={activa}
+                      aria-label={`${v.title}, ${agotada ? 'agotado' : `$${v.price.toLocaleString('es-MX')} MXN`}`}
+                      disabled={agotada}
+                      onClick={() => { setVarId(v.id); setQty(1) }}
+                      className="opcion-variante"
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2,
+                        minWidth: 132, padding: '10px 16px', borderRadius: 12,
+                        background: activa ? 'var(--paper)' : 'transparent',
+                        border: '1px solid ' + (activa ? 'var(--ink)' : 'var(--line)'),
+                        // El anillo va por sombra, no por borde más grueso: así
+                        // elegir una opción no empuja a las demás.
+                        boxShadow: activa ? 'inset 0 0 0 1px var(--ink)' : 'none',
+                        color: agotada ? 'var(--ink-4)' : 'var(--ink)',
+                        cursor: agotada ? 'not-allowed' : 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <span style={{ fontSize: 14, fontWeight: 600, textDecoration: agotada ? 'line-through' : 'none' }}>
+                        {v.title}
+                      </span>
+                      <span style={{ fontSize: 13, color: agotada ? 'var(--ink-4)' : 'var(--ink-3)' }}>
+                        {agotada ? 'Agotado' : `$${v.price.toLocaleString('es-MX')}`}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           )}
 
@@ -323,7 +376,7 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
                     disabled={qty >= stock}
                     style={{
                       width: 38, height: 44, background: 'none', border: 'none',
-                      cursor: qty >= product.stock ? 'not-allowed' : 'pointer',
+                      cursor: qty >= stock ? 'not-allowed' : 'pointer',
                       color: qty >= stock ? 'var(--ink-4)' : 'var(--ink)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
@@ -355,7 +408,7 @@ export default function ProductPage({ params }: { params: { handle: string } }) 
                 ) : (
                   <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                     <Icon name="clock" size={15} />
-                    Apartar con {APARTADO_LABEL} — ${anticipoDe(product.price).toLocaleString('es-MX')} MXN
+                    Apartar con {APARTADO_LABEL} — ${anticipoDe(precio).toLocaleString('es-MX')} MXN
                   </span>
                 )}
               </button>
