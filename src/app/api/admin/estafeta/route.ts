@@ -70,7 +70,9 @@ function csvResponse(lines: string[]) {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function csvCell(v: unknown): string {
-  const s = String(v ?? '')
+  // Anti inyección de fórmulas: Excel ejecuta las celdas que empiezan con = + - @ (los datos vienen del formulario público)
+  const raw = String(v ?? '')
+  const s = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
@@ -104,6 +106,8 @@ export async function GET(req: NextRequest) {
         .select('recibe, direccion, piezas, resta, paqueteria, entrega_contactos(nombre, telefono, email)')
         .in('id', ids)
         .eq('tipo', 'envio')
+        // Un conflicto es una identidad sin resolver (el contacto es otra persona): el dueño lo arregla a mano antes de enviar
+        .neq('status', 'conflicto')
         .not('direccion', 'is', null)
         .order('created_at', { ascending: false })
       if (error) {
