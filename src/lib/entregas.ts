@@ -52,3 +52,12 @@ export type ContactoEnmascarado = {
   email: string
   tieneDireccion: boolean
 }
+
+/**
+ * IP del visitante, para limitar intentos. Detrás del proxy de Vercel la IP
+ * real viene como primer valor de x-forwarded-for; si no, x-real-ip.
+ */
+export function ipDe(headers: Headers): string {
+  const reenviada = headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+  return reenviada || headers.get('x-real-ip')?.trim() || 'desconocida'
+}

@@ -5,6 +5,7 @@ import {
   enmascararColonia,
   enmascararCP,
   enmascararEmail,
+  ipDe,
 } from './entregas'
 
 describe('normalizarTelefono', () => {
@@ -34,5 +35,15 @@ describe('enmascarar', () => {
   it('no truena con datos faltantes', () => {
     expect(enmascararCalle('', '')).toBe('')
     expect(enmascararEmail('')).toBe('')
+  })
+})
+
+describe('ipDe', () => {
+  it('lee la IP real detrás del proxy de Vercel', () => {
+    expect(ipDe(new Headers({ 'x-forwarded-for': '189.1.2.3, 10.0.0.1' }))).toBe('189.1.2.3')
+    expect(ipDe(new Headers({ 'x-real-ip': '189.1.2.3' }))).toBe('189.1.2.3')
+  })
+  it('da algo estable cuando no hay encabezados', () => {
+    expect(ipDe(new Headers())).toBe('desconocida')
   })
 })
