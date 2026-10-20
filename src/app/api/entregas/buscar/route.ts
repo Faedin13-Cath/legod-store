@@ -108,10 +108,12 @@ export async function POST(req: NextRequest) {
   // Los teléfonos están guardados en ~8 formatos distintos, así que no se puede
   // comparar en SQL. Se traen SOLO id y teléfonos (nunca nombres ni direcciones),
   // se normalizan aquí y únicamente del que coincida se lee la fila completa.
-  let perfilId: string | null = null
+  // Se juntan TODAS las coincidencias: si dos perfiles comparten número no se
+  // puede saber de quién es, y mostrar los datos de otra persona es peor que no reconocer a nadie.
+  const coincidencias: string[] = []
   const PAGINA = 1000
-  for (let desde = 0; perfilId === null; desde += PAGINA) {
-    const { data: perfiles, error: errPerfiles } = await supabase
+  for (let desde = 0; ; desde += PAGINA) {
+    const { data, error: errPerfiles } = await supabase
       .from('profiles')
       .select('id, whatsapp, ship_phone')
       .order('id')
@@ -120,15 +122,24 @@ export async function POST(req: NextRequest) {
       console.error('[entregas/buscar] perfiles', errPerfiles.message)
       return NextResponse.json({ error: 'Error del servidor' }, { status: 500 })
     }
-    const hit = perfiles.find(p =>
-      (p.whatsapp && normalizarTelefono(p.whatsapp) === telefono) ||
-      (p.ship_phone && normalizarTelefono(p.ship_phone) === telefono)
-    )
-    if (hit) perfilId = hit.id
+    const perfiles = data ?? []
+    for (const p of perfiles) {
+      if (
+        (p.whatsapp && normalizarTelefono(p.whatsapp) === telefono) ||
+        (p.ship_phone && normalizarTelefono(p.ship_phone) === telefono)
+      ) coincidencias.push(p.id)
+    }
     if (perfiles.length < PAGINA) break
   }
 
-  if (perfilId) {
+  if (coincidencias.length > 1) {
+    // Solo la cuenta: ni ids ni el número.
+    console.error(`[entregas/buscar] ${coincidencias.length} perfiles comparten un mismo celular`)
+    return NextResponse.json({ contacto: null })
+  }
+
+  if (coincidencias.length === 1) {
+    const perfilId = coincidencias[0]
     const { data: p, error: errPerfil } = await supabase
       .from('profiles')
       .select('name, ship_name, email, ship_street, ship_num_ext, ship_colonia, ship_zip')
@@ -141,7 +152,7 @@ export async function POST(req: NextRequest) {
     if (p) {
       return NextResponse.json({
         contacto: enmascarar({
-          nombre: p.ship_name || p.name, email: p.email, calle: p.ship_street,
+          nombre: p.name || p.ship_name, email: p.email, calle: p.ship_street,
           numExt: p.ship_num_ext, colonia: p.ship_colonia, cp: p.ship_zip,
         }),
       })
