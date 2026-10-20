@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { normalizarTelefono } from '@/lib/entregas'
 
 type SellRequest = {
   id: string; created_at: string; name: string; phone: string
@@ -43,6 +44,53 @@ type PreventaFigura = {
   handle: string; name: string; photo: string | null; stock: number
   arrivedAt: string | null
   unidades: number; pendiente: number; clientes: number
+}
+
+type EntregaAdmin = {
+  id: string; created_at: string; tipo: string; paqueteria: string | null
+  recibe: string | null; piezas: string; foto: string | null; resta: number; status: string
+  nombre_enviado: string | null; email_enviado: string | null
+  direccion: {
+    calle?: string; numExt?: string; numInt?: string | null; colonia?: string
+    ciudad?: string; estado?: string; cp?: string; referencia?: string
+  } | null
+  contacto: { id: string; nombre: string; telefono: string; email: string | null } | null
+}
+
+type FiltroEntrega = 'todo' | 'envio' | 'rock_show' | 'sin_atender'
+
+const FILTROS_ENTREGA: { id: FiltroEntrega; label: string }[] = [
+  { id: 'todo', label: 'Todo' },
+  { id: 'envio', label: 'Envío' },
+  { id: 'rock_show', label: 'Rock Show' },
+  { id: 'sin_atender', label: 'Sin atender' },
+]
+
+function direccionTexto(d: EntregaAdmin['direccion']): string {
+  if (!d) return ''
+  const calle = [d.calle, d.numExt && `#${d.numExt}`, d.numInt && `int. ${d.numInt}`].filter(Boolean).join(' ')
+  const resto = [d.colonia, d.ciudad, d.estado, d.cp && `CP ${d.cp}`].filter(Boolean).join(', ')
+  return [calle, resto, d.referencia && `Ref: ${d.referencia}`].filter(Boolean).join(', ')
+}
+
+// Una celda para pegar en hoja de cálculo: sin saltos de línea ni tabuladores,
+// porque las piezas vienen en varias líneas y romperían la fila al pegar.
+function celda(v: unknown): string {
+  const t = String(v ?? '').replace(/\s*[\r\n]+\s*/g, ' · ').replace(/\t/g, ' ').trim()
+  // Texto que viene del formulario público: una celda que empieza con = + - @ se
+  // evalúa como fórmula al pegarla en Excel/Sheets. El apóstrofo la deja como texto.
+  const seguro = /^[=+\-@]/.test(t) ? `'${t}` : t
+  // Las comillas dobles pueden romper el análisis de la fila al pegar: se igualan a sencillas.
+  return seguro.replace(/"/g, "'")
+}
+
+// Minúsculas y sin acentos, para que "jose" encuentre "José".
+function sinAcentos(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+}
+
+function fechaEntrega(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
 export default function AdminPage() {
@@ -133,6 +181,100 @@ export default function AdminPage() {
     }
   }
 
+  const [entregas, setEntregas] = useState<EntregaAdmin[]>([])
+  const [loadingEntregas, setLoadingEntregas] = useState(true)
+  const [errorEntregas, setErrorEntregas] = useState(false)
+  const [filtroEntrega, setFiltroEntrega] = useState<FiltroEntrega>('todo')
+  const [busquedaEntrega, setBusquedaEntrega] = useState('')
+  const [atendiendo, setAtendiendo] = useState<string | null>(null)
+  const [avisoEntregas, setAvisoEntregas] = useState('')
+  const [textoParaCopiar, setTextoParaCopiar] = useState('')
+  const [bajandoExcel, setBajandoExcel] = useState(false)
+
+  // Lo que se ve en pantalla: los dos botones de exportar trabajan sobre esto, no sobre todo.
+  const entregasVisibles = entregas.filter(e => {
+    if (filtroEntrega === 'envio' && e.tipo !== 'envio') return false
+    if (filtroEntrega === 'rock_show' && e.tipo !== 'rock_show') return false
+    if (filtroEntrega === 'sin_atender' && e.status === 'atendida') return false
+    const q = busquedaEntrega.trim()
+    if (!q) return true
+    // Si es un número completo (+52, 044, espacios…) se normaliza; si es parcial
+    // (las últimas cifras) se busca por los dígitos tal cual.
+    const digitos = normalizarTelefono(q) ?? q.replace(/\D/g, '')
+    const nombres = sinAcentos(`${e.contacto?.nombre ?? ''} ${e.nombre_enviado ?? ''}`)
+    return nombres.includes(sinAcentos(q)) || (digitos.length > 0 && (e.contacto?.telefono ?? '').includes(digitos))
+  })
+
+  async function marcarAtendida(e: EntregaAdmin) {
+    if (e.status === 'conflicto' && !confirm(
+      'Esta entrega está en conflicto: el celular ya era de otro contacto y la persona dijo «no soy yo».\n\n'
+      + 'Al marcarla atendida se pierde la marca de conflicto. ¿Ya lo resolviste a mano?'
+    )) return
+    setAtendiendo(e.id); setAvisoEntregas('')
+    try {
+      const res = await fetch('/api/admin/entregas', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: e.id, status: 'atendida' }),
+      })
+      if (!res.ok) { setAvisoEntregas('No se pudo marcar como atendida.'); return }
+      setEntregas(prev => prev.map(x => x.id === e.id ? { ...x, status: 'atendida' } : x))
+    } catch {
+      setAvisoEntregas('No se pudo conectar.')
+    } finally {
+      setAtendiendo(null)
+    }
+  }
+
+  async function copiarEntregas() {
+    setAvisoEntregas(''); setTextoParaCopiar('')
+    const filas = [
+      ['Fecha', 'Cliente', 'Celular', 'Tipo', 'Piezas', 'Resta', 'Paquetería', 'Recibe', 'Dirección', 'Estado', 'Nombre enviado', 'Correo enviado'],
+      ...entregasVisibles.map(e => [
+        fechaEntrega(e.created_at),
+        e.contacto?.nombre,
+        e.contacto?.telefono,
+        e.tipo === 'envio' ? 'Envío' : 'Rock Show',
+        e.piezas,
+        e.resta,
+        e.paqueteria,
+        e.recibe,
+        direccionTexto(e.direccion),
+        e.status === 'conflicto' ? 'Conflicto' : e.status === 'atendida' ? 'Atendida' : 'Nueva',
+        e.nombre_enviado,
+        e.email_enviado,
+      ]),
+    ]
+    const texto = filas.map(f => f.map(celda).join('\t')).join('\n')
+    try {
+      await navigator.clipboard.writeText(texto)
+      setAvisoEntregas(`Copiadas ${entregasVisibles.length} ${entregasVisibles.length === 1 ? 'entrega' : 'entregas'}. Pégalas en tu hoja de cálculo.`)
+    } catch {
+      // Sin acceso al portapapeles (permiso negado o página sin https): se deja el texto a la vista.
+      setTextoParaCopiar(texto)
+      setAvisoEntregas('No se pudo copiar automáticamente. Selecciona el texto de abajo y cópialo a mano.')
+    }
+  }
+
+  async function bajarExcelEstafeta() {
+    setBajandoExcel(true); setAvisoEntregas('')
+    try {
+      const ids = entregasVisibles.map(e => e.id).join(',')
+      const res = await fetch(`/api/admin/estafeta?scope=all&entregas=${encodeURIComponent(ids)}`)
+      if (!res.ok) { setAvisoEntregas('No se pudo generar el archivo de Estafeta.'); return }
+      const url = URL.createObjectURL(await res.blob())
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `estafeta_entregas_${new Date().toISOString().slice(0, 10)}.csv`
+      document.body.appendChild(a); a.click(); a.remove()
+      URL.revokeObjectURL(url)
+    } catch {
+      setAvisoEntregas('No se pudo conectar.')
+    } finally {
+      setBajandoExcel(false)
+    }
+  }
+
   useEffect(() => {
     if (!isOwner) return
     fetch('/api/admin/sell-requests')
@@ -163,6 +305,11 @@ export default function AdminPage() {
         setLoadingCasillero(false)
       })
       .catch(() => setLoadingCasillero(false))
+
+    fetch('/api/admin/entregas')
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(d => { setEntregas(d.entregas ?? []); setLoadingEntregas(false) })
+      .catch(() => { setErrorEntregas(true); setLoadingEntregas(false) })
   }, [isOwner])
 
   if (loading) {
@@ -577,6 +724,147 @@ export default function AdminPage() {
               )
             })}
           </div>
+        )}
+      </div>
+
+      {/* Entregas — lo que llega del formulario /entregas */}
+      <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 16, padding: '22px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+            <Icon name="package" size={18} />
+          </div>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
+            Entregas
+            {entregas.filter(e => e.status !== 'atendida').length > 0 && (
+              <span style={{ fontSize: 11, fontWeight: 700, background: 'var(--accent)', color: '#fff', padding: '2px 8px', borderRadius: 999, marginLeft: 8 }}>
+                {entregas.filter(e => e.status !== 'atendida').length} sin atender
+              </span>
+            )}
+          </h2>
+        </div>
+        <p style={{ fontSize: 12, color: 'var(--ink-3)', margin: '0 0 14px', lineHeight: 1.6 }}>
+          Lo que los clientes llenaron en el formulario de entregas. Copiar y Bajar a Excel
+          trabajan solo con lo que ves filtrado.
+        </p>
+
+        {loadingEntregas ? (
+          <p style={{ fontSize: 13, color: 'var(--ink-3)' }}>Cargando…</p>
+        ) : errorEntregas ? (
+          <p style={{ fontSize: 13, color: 'var(--ink-3)' }}>No se pudieron cargar las entregas.</p>
+        ) : entregas.length === 0 ? (
+          <p style={{ fontSize: 13, color: 'var(--ink-3)' }}>Aún no hay entregas del formulario.</p>
+        ) : (
+          <>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+              {FILTROS_ENTREGA.map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setFiltroEntrega(f.id)}
+                  className={filtroEntrega === f.id ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'}
+                >
+                  {f.label}
+                </button>
+              ))}
+              <input
+                value={busquedaEntrega}
+                onChange={ev => setBusquedaEntrega(ev.target.value)}
+                placeholder="Buscar por nombre o celular"
+                className="input"
+                style={{ flex: '1 1 180px', fontSize: 13 }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+              <button onClick={copiarEntregas} disabled={entregasVisibles.length === 0} className="btn btn-secondary btn-sm">
+                Copiar ({entregasVisibles.length})
+              </button>
+              <button onClick={bajarExcelEstafeta} disabled={entregasVisibles.length === 0 || bajandoExcel} className="btn btn-secondary btn-sm">
+                {bajandoExcel ? 'Generando…' : 'Bajar a Excel (Estafeta)'}
+              </button>
+            </div>
+            {avisoEntregas && (
+              <p style={{ fontSize: 12, color: 'var(--ink-2)', margin: '0 0 12px', lineHeight: 1.6 }}>{avisoEntregas}</p>
+            )}
+            {textoParaCopiar && (
+              <textarea
+                readOnly
+                value={textoParaCopiar}
+                onFocus={ev => ev.currentTarget.select()}
+                className="input"
+                style={{ width: '100%', height: 120, fontSize: 12, fontFamily: 'monospace', marginBottom: 12 }}
+              />
+            )}
+
+            {entregasVisibles.length === 0 ? (
+              <p style={{ fontSize: 13, color: 'var(--ink-3)' }}>Ninguna entrega coincide con el filtro.</p>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 760 }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', color: 'var(--ink-3)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <th style={{ padding: '0 10px 8px 0', fontWeight: 600 }}>Cuándo</th>
+                      <th style={{ padding: '0 10px 8px', fontWeight: 600 }}>Cliente</th>
+                      <th style={{ padding: '0 10px 8px', fontWeight: 600 }}>Tipo</th>
+                      <th style={{ padding: '0 10px 8px', fontWeight: 600 }}>Piezas</th>
+                      <th style={{ padding: '0 10px 8px', fontWeight: 600 }}>Resta</th>
+                      <th style={{ padding: '0 10px 8px', fontWeight: 600 }}>Entrega</th>
+                      <th style={{ padding: '0 0 8px', fontWeight: 600 }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {entregasVisibles.map(e => {
+                      const conflicto = e.status === 'conflicto'
+                      const atendida = e.status === 'atendida'
+                      return (
+                        <tr key={e.id} style={{ borderTop: '1px solid var(--line)', verticalAlign: 'top', background: conflicto ? '#FFF8E1' : undefined, opacity: atendida ? 0.6 : 1 }}>
+                          <td style={{ padding: '10px 10px 10px 0', color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>{fechaEntrega(e.created_at)}</td>
+                          <td style={{ padding: '10px', color: 'var(--ink)' }}>
+                            <div style={{ fontWeight: 600 }}>{e.contacto?.nombre ?? '—'}</div>
+                            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{e.contacto?.telefono ?? ''}</div>
+                            {conflicto && (
+                              <div style={{ fontSize: 11, color: '#7A5B00', marginTop: 4, lineHeight: 1.5 }}>
+                                <span style={{ fontWeight: 700, background: '#F5C84A', color: '#3A2A00', padding: '2px 8px', borderRadius: 999 }}>Conflicto</span>
+                                <div style={{ marginTop: 4 }}>
+                                  Dijo «no soy yo»; el contacto no se tocó. Mandó: {e.nombre_enviado || '—'}{e.email_enviado ? ` · ${e.email_enviado}` : ''}
+                                </div>
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: '10px', color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>{e.tipo === 'envio' ? 'Envío' : 'Rock Show'}</td>
+                          <td style={{ padding: '10px', color: 'var(--ink-2)', whiteSpace: 'pre-wrap', maxWidth: 260, fontSize: 12 }}>
+                            {e.piezas}
+                            {e.foto && (
+                              <div style={{ marginTop: 4 }}>
+                                <a href={e.foto} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink)', textDecoration: 'underline' }}>Ver foto</a>
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: '10px', color: 'var(--ink)', fontWeight: 600, whiteSpace: 'nowrap' }}>${Number(e.resta).toLocaleString('es-MX')}</td>
+                          <td style={{ padding: '10px', color: 'var(--ink-2)', fontSize: 12, lineHeight: 1.5, maxWidth: 280 }}>
+                            {e.tipo === 'envio' ? (
+                              <>
+                                <strong>{e.paqueteria ?? '—'}</strong>
+                                {e.recibe && <div>Recibe: {e.recibe}</div>}
+                                <div>{direccionTexto(e.direccion) || '—'}</div>
+                              </>
+                            ) : 'Recoge en Rock Show'}
+                          </td>
+                          <td style={{ padding: '10px 0', whiteSpace: 'nowrap' }}>
+                            {atendida ? (
+                              <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 999, background: '#DFF5E8', color: '#16623B', border: '1px solid #B6E2C7' }}>Atendida</span>
+                            ) : (
+                              <button onClick={() => marcarAtendida(e)} disabled={atendiendo === e.id} className="btn btn-primary btn-sm">
+                                {atendiendo === e.id ? '…' : 'Marcar atendida'}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

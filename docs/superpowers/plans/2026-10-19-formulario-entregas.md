@@ -417,3 +417,90 @@ De la spec, explícitamente pospuesto:
 
 - **Palomitas sobre las compras reales** del cliente en vez de escribirlas. Antes de construirlo hay que replantearle al dueño el código por SMS: enseñar qué compró alguien pesa más que enseñar su calle tapada.
 - **Apagar los dos Google Forms** y dejar en ellos el link nuevo. Es trabajo del dueño en su cuenta de Google; recordárselo al entregar.
+
+---
+
+### Task 8: Código de verificación para "Cambiar dirección"
+
+Agregada durante la construcción, a petición del dueño (2026-10-19). Ver la sección "Código de verificación" de la spec.
+
+**Files:**
+- Modify: `supabase/migrations/entregas.sql` (append)
+- Create: `src/app/api/entregas/codigo/route.ts`
+- Modify: `src/lib/entregas.ts`, `src/lib/entregas.test.ts`
+- Modify: `src/app/api/entregas/route.ts`
+- Modify: `src/app/entregas/page.tsx`
+- Modify: `src/lib/resend.ts`
+
+**Interfaces:**
+- Consumes: `entrega_contactos` (T2), `normalizarTelefono` e `ipDe` (T1/T3), el patrón de correo de `src/lib/resend.ts`.
+- Produces: `POST /api/entregas/codigo` con `{ telefono }` → manda el código y responde `{ enviado: true, correo: '<enmascarado>' }`, `{ enviado: false, motivo: 'sin_correo' }` si el contacto no tiene correo, `429` sobre el tope. `POST /api/entregas` acepta `codigo` y lo exige cuando viene una dirección nueva para un contacto que ya existe.
+
+Reglas:
+- Código de 6 dígitos, vigencia 15 minutos, un solo uso, máximo 5 intentos por código.
+- Se guarda **hasheado** (`crypto.createHash('sha256')`), nunca en claro — la tabla la lee cualquiera con la llave de servicio.
+- El correo se manda con Resend, en español, con el mismo tono de las plantillas que ya existen.
+- Se responde igual exista o no el contacto, salvo el caso `sin_correo`, que el formulario necesita para mandar a WhatsApp.
+- El tope por IP reusa `entrega_intentos`.
+
+- [ ] **Step 1: Escribir los tests que fallan**
+
+```ts
+// src/lib/entregas.test.ts — agregar
+describe('generarCodigo', () => {
+  it('da 6 dígitos', () => expect(generarCodigo()).toMatch(/^\d{6}$/))
+  it('no repite el mismo código', () => {
+    const vistos = new Set(Array.from({ length: 50 }, () => generarCodigo()))
+    expect(vistos.size).toBeGreaterThan(40)
+  })
+})
+
+describe('hashCodigo', () => {
+  it('es estable y no reversible a simple vista', () => {
+    expect(hashCodigo('123456')).toBe(hashCodigo('123456'))
+    expect(hashCodigo('123456')).not.toBe(hashCodigo('123457'))
+    expect(hashCodigo('123456')).not.toContain('123456')
+  })
+})
+```
+
+- [ ] **Step 2: Correr y verificar que fallan**
+
+Run: `npm test`
+Expected: FAIL — `generarCodigo` y `hashCodigo` no existen.
+
+- [ ] **Step 3: Implementar `generarCodigo(): string` y `hashCodigo(codigo: string): string` en `src/lib/entregas.ts`**
+
+`generarCodigo` usa `crypto.randomInt`, no `Math.random`.
+
+- [ ] **Step 4: Correr y verificar que pasan**
+
+Run: `npm test`
+Expected: PASS
+
+- [ ] **Step 5: Agregar la tabla `entrega_codigos`**
+
+Append a `supabase/migrations/entregas.sql`, con `create table if not exists`: `id`, `contacto_id` (FK), `codigo_hash text not null`, `expira_at timestamptz not null`, `intentos int not null default 0`, `usado boolean not null default false`, `created_at`. RLS sin políticas, índice por `contacto_id`.
+
+- [ ] **Step 6: Implementar `POST /api/entregas/codigo`**
+
+- [ ] **Step 7: Exigir el código en `POST /api/entregas`**
+
+Solo cuando el contacto ya existe, no viene `noSoyYo`, y la petición trae una dirección nueva. Código inválido, vencido, usado o con 5 intentos → 400 en español. Al usarse, marcar `usado`.
+
+- [ ] **Step 8: La pantalla del código en el formulario**
+
+"Cambiar dirección" ya no abre los campos directo: manda el código y pide los 6 dígitos, diciendo a qué correo enmascarado llegó. Sin correo en el contacto → pantalla que manda a WhatsApp. Reenviar disponible después de 60 segundos.
+
+- [ ] **Step 9: Correo obligatorio al registrarse**
+
+Un contacto nuevo no se crea sin correo, en el formulario y en el endpoint.
+
+- [ ] **Step 10: Verificar en el navegador y commitear**
+
+Run: `npm test` y `npm run build`
+
+```bash
+git add -A
+git commit -m "Pedir código por correo para cambiar la dirección guardada"
+```
