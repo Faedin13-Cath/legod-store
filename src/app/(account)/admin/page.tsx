@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { normalizarTelefono } from '@/lib/entregas'
 
 type SellRequest = {
   id: string; created_at: string; name: string; phone: string
@@ -75,7 +76,17 @@ function direccionTexto(d: EntregaAdmin['direccion']): string {
 // Una celda para pegar en hoja de cálculo: sin saltos de línea ni tabuladores,
 // porque las piezas vienen en varias líneas y romperían la fila al pegar.
 function celda(v: unknown): string {
-  return String(v ?? '').replace(/\s*[\r\n]+\s*/g, ' · ').replace(/\t/g, ' ').trim()
+  const t = String(v ?? '').replace(/\s*[\r\n]+\s*/g, ' · ').replace(/\t/g, ' ').trim()
+  // Texto que viene del formulario público: una celda que empieza con = + - @ se
+  // evalúa como fórmula al pegarla en Excel/Sheets. El apóstrofo la deja como texto.
+  const seguro = /^[=+\-@]/.test(t) ? `'${t}` : t
+  // Las comillas dobles pueden romper el análisis de la fila al pegar: se igualan a sencillas.
+  return seguro.replace(/"/g, "'")
+}
+
+// Minúsculas y sin acentos, para que "jose" encuentre "José".
+function sinAcentos(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 }
 
 function fechaEntrega(iso: string): string {
@@ -185,14 +196,20 @@ export default function AdminPage() {
     if (filtroEntrega === 'envio' && e.tipo !== 'envio') return false
     if (filtroEntrega === 'rock_show' && e.tipo !== 'rock_show') return false
     if (filtroEntrega === 'sin_atender' && e.status === 'atendida') return false
-    const q = busquedaEntrega.trim().toLowerCase()
+    const q = busquedaEntrega.trim()
     if (!q) return true
-    const digitos = q.replace(/\D/g, '')
-    const nombres = `${e.contacto?.nombre ?? ''} ${e.nombre_enviado ?? ''}`.toLowerCase()
-    return nombres.includes(q) || (digitos.length > 0 && (e.contacto?.telefono ?? '').includes(digitos))
+    // Si es un número completo (+52, 044, espacios…) se normaliza; si es parcial
+    // (las últimas cifras) se busca por los dígitos tal cual.
+    const digitos = normalizarTelefono(q) ?? q.replace(/\D/g, '')
+    const nombres = sinAcentos(`${e.contacto?.nombre ?? ''} ${e.nombre_enviado ?? ''}`)
+    return nombres.includes(sinAcentos(q)) || (digitos.length > 0 && (e.contacto?.telefono ?? '').includes(digitos))
   })
 
   async function marcarAtendida(e: EntregaAdmin) {
+    if (e.status === 'conflicto' && !confirm(
+      'Esta entrega está en conflicto: el celular ya era de otro contacto y la persona dijo «no soy yo».\n\n'
+      + 'Al marcarla atendida se pierde la marca de conflicto. ¿Ya lo resolviste a mano?'
+    )) return
     setAtendiendo(e.id); setAvisoEntregas('')
     try {
       const res = await fetch('/api/admin/entregas', {
@@ -212,7 +229,7 @@ export default function AdminPage() {
   async function copiarEntregas() {
     setAvisoEntregas(''); setTextoParaCopiar('')
     const filas = [
-      ['Fecha', 'Cliente', 'Celular', 'Tipo', 'Piezas', 'Resta', 'Paquetería', 'Recibe', 'Dirección', 'Estado'],
+      ['Fecha', 'Cliente', 'Celular', 'Tipo', 'Piezas', 'Resta', 'Paquetería', 'Recibe', 'Dirección', 'Estado', 'Nombre enviado', 'Correo enviado'],
       ...entregasVisibles.map(e => [
         fechaEntrega(e.created_at),
         e.contacto?.nombre,
@@ -224,6 +241,8 @@ export default function AdminPage() {
         e.recibe,
         direccionTexto(e.direccion),
         e.status === 'conflicto' ? 'Conflicto' : e.status === 'atendida' ? 'Atendida' : 'Nueva',
+        e.nombre_enviado,
+        e.email_enviado,
       ]),
     ]
     const texto = filas.map(f => f.map(celda).join('\t')).join('\n')
