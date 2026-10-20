@@ -51,6 +51,9 @@ export type ContactoEnmascarado = {
   cp: string
   email: string
   tieneDireccion: boolean
+  // Hay un registro de entregas con su nombre completo (el que el formulario puede reutilizar).
+  // Es un booleano: nunca lleva el nombre ni otro dato personal.
+  tieneNombre: boolean
 }
 
 /**

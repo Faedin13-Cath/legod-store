@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { cloneElement, isValidElement, useId, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import Icon from '@/components/ui/Icon'
@@ -8,7 +8,8 @@ import { CARRIERS_ENVIO, SHIPPING_PRICES } from '@/lib/shipping'
 import { normalizarTelefono, validarResta, type ContactoEnmascarado } from '@/lib/entregas'
 
 const WHATSAPP = process.env.NEXT_PUBLIC_WHATSAPP ?? '525574777350'
-const MAX_FOTO = 10 * 1024 * 1024
+// Vercel rechaza cuerpos de ~4.5 MB; con el resto del formulario la foto debe quedar por debajo.
+const MAX_FOTO = 4 * 1024 * 1024
 const MAX_PIEZAS = 5000
 
 type Fase = 'telefono' | 'conocido' | 'nuevo'
@@ -31,16 +32,29 @@ const labelStyle: React.CSSProperties = {
 // 16px evita que el iPhone haga zoom al tocar un campo.
 const inputStyle: React.CSSProperties = { width: '100%', fontSize: 16, minHeight: 46 }
 
-function Campo({ label, opcional, children }: { label: string; opcional?: boolean; children: React.ReactNode }) {
+// Si el hijo es un solo input/textarea, la etiqueta queda ligada a él (tocar el texto
+// enfoca el campo y el lector de pantalla lo nombra). En grupos de botones no es <label>.
+function Campo({ label, opcional, htmlFor, children }: { label: string; opcional?: boolean; htmlFor?: string; children: React.ReactNode }) {
+  const generado = useId()
+  const esCampo = isValidElement(children) && (children.type === 'input' || children.type === 'textarea')
+  const id = esCampo ? generado : htmlFor
+  const Rotulo = id ? 'label' : 'div'
   return (
     <div>
-      <label style={labelStyle}>
+      <Rotulo {...(id ? { htmlFor: id } : {})} style={labelStyle}>
         {label}
         {opcional && <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}> (opcional)</span>}
-      </label>
-      {children}
+      </Rotulo>
+      {esCampo ? cloneElement(children as React.ReactElement<{ id?: string }>, { id }) : children}
     </div>
   )
+}
+
+// Botón de texto con área de toque de al menos 44px.
+const enlaceStyle: React.CSSProperties = {
+  background: 'none', border: 'none', color: 'var(--accent)', fontSize: 14, fontWeight: 600,
+  cursor: 'pointer', minHeight: 44, minWidth: 44, padding: '0 12px',
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
 }
 
 function Aviso({ children }: { children: React.ReactNode }) {
@@ -137,7 +151,8 @@ export default function EntregasPage() {
       if (res.status === 400) { falla('Ese celular no parece válido. Revisa que sean 10 dígitos.'); return }
       if (res.status === 429) { falla('Has intentado muchas veces. Espera un minuto y vuelve a intentar.'); return }
       if (!res.ok) { falla('No pudimos revisar tu número. Intenta de nuevo en un momento.'); return }
-      const data = await res.json() as { contacto: ContactoEnmascarado | null }
+      const data = await res.json().catch(() => null) as { contacto?: ContactoEnmascarado | null } | null
+      if (!data || !('contacto' in data)) { falla('No pudimos leer la respuesta. Intenta de nuevo en un momento.'); return }
       if (data.contacto && tel !== rechazado) {
         // El nombre no se guarda aquí: buscar solo da el de pila y el guardado no se debe pisar.
         setContacto(data.contacto); setNombre('')
@@ -168,7 +183,7 @@ export default function EntregasPage() {
 
   function continuarPaso1(conCambioDir: boolean) {
     setError('')
-    if (fase === 'nuevo' && !nombre.trim()) { falla('Escribe tu nombre.'); return }
+    if (pideNombre && !nombre.trim()) { falla('Escribe tu nombre.'); return }
     if (fase === 'nuevo' && email.trim() && !/^[^\s@]+@[^\s@]+$/.test(email.trim())) {
       falla('Ese correo no parece válido. Revísalo o déjalo en blanco.'); return
     }
@@ -197,7 +212,7 @@ export default function EntregasPage() {
     e.target.value = ''
     if (!f) return
     if (!f.type.startsWith('image/')) { falla('La foto debe ser una imagen.'); return }
-    if (f.size > MAX_FOTO) { falla('La foto pesa más de 10 MB. Elige una más ligera.'); return }
+    if (f.size > MAX_FOTO) { falla('La foto pesa más de 4 MB. Elige una más ligera.'); return }
     setError(''); setFoto(f)
   }
 
@@ -234,7 +249,14 @@ export default function EntregasPage() {
     setBusy(true)
     try {
       const res = await fetch('/api/entregas', { method: 'POST', body: fd })
-      const data = await res.json().catch(() => ({})) as { ok?: boolean; fotoFallo?: boolean; error?: string; codigo?: string }
+      const data = await res.json().catch(() => null) as { ok?: boolean; fotoFallo?: boolean; error?: string; codigo?: string } | null
+      if (!data) {
+        // Sin JSON: no contestó nuestro servidor, sino el hosting (cuerpo demasiado grande) o la red.
+        if (res.ok) falla('No pudimos confirmar que se guardara. Antes de volver a enviar, escríbenos por WhatsApp para no duplicar tu entrega.')
+        else if (foto) falla('No se pudo enviar. Es probable que la foto pese demasiado: quítala o elige una más ligera y vuelve a enviar.')
+        else falla('No se pudo guardar. Intenta de nuevo en un momento.')
+        return
+      }
       if (data.codigo === 'sin_direccion_guardada') {
         // No había dirección que reutilizar: se piden los campos, lo demás se conserva.
         setContacto(c => c && { ...c, tieneDireccion: false })
@@ -247,6 +269,7 @@ export default function EntregasPage() {
         return
       }
       if (!res.ok || !data.ok) {
+        if (res.status === 413 && foto) { falla('La foto pesa demasiado. Quítala o elige una más ligera y vuelve a enviar.'); return }
         falla(data.error ?? 'No se pudo guardar. Intenta de nuevo en un momento.')
         return
       }
@@ -261,7 +284,11 @@ export default function EntregasPage() {
   }
 
   // Cliente reconocido que eligió Continuar: la dirección se toma de lo guardado, no se escribe.
-  const usaGuardada = Boolean(contacto?.tieneDireccion) && !cambiarDir
+  // Solo se reutiliza lo que está en el registro de entregas (con nombre); un cliente que
+  // solo tiene cuenta en la tienda escribe su dirección y su nombre.
+  const puedeReusar = Boolean(contacto?.tieneDireccion && contacto.tieneNombre)
+  const usaGuardada = puedeReusar && !cambiarDir
+  const pideNombre = fase === 'nuevo' || Boolean(contacto && !contacto.tieneNombre)
 
   const lineas = piezas.split('\n').filter(l => l.trim()).length
   const btn: React.CSSProperties = { height: 50, fontSize: 16, width: '100%' }
@@ -337,10 +364,15 @@ export default function EntregasPage() {
                   </>
                 )}
               </div>
+              {!contacto.tieneNombre && (
+                <Campo label="Tu nombre completo">
+                  <input type="text" autoComplete="name" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre y apellido" className="input" style={inputStyle} />
+                </Campo>
+              )}
               <button type="button" onClick={() => continuarPaso1(false)} className="btn btn-primary" style={btn}>
-                {contacto.tieneDireccion ? 'Continuar, a la misma dirección' : 'Continuar'}
+                {puedeReusar ? 'Continuar, a la misma dirección' : 'Continuar'}
               </button>
-              {contacto.tieneDireccion && (
+              {puedeReusar && (
                 <button type="button" onClick={() => continuarPaso1(true)} className="btn btn-secondary" style={btn}>Cambiar dirección</button>
               )}
               <button
@@ -372,7 +404,7 @@ export default function EntregasPage() {
               <Campo label="Celular">
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                   <div style={{ fontSize: 16, color: 'var(--ink)', fontWeight: 600 }}>{telefono}</div>
-                  <button type="button" onClick={cambiarNumero} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 500, cursor: 'pointer', padding: 8 }}>
+                  <button type="button" onClick={cambiarNumero} style={enlaceStyle}>
                     Cambiar
                   </button>
                 </div>
@@ -383,7 +415,7 @@ export default function EntregasPage() {
               <Campo label="Correo" opcional>
                 <input type="email" inputMode="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" className="input" style={inputStyle} />
               </Campo>
-              <button type="button" onClick={() => continuarPaso1(true)} className="btn btn-primary" style={btn}>Continuar</button>
+              <button type="button" onClick={() => continuarPaso1(cambiarDir)} className="btn btn-primary" style={btn}>Continuar</button>
             </div>
           )}
 
@@ -409,7 +441,7 @@ export default function EntregasPage() {
                       Lo enviamos a la <strong>misma dirección de siempre</strong>:{' '}
                       <strong style={{ color: 'var(--ink)' }}>{contacto.calle}, col. {contacto.colonia}, C.P. {contacto.cp}</strong>.
                       <br />
-                      <button type="button" onClick={() => setCambiarDir(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '8px 0 0' }}>
+                      <button type="button" onClick={() => setCambiarDir(true)} style={{ ...enlaceStyle, padding: 0, justifyContent: 'flex-start' }}>
                         Usar otra dirección
                       </button>
                     </div>
@@ -417,10 +449,10 @@ export default function EntregasPage() {
 
                   {!usaGuardada && contacto?.tieneDireccion && (
                     <div style={{ background: 'var(--accent-soft)', borderRadius: 12, padding: '10px 14px', fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>
-                      Antes tenías:{' '}
+                      {contacto.tieneNombre ? 'Antes tenías:' : 'Tenemos guardada:'}{' '}
                       <strong style={{ color: 'var(--ink)' }}>{contacto.calle}, col. {contacto.colonia}, C.P. {contacto.cp}</strong>.
                       <br />
-                      Escribe aquí tu nueva dirección.
+                      {contacto.tieneNombre ? 'Escribe aquí tu nueva dirección.' : 'Escribe tu dirección completa para este envío.'}
                     </div>
                   )}
 
@@ -455,12 +487,12 @@ export default function EntregasPage() {
             <form onSubmit={enviar} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', margin: 0 }}>¿Qué piezas son?</h1>
 
-              <Campo label="Tus piezas">
+              <Campo label="Tus piezas" htmlFor="piezas">
                 <p style={{ fontSize: 13, color: 'var(--ink-2)', margin: '0 0 8px', lineHeight: 1.5 }}>
                   <strong>Una por renglón.</strong> Escribe el nombre o la clave de cada figura.
                 </p>
                 <textarea
-                  value={piezas} onChange={e => setPiezas(e.target.value)} rows={8}
+                  id="piezas" value={piezas} onChange={e => setPiezas(e.target.value)} rows={8}
                   placeholder={'Darth Vader\nSpider-Man\nsw0001'}
                   className="input" style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
                 />
@@ -470,16 +502,17 @@ export default function EntregasPage() {
               </Campo>
 
               <Campo label="Foto de lo que te vendimos" opcional>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', margin: '0 0 8px', lineHeight: 1.5 }}>Máximo 4 MB.</p>
                 {foto ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid var(--line)', borderRadius: 12, padding: '10px 14px' }}>
                     <span style={{ color: 'var(--success)', display: 'flex' }}><Icon name="check" size={18} /></span>
                     <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{foto.name}</span>
-                    <button type="button" onClick={() => setFoto(null)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 500, cursor: 'pointer', padding: 8 }}>Quitar</button>
+                    <button type="button" onClick={() => setFoto(null)} style={enlaceStyle}>Quitar</button>
                   </div>
                 ) : (
                   <label className="btn btn-secondary" style={{ ...btn, cursor: 'pointer' }}>
                     <Icon name="plus" size={16} /> Subir o tomar foto
-                    <input type="file" accept="image/*" onChange={elegirFoto} style={{ display: 'none' }} />
+                    <input type="file" accept="image/*" aria-label="Foto de lo que te vendimos" onChange={elegirFoto} style={{ display: 'none' }} />
                   </label>
                 )}
               </Campo>

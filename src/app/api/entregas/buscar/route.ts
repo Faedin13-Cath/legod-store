@@ -12,8 +12,9 @@ import {
 import { perfilesPorTelefono } from '@/lib/entregas-perfiles'
 
 // Endpoint público: no hay sesión ni contraseña, el celular es toda la llave.
-// Por eso NUNCA sale de aquí la dirección completa, ningún id, ni una pista de
-// en cuál tabla se encontró el dato. Todo se enmascara en el servidor.
+// Por eso NUNCA sale de aquí la dirección completa ni ningún id. Todo se enmascara
+// en el servidor. La respuesta tiene siempre la misma forma; la única pista de origen
+// es el booleano tieneNombre (false = solo hay cuenta de la tienda, sin registro de entregas).
 
 const MAX_INTENTOS = 10      // por IP...
 const VENTANA_SEG = 60       // ...en esta ventana
@@ -30,7 +31,7 @@ type Datos = {
 
 // Un solo constructor para las dos fuentes: la respuesta es idéntica
 // venga de entrega_contactos o de profiles.
-function enmascarar(d: Datos): ContactoEnmascarado {
+function enmascarar(d: Datos, tieneNombre: boolean): ContactoEnmascarado {
   const calle = d.calle ?? ''
   const cp = d.cp ?? ''
   return {
@@ -41,6 +42,7 @@ function enmascarar(d: Datos): ContactoEnmascarado {
     cp: enmascararCP(cp),
     email: enmascararEmail(d.email ?? ''),
     tieneDireccion: Boolean(calle && cp),
+    tieneNombre,
   }
 }
 
@@ -101,7 +103,7 @@ export async function POST(req: NextRequest) {
       contacto: enmascarar({
         nombre: contacto.nombre, email: contacto.email, calle: contacto.calle,
         numExt: contacto.num_ext, colonia: contacto.colonia, cp: contacto.cp,
-      }),
+      }, Boolean(contacto.nombre?.trim())),
     })
   }
 
@@ -135,7 +137,7 @@ export async function POST(req: NextRequest) {
         contacto: enmascarar({
           nombre: p.name || p.ship_name, email: p.email, calle: p.ship_street,
           numExt: p.ship_num_ext, colonia: p.ship_colonia, cp: p.ship_zip,
-        }),
+        }, false), // el perfil no es un registro de entregas: el formulario pedirá el nombre
       })
     }
   }
