@@ -19,6 +19,55 @@ type Ship = {
   colonia?: string; city?: string; state?: string; zip?: string; ref?: string
 }
 type LineItem = { title?: string; quantity?: number }
+type Contacto = { nombre: string | null; telefono: string | null; email: string | null }
+
+// Una fila de la carga masiva: el orden sigue a HEADER y los defaults (MX, CM, KG,
+// medidas, NO) viven solo aquí para que órdenes y entregas no se desfasen.
+function guiaRow(g: {
+  name: string; email: string; phone: string; street: string; numExt: string; numInt: string
+  colonia: string; city: string; zip: string; state: string; ref: string
+  contenido: string; cantidad: number; valor: string
+}): string {
+  return [
+    g.name,                          // nombre_destinatario
+    '',                              // compania_destinatario
+    g.email,                         // email_destinatario
+    g.phone,                         // telefono_destinatario
+    g.street,                        // calle_destinatario
+    g.numExt,                        // numero_ext_destinatario
+    g.numInt,                        // numero_int_destinatario
+    g.colonia,                       // colonia_destinatario
+    g.city,                          // municipio_destinatario
+    g.zip,                           // codigo_postal_destinatario
+    g.state,                         // estado_destinatario
+    'MX',                            // pais_destinatario
+    g.ref,                           // referencia_ubicacion
+    'NO',                            // guardar_direccion_destino
+    g.contenido || 'Figura LEGO',    // contenido_paquete
+    'CM',                            // unidad_longitud
+    'KG',                            // unidad_peso
+    '20',                            // ancho_paquete  (default, ajústalo)
+    '15',                            // alto_paquete
+    '25',                            // largo_paquete
+    String(g.cantidad),              // cantidad
+    '1',                             // peso (kg, default)
+    g.valor,                         // valor_declarado
+    'NO',                            // solicitar_aseguranza
+  ].map(csvCell).join(',')
+}
+
+function csvResponse(lines: string[]) {
+  const csv = '﻿' + lines.join('\r\n')  // BOM para acentos en Excel
+  const date = new Date().toISOString().slice(0, 10)
+  return new NextResponse(csv, {
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="estafeta_envios_${date}.csv"`,
+    },
+  })
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function csvCell(v: unknown): string {
   const s = String(v ?? '')
@@ -40,6 +89,47 @@ export async function GET(req: NextRequest) {
 
   const scope = req.nextUrl.searchParams.get('scope') ?? 'pending'
   const admin = createAdminClient()
+
+  // Entregas del formulario. Si viene `entregas=`, el CSV es SOLO de esas entregas:
+  // nunca cae a las órdenes de la tienda, aunque la lista venga vacía o no coincida.
+  const entregasParam = req.nextUrl.searchParams.get('entregas')
+  if (entregasParam !== null) {
+    const ids = Array.from(new Set(
+      entregasParam.split(',').map(x => x.trim()).filter(x => UUID.test(x)),
+    ))
+    const lines = [HEADER.join(',')]
+    if (ids.length) {
+      const { data, error } = await admin
+        .from('entregas')
+        .select('recibe, direccion, piezas, resta, paqueteria, entrega_contactos(nombre, telefono, email)')
+        .in('id', ids)
+        .eq('tipo', 'envio')
+        .not('direccion', 'is', null)
+        .order('created_at', { ascending: false })
+      if (error) {
+        return NextResponse.json({ error: 'No se pudieron leer las entregas' }, { status: 500 })
+      }
+      for (const e of data ?? []) {
+        // Rock Show no lleva guía (tipo ya filtrado); aquí solo Estafeta
+        if (!(e.paqueteria ?? '').toLowerCase().includes('estafeta')) continue
+        const d = (e.direccion ?? {}) as Record<string, string | null>
+        const rel = e.entrega_contactos as unknown as Contacto | Contacto[] | null
+        const c: Contacto = (Array.isArray(rel) ? rel[0] : rel) ?? { nombre: null, telefono: null, email: null }
+        lines.push(guiaRow({
+          name: e.recibe || c.nombre || '',
+          email: c.email ?? '',
+          phone: c.telefono ?? '',
+          street: d.calle ?? '', numExt: d.numExt ?? '', numInt: d.numInt ?? '',
+          colonia: d.colonia ?? '', city: d.ciudad ?? '', zip: d.cp ?? '', state: d.estado ?? '',
+          ref: d.referencia ?? '',
+          contenido: String(e.piezas ?? '').split(/\r?\n/).map(x => x.trim()).filter(Boolean).join(' | '),
+          cantidad: 1,
+          valor: String(e.resta ?? ''),
+        }))
+      }
+    }
+    return csvResponse(lines)
+  }
 
   let query = admin
     .from('orders')
@@ -71,40 +161,17 @@ export async function GET(req: NextRequest) {
     const contenido = items.map(i => `${i.title ?? ''}${(i.quantity ?? 1) > 1 ? ` x${i.quantity}` : ''}`).join(' | ')
     const cantidad  = items.reduce((sum, i) => sum + (i.quantity ?? 1), 0) || 1
 
-    lines.push([
-      s.name ?? '',                    // nombre_destinatario
-      '',                              // compania_destinatario
-      emailBy[o.user_id as string] ?? '', // email_destinatario
-      s.phone ?? '',                   // telefono_destinatario
-      s.street ?? '',                  // calle_destinatario
-      s.numExt ?? '',                  // numero_ext_destinatario
-      s.numInt ?? '',                  // numero_int_destinatario
-      s.colonia ?? '',                 // colonia_destinatario
-      s.city ?? '',                    // municipio_destinatario
-      s.zip ?? '',                     // codigo_postal_destinatario
-      s.state ?? '',                   // estado_destinatario
-      'MX',                            // pais_destinatario
-      s.ref ?? '',                     // referencia_ubicacion
-      'NO',                            // guardar_direccion_destino
-      contenido || 'Figura LEGO',      // contenido_paquete
-      'CM',                            // unidad_longitud
-      'KG',                            // unidad_peso
-      '20',                            // ancho_paquete  (default, ajústalo)
-      '15',                            // alto_paquete
-      '25',                            // largo_paquete
-      String(cantidad),                // cantidad
-      '1',                             // peso (kg, default)
-      String(o.total_price ?? ''),     // valor_declarado
-      'NO',                            // solicitar_aseguranza
-    ].map(csvCell).join(','))
+    lines.push(guiaRow({
+      name: s.name ?? '',
+      email: emailBy[o.user_id as string] ?? '',
+      phone: s.phone ?? '',
+      street: s.street ?? '', numExt: s.numExt ?? '', numInt: s.numInt ?? '',
+      colonia: s.colonia ?? '', city: s.city ?? '', zip: s.zip ?? '', state: s.state ?? '',
+      ref: s.ref ?? '',
+      contenido, cantidad,
+      valor: String(o.total_price ?? ''),
+    }))
   }
 
-  const csv = '﻿' + lines.join('\r\n')  // BOM para acentos en Excel
-  const date = new Date().toISOString().slice(0, 10)
-  return new NextResponse(csv, {
-    headers: {
-      'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="estafeta_envios_${date}.csv"`,
-    },
-  })
+  return csvResponse(lines)
 }
