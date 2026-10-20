@@ -28,7 +28,7 @@ create table if not exists entrega_contactos (
 alter table entrega_contactos enable row level security;
 -- Sin políticas públicas: solo el backend (service_role) lee/escribe.
 
-create index if not exists entrega_contactos_telefono_idx on entrega_contactos (telefono);
+-- Sin índice extra por telefono: el unique de arriba ya crea el índice.
 
 create table if not exists entregas (
   id           uuid primary key default gen_random_uuid(),
@@ -51,7 +51,10 @@ alter table entregas enable row level security;
 
 create index if not exists entregas_created_idx on entregas (created_at desc);
 
--- Registro de intentos para limitar el envío masivo del formulario por IP
+-- Registro de intentos del endpoint que dice si un celular ya existe.
+-- Sirve para limitar cuántas consultas hace una IP: sin ese límite,
+-- alguien podría recorrer números de celular y obtener nombres y
+-- direcciones parciales de clientes.
 create table if not exists entrega_intentos (
   id          bigserial primary key,
   ip          text not null,
