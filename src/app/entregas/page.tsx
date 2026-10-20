@@ -95,6 +95,8 @@ export default function EntregasPage() {
   // Celular que el cliente dijo "no soy yo": si vuelve a salir el mismo, no es un dedazo.
   const [rechazado, setRechazado] = useState('')
   const [noSoyYo, setNoSoyYo] = useState(false)
+  // El servidor no encontró su registro de entregas (p. ej. solo tiene cuenta en la tienda).
+  const [pedirNombre, setPedirNombre] = useState(false)
 
   // Paso 2
   const [tipo, setTipo] = useState<Tipo | ''>('')
@@ -137,8 +139,8 @@ export default function EntregasPage() {
       if (!res.ok) { falla('No pudimos revisar tu número. Intenta de nuevo en un momento.'); return }
       const data = await res.json() as { contacto: ContactoEnmascarado | null }
       if (data.contacto && tel !== rechazado) {
-        setContacto(data.contacto)
-        setNombre(data.contacto.nombre)
+        // El nombre no se guarda aquí: buscar solo da el de pila y el guardado no se debe pisar.
+        setContacto(data.contacto); setNombre('')
         setFase('conocido')
       } else {
         // Nuevo, o dijo "no soy yo" y el número volvió a salir: es suyo y lo confirma.
@@ -155,18 +157,18 @@ export default function EntregasPage() {
   function esOtraPersona() {
     // Lo más probable es un dígito mal puesto: se regresa al celular para corregirlo.
     setRechazado(normalizarTelefono(telefono) ?? '')
-    setContacto(null); setNombre(''); setEmail(''); setCambiarDir(false); setNoSoyYo(false)
+    setContacto(null); setNombre(''); setEmail(''); setCambiarDir(false); setNoSoyYo(false); setPedirNombre(false)
     setFase('telefono'); setError('')
   }
 
   function cambiarNumero() {
-    setContacto(null); setNombre(''); setEmail(''); setCambiarDir(false); setNoSoyYo(false)
+    setContacto(null); setNombre(''); setEmail(''); setCambiarDir(false); setNoSoyYo(false); setPedirNombre(false)
     setFase('telefono'); setError('')
   }
 
   function continuarPaso1(conCambioDir: boolean) {
     setError('')
-    if (!nombre.trim()) { falla('Escribe tu nombre.'); return }
+    if (fase === 'nuevo' && !nombre.trim()) { falla('Escribe tu nombre.'); return }
     if (fase === 'nuevo' && email.trim() && !/^[^\s@]+@[^\s@]+$/.test(email.trim())) {
       falla('Ese correo no parece válido. Revísalo o déjalo en blanco.'); return
     }
@@ -180,6 +182,7 @@ export default function EntregasPage() {
     if (!tipo) { falla('Elige si es envío o Rock Show.'); return }
     if (tipo === 'envio') {
       if (!paqueteria) { falla('Elige la paquetería.'); return }
+      if (usaGuardada) { irA(3); return }
       const faltan = (['recibe', 'calle', 'numExt', 'cp', 'colonia', 'ciudad', 'estado', 'referencia'] as const)
         .some(k => !dir[k].trim())
       if (faltan) { falla('Faltan datos de la dirección. Solo el número interior es opcional.'); return }
@@ -214,13 +217,14 @@ export default function EntregasPage() {
 
     const fd = new FormData()
     fd.set('telefono', telefono)
-    fd.set('nombre', nombre.trim())
+    if (nombre.trim()) fd.set('nombre', nombre.trim()) // solo cliente nuevo o "no soy yo"
     if (email.trim()) fd.set('email', email.trim())
     if (noSoyYo) fd.set('noSoyYo', 'true')
     fd.set('tipo', tipo)
     if (tipo === 'envio') {
       fd.set('paqueteria', paqueteria)
-      for (const [k, v] of Object.entries(dir)) fd.set(k, v.trim())
+      if (usaGuardada) fd.set('usarGuardada', 'true')
+      else for (const [k, v] of Object.entries(dir)) fd.set(k, v.trim())
     }
     fd.set('piezas', piezas)
     fd.set('resta', resta)
@@ -230,7 +234,18 @@ export default function EntregasPage() {
     setBusy(true)
     try {
       const res = await fetch('/api/entregas', { method: 'POST', body: fd })
-      const data = await res.json().catch(() => ({})) as { ok?: boolean; fotoFallo?: boolean; error?: string }
+      const data = await res.json().catch(() => ({})) as { ok?: boolean; fotoFallo?: boolean; error?: string; codigo?: string }
+      if (data.codigo === 'sin_direccion_guardada') {
+        // No había dirección que reutilizar: se piden los campos, lo demás se conserva.
+        setContacto(c => c && { ...c, tieneDireccion: false })
+        irA(2); falla('No tenemos tu dirección guardada completa. Escríbela para continuar.')
+        return
+      }
+      if (data.codigo === 'falta_nombre') {
+        setPedirNombre(true); setFase('nuevo')
+        irA(1); falla('Necesitamos tu nombre completo para guardar tu entrega.')
+        return
+      }
       if (!res.ok || !data.ok) {
         falla(data.error ?? 'No se pudo guardar. Intenta de nuevo en un momento.')
         return
@@ -244,6 +259,9 @@ export default function EntregasPage() {
       setBusy(false)
     }
   }
+
+  // Cliente reconocido que eligió Continuar: la dirección se toma de lo guardado, no se escribe.
+  const usaGuardada = Boolean(contacto?.tieneDireccion) && !cambiarDir
 
   const lineas = piezas.split('\n').filter(l => l.trim()).length
   const btn: React.CSSProperties = { height: 50, fontSize: 16, width: '100%' }
@@ -319,14 +337,12 @@ export default function EntregasPage() {
                   </>
                 )}
               </div>
-              <Campo label="Tu nombre completo">
-                <input
-                  type="text" autoComplete="name" value={nombre} onChange={e => setNombre(e.target.value)}
-                  className="input" style={inputStyle}
-                />
-              </Campo>
-              <button type="button" onClick={() => continuarPaso1(false)} className="btn btn-primary" style={btn}>Continuar</button>
-              <button type="button" onClick={() => continuarPaso1(true)} className="btn btn-secondary" style={btn}>Cambiar dirección</button>
+              <button type="button" onClick={() => continuarPaso1(false)} className="btn btn-primary" style={btn}>
+                {contacto.tieneDireccion ? 'Continuar, a la misma dirección' : 'Continuar'}
+              </button>
+              {contacto.tieneDireccion && (
+                <button type="button" onClick={() => continuarPaso1(true)} className="btn btn-secondary" style={btn}>Cambiar dirección</button>
+              )}
               <button
                 type="button" onClick={esOtraPersona} className="btn btn-secondary"
                 style={{ ...btn, color: '#DC2626', borderColor: '#FCA5A5', background: '#FEF2F2' }}
@@ -343,10 +359,12 @@ export default function EntregasPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
                 <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', margin: '0 0 6px' }}>
-                  {noSoyYo ? 'Cuéntanos quién eres' : '¡Bienvenido! Es tu primera vez'}
+                  {pedirNombre ? '¿Cómo te llamas?' : noSoyYo ? 'Cuéntanos quién eres' : '¡Bienvenido! Es tu primera vez'}
                 </h1>
                 <p style={{ fontSize: 14, color: 'var(--ink-2)', margin: 0, lineHeight: 1.5 }}>
-                  {noSoyYo
+                  {pedirNombre
+                    ? 'Escribe tu nombre completo y seguimos donde te quedaste.'
+                    : noSoyYo
                     ? 'Ese celular ya está guardado a nombre de otra persona. Escribe tus datos y lo revisamos contigo por WhatsApp.'
                     : 'Solo necesitamos un par de datos.'}
                 </p>
@@ -386,16 +404,28 @@ export default function EntregasPage() {
                     </div>
                   </Campo>
 
-                  {contacto?.tieneDireccion && (
-                    <div style={{ background: 'var(--accent-soft)', borderRadius: 12, padding: '10px 14px', fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>
-                      {cambiarDir ? 'Antes tenías:' : 'Tenemos guardada:'}{' '}
+                  {usaGuardada && contacto && (
+                    <div style={{ background: 'var(--accent-soft)', borderRadius: 12, padding: '12px 14px', fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.5 }}>
+                      Lo enviamos a la <strong>misma dirección de siempre</strong>:{' '}
                       <strong style={{ color: 'var(--ink)' }}>{contacto.calle}, col. {contacto.colonia}, C.P. {contacto.cp}</strong>.
                       <br />
-                      {cambiarDir
-                        ? 'Escribe aquí tu nueva dirección.'
-                        : 'Por tu seguridad, escribe tu dirección completa otra vez.'}
+                      <button type="button" onClick={() => setCambiarDir(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '8px 0 0' }}>
+                        Usar otra dirección
+                      </button>
                     </div>
                   )}
+
+                  {!usaGuardada && contacto?.tieneDireccion && (
+                    <div style={{ background: 'var(--accent-soft)', borderRadius: 12, padding: '10px 14px', fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>
+                      Antes tenías:{' '}
+                      <strong style={{ color: 'var(--ink)' }}>{contacto.calle}, col. {contacto.colonia}, C.P. {contacto.cp}</strong>.
+                      <br />
+                      Escribe aquí tu nueva dirección.
+                    </div>
+                  )}
+
+                  {!usaGuardada && (
+                    <>
 
                   <Campo label="Quién recibe"><input type="text" value={dir.recibe} onChange={setD('recibe')} autoComplete="name" className="input" style={inputStyle} /></Campo>
                   <Campo label="Calle"><input type="text" value={dir.calle} onChange={setD('calle')} autoComplete="address-line1" className="input" style={inputStyle} /></Campo>
@@ -408,6 +438,8 @@ export default function EntregasPage() {
                   <Campo label="Municipio o ciudad"><input type="text" value={dir.ciudad} onChange={setD('ciudad')} autoComplete="address-level2" className="input" style={inputStyle} /></Campo>
                   <Campo label="Estado"><input type="text" value={dir.estado} onChange={setD('estado')} autoComplete="address-level1" className="input" style={inputStyle} /></Campo>
                   <Campo label="Referencia"><input type="text" value={dir.referencia} onChange={setD('referencia')} placeholder="Entre qué calles, color de la casa…" className="input" style={inputStyle} /></Campo>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -488,7 +520,7 @@ export default function EntregasPage() {
               }}>
                 <Icon name="check" size={26} />
               </div>
-              <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', margin: '0 0 8px' }}>¡Gracias, {nombre.trim().split(/\s+/)[0]}!</h1>
+              <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', margin: '0 0 8px' }}>¡Gracias, {(contacto?.nombre || nombre.trim().split(/\s+/)[0])}!</h1>
               <p style={{ fontSize: 15, color: 'var(--ink-2)', margin: 0, lineHeight: 1.6 }}>
                 Ya tenemos los datos de tu entrega. Si hace falta algo más, te escribimos por WhatsApp.
               </p>

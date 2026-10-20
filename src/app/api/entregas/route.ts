@@ -13,7 +13,8 @@ const BUCKET = 'entregas-fotos'
 const MAX_FOTO = 10 * 1024 * 1024 // 10 MB
 const MAX_CAMPO = 200
 
-const bad = (error: string) => NextResponse.json({ error }, { status: 400 })
+// `codigo` deja que el formulario decida qué mostrar sin leer el texto del mensaje.
+const bad = (error: string, codigo?: string) => NextResponse.json({ error, codigo }, { status: 400 })
 const fallo = () => NextResponse.json({ error: 'No se pudo guardar, intenta de nuevo' }, { status: 500 })
 
 export async function POST(req: NextRequest) {
@@ -33,8 +34,10 @@ export async function POST(req: NextRequest) {
   const telefono = normalizarTelefono(String(form.get('telefono') ?? ''))
   if (!telefono) return bad('Celular inválido')
 
+  // El nombre solo es obligatorio si no se reconoció al cliente (ver más abajo): buscar
+  // solo devuelve el nombre de pila, así que mandarlo de vuelta pisaría el completo.
   const nombre = texto('nombre')
-  if (!nombre || nombre.length > MAX_CAMPO) return bad('Falta tu nombre')
+  if (nombre && nombre.length > MAX_CAMPO) return bad('Tu nombre es demasiado largo')
 
   const tipo = String(form.get('tipo') ?? '')
   if (tipo !== 'envio' && tipo !== 'rock_show') return bad('Tipo de entrega inválido')
@@ -50,7 +53,11 @@ export async function POST(req: NextRequest) {
     return bad('Correo inválido')
   }
 
-  const noSoyYo = ['true', '1', 'on'].includes(String(form.get('noSoyYo') ?? '').toLowerCase())
+  const bandera = (k: string) => ['true', '1', 'on'].includes(String(form.get(k) ?? '').toLowerCase())
+  const noSoyYo = bandera('noSoyYo')
+  // "Misma dirección de siempre": la dirección nunca sale del servidor, así que el
+  // formulario no la manda y aquí se toma del contacto guardado. Solo aplica a envíos.
+  const usarGuardada = tipo === 'envio' && bandera('usarGuardada')
 
   // ── Envío: dirección completa (Rock Show no lleva dirección) ──
   let paqueteria: string | null = null
@@ -71,14 +78,20 @@ export async function POST(req: NextRequest) {
     if (paqueteria && !(CARRIERS_ENVIO as readonly string[]).includes(paqueteria)) {
       return bad('Paquetería inválida')
     }
-    if (!paqueteria || !recibe || !calle || !numExt || !colonia || !ciudad || !estado || !cp || !referencia) {
-      return bad('Faltan datos de la dirección')
+    if (usarGuardada) {
+      // La paquetería es de cada envío, no parte de la dirección guardada.
+      if (!paqueteria) return bad('Elige la paquetería')
+      if (recibe && recibe.length > MAX_CAMPO) return bad('Algún dato de la dirección es demasiado largo')
+    } else {
+      if (!paqueteria || !recibe || !calle || !numExt || !colonia || !ciudad || !estado || !cp || !referencia) {
+        return bad('Faltan datos de la dirección')
+      }
+      if ([paqueteria, recibe, calle, numExt, numInt ?? '', colonia, ciudad, estado, cp, referencia]
+        .some(v => v.length > MAX_CAMPO)) {
+        return bad('Algún dato de la dirección es demasiado largo')
+      }
+      dir = { calle, numExt, numInt, colonia, ciudad, estado, cp, referencia }
     }
-    if ([paqueteria, recibe, calle, numExt, numInt ?? '', colonia, ciudad, estado, cp, referencia]
-      .some(v => v.length > MAX_CAMPO)) {
-      return bad('Algún dato de la dirección es demasiado largo')
-    }
-    dir = { calle, numExt, numInt, colonia, ciudad, estado, cp, referencia }
   }
 
   const foto = form.get('foto')
@@ -89,6 +102,35 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createAdminClient()
+
+  // ── Contacto (se busca antes de subir la foto: si algo falla aquí no queda una foto huérfana) ──
+  const buscarContacto = () =>
+    supabase.from('entrega_contactos')
+      .select('id, calle, num_ext, num_int, colonia, ciudad, estado, cp, referencia')
+      .eq('telefono', telefono).maybeSingle()
+
+  const { data: existente, error: errBusca } = await buscarContacto()
+  if (errBusca) {
+    console.error('[entregas] buscar contacto', errBusca.message)
+    return fallo()
+  }
+
+  // Contacto reconocido y confirmado: su nombre guardado no se toca.
+  const confirmado = Boolean(existente) && !noSoyYo
+  if (!confirmado && !nombre) return bad('Falta tu nombre', 'falta_nombre')
+
+  if (usarGuardada) {
+    // Sin contacto, o con una dirección incompleta, no hay nada que reutilizar: jamás se
+    // guarda una entrega con la dirección vacía. (Con "no soy yo" tampoco: no es su dirección.)
+    const g = confirmado ? existente : null
+    if (!g || !g.calle || !g.num_ext || !g.colonia || !g.ciudad || !g.estado || !g.cp || !g.referencia) {
+      return bad('No tenemos tu dirección guardada completa. Escríbela para continuar', 'sin_direccion_guardada')
+    }
+    dir = {
+      calle: g.calle, numExt: g.num_ext, numInt: g.num_int ?? null, colonia: g.colonia,
+      ciudad: g.ciudad, estado: g.estado, cp: g.cp, referencia: g.referencia,
+    }
+  }
 
   // ── Foto (opcional): mismo patrón que /api/sell ──
   let fotoUrl: string | null = null
@@ -114,19 +156,10 @@ export async function POST(req: NextRequest) {
   }
 
   // Columnas de dirección tal como las espera entrega_contactos.
-  const columnasDir = dir && {
+  // Con la dirección guardada no se reescribe el contacto: ya es esa.
+  const columnasDir = dir && !usarGuardada && {
     calle: dir.calle, num_ext: dir.numExt, num_int: dir.numInt, colonia: dir.colonia,
     ciudad: dir.ciudad, estado: dir.estado, cp: dir.cp, referencia: dir.referencia,
-  }
-
-  // ── Contacto ──
-  const buscarContacto = () =>
-    supabase.from('entrega_contactos').select('id').eq('telefono', telefono).maybeSingle()
-
-  const { data: existente, error: errBusca } = await buscarContacto()
-  if (errBusca) {
-    console.error('[entregas] buscar contacto', errBusca.message)
-    return fallo()
   }
 
   let contactoId: string
@@ -139,14 +172,17 @@ export async function POST(req: NextRequest) {
     contactoId = existente.id
     status = 'conflicto'
   } else if (existente) {
-    // Se actualiza con lo nuevo, pero solo lo que vino: un correo vacío o un
-    // Rock Show (sin dirección) no deben borrar lo que ya estaba guardado.
-    const cambios: Record<string, unknown> = { nombre, ...(columnasDir ?? {}) }
+    // Se actualiza con lo nuevo, pero solo lo que vino: un correo vacío, un
+    // Rock Show o la dirección guardada no deben borrar lo que ya estaba.
+    // El nombre no se toca: el formulario no lo manda porque solo conoce el de pila.
+    const cambios: Record<string, unknown> = { ...(columnasDir ?? {}) }
     if (email) cambios.email = email
-    const { error } = await supabase.from('entrega_contactos').update(cambios).eq('id', existente.id)
-    if (error) {
-      console.error('[entregas] actualizar contacto', error.message)
-      return fallo()
+    if (Object.keys(cambios).length > 0) {
+      const { error } = await supabase.from('entrega_contactos').update(cambios).eq('id', existente.id)
+      if (error) {
+        console.error('[entregas] actualizar contacto', error.message)
+        return fallo()
+      }
     }
     contactoId = existente.id
   } else {
