@@ -10,7 +10,8 @@ import { CARRIERS_ENVIO } from '@/lib/shipping'
 // descarta en silencio; si algo no se puede guardar se responde error.
 
 const BUCKET = 'entregas-fotos'
-const MAX_FOTO = 10 * 1024 * 1024 // 10 MB
+// 4 MB, igual que el cliente: el host rechaza cuerpos de ~4.5 MB antes de llegar aquí.
+const MAX_FOTO = 4 * 1024 * 1024
 const MAX_CAMPO = 200
 
 // `codigo` deja que el formulario decida qué mostrar sin leer el texto del mensaje.

@@ -60,7 +60,7 @@ Una sola caja grande: **"Tu celular"**. Al continuar, el servidor busca ese núm
 
 **"No soy yo" nunca sobreescribe el contacto que ya existe** (decisión del constructor). Lo más probable es que se haya equivocado de dígito, no que sea otra persona: primero se le pide revisar el número. Si insiste, su entrega se guarda con los datos que él escriba y queda marcada en el panel como *número en conflicto*, para que el dueño lo resuelva. Borrar de golpe el nombre y la dirección de un cliente real desde un formulario sin contraseña no es una opción.
 
-**El correo es obligatorio al registrarse** (decisión del dueño, 2026-10-19, durante la construcción). Lo ocupa para los envíos, y ahora además es a donde llega el código de verificación de "Cambiar dirección". Esto reemplaza la decisión anterior de dejarlo opcional.
+**El correo es obligatorio al registrarse** (decisión del dueño, 2026-10-19, durante la construcción). **Estado: pendiente, es la Tarea 8 y aún no está construido en esta rama.** Lo ocupa para los envíos, y ahora además es a donde llega el código de verificación de "Cambiar dirección". Esto reemplaza la decisión anterior de dejarlo opcional.
 
 ### Paso 2 — Cómo quiere sus figuras
 
@@ -97,6 +97,8 @@ El cliente reconoce su propia dirección; un curioso saca un nombre de pila y un
 
 ### Código de verificación para "Cambiar dirección" (decisión del dueño, 2026-10-19)
 
+> **Estado: pendiente (Tarea 8).** Lo descrito abajo está decidido pero aún no está construido en esta rama; hoy "Cambiar dirección" no pide código.
+
 Durante la construcción el dueño cerró el hueco que esta sección describe, por su cuenta y mejor de como se lo planteé.
 
 Después de los arreglos de las tareas 4 y 5, **el único camino que sobreescribe los datos guardados de un cliente es "Cambiar dirección"**. "Continuar" ya no manda ni nombre ni dirección, y "No soy yo" por diseño nunca toca el contacto — es la ruta segura, no la peligrosa.
@@ -111,7 +113,7 @@ Se le ofreció al dueño una cuarta salida —código de 4 dígitos por SMS ante
 
 - El endpoint que busca por celular **devuelve solo los campos enmascarados**, nunca el registro completo. El enmascarado ocurre en el servidor.
 - Ese endpoint necesita **límite de intentos por IP** (sugerido: unos 10 por minuto). Sin él, cualquiera puede barrer números y cosechar nombres. El proyecto va en Vercel, donde un contador en memoria es por instancia y se borra en frío — serviría de adorno. Se lleva **en una tabla de Supabase** (decisión del constructor): cumple sin agregar dependencias ni cuentas nuevas, al costo de una escritura por consulta. Necesita borrado de registros viejos.
-- Como la búsqueda ahora alcanza `profiles`, el endpoint devuelve lo mismo —enmascarado— sin importar de qué tabla salió el dato, y **nunca** indica cuál de las dos fue.
+- Como la búsqueda ahora alcanza `profiles`, el endpoint devuelve lo mismo —enmascarado— sin importar de qué tabla salió el dato, y **nunca** indica cuál de las dos fue, con una excepción aceptada a propósito: devuelve un booleano `tieneNombre`, que es `true` exactamente cuando el dato vino de `entrega_contactos` y `false` cuando vino de `profiles`, así que sí distingue la tabla. Se aceptó porque, sin él, el cliente que tiene cuenta en la tienda pero nunca ha usado el formulario llenaría todo el formulario y sería regresado al paso 1, teniendo que volver a teclear su dirección.
 - El `id` interno del contacto no debe viajar al navegador en forma utilizable para leer el registro completo. Si el cliente confirma "sí soy yo", el servidor vuelve a resolver el contacto por el número en el envío final, no por un id que el navegador pudo manipular.
 
 ---

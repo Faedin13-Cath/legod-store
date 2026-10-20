@@ -830,7 +830,14 @@ export default function AdminPage() {
                             )}
                           </td>
                           <td style={{ padding: '10px', color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>{e.tipo === 'envio' ? 'Envío' : 'Rock Show'}</td>
-                          <td style={{ padding: '10px', color: 'var(--ink-2)', whiteSpace: 'pre-wrap', maxWidth: 260, fontSize: 12 }}>{e.piezas}</td>
+                          <td style={{ padding: '10px', color: 'var(--ink-2)', whiteSpace: 'pre-wrap', maxWidth: 260, fontSize: 12 }}>
+                            {e.piezas}
+                            {e.foto && (
+                              <div style={{ marginTop: 4 }}>
+                                <a href={e.foto} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink)', textDecoration: 'underline' }}>Ver foto</a>
+                              </div>
+                            )}
+                          </td>
                           <td style={{ padding: '10px', color: 'var(--ink)', fontWeight: 600, whiteSpace: 'nowrap' }}>${Number(e.resta).toLocaleString('es-MX')}</td>
                           <td style={{ padding: '10px', color: 'var(--ink-2)', fontSize: 12, lineHeight: 1.5, maxWidth: 280 }}>
                             {e.tipo === 'envio' ? (
