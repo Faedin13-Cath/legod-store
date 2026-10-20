@@ -72,7 +72,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 function csvCell(v: unknown): string {
   // Anti inyección de fórmulas: Excel ejecuta las celdas que empiezan con = + - @ (los datos vienen del formulario público)
   const raw = String(v ?? '')
-  const s = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw
+  // Un número o teléfono (p. ej. "+52 55 1234 5678") no es fórmula: se deja tal cual
+  const esNumero = /^[+-]?[\d\s().-]+$/.test(raw.trim())
+  const s = !esNumero && /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
