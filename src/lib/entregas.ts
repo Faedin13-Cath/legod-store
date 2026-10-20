@@ -67,3 +67,27 @@ export function ipDe(headers: Headers): string {
   if (reenviada) return reenviada
   return 'desconocida'
 }
+
+/**
+ * Monto que el cliente aún debe. Solo dígitos con hasta dos decimales:
+ * "como $100" o "-50" se rechazan en lugar de adivinar, porque es dinero
+ * que el dueño va a cobrar en mano. Devuelve null si no es un monto válido.
+ */
+export function validarResta(raw: string): number | null {
+  const s = raw.trim()
+  if (!/^\d{1,7}(\.\d{1,2})?$/.test(s)) return null
+  return Number(s)
+}
+
+const MAX_PIEZAS = 5000
+
+/**
+ * Lista de piezas tal como la pegó el cliente. Se recortan solo las orillas;
+ * los saltos de línea de en medio se conservan porque cada renglón es una
+ * figura. Devuelve null si queda vacía o pasa del tope.
+ */
+export function validarPiezas(raw: string): string | null {
+  const s = raw.trim()
+  if (!s || s.length > MAX_PIEZAS) return null
+  return s
+}

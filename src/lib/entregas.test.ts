@@ -6,6 +6,8 @@ import {
   enmascararCP,
   enmascararEmail,
   ipDe,
+  validarResta,
+  validarPiezas,
 } from './entregas'
 
 describe('normalizarTelefono', () => {
@@ -57,5 +59,29 @@ describe('ipDe', () => {
   })
   it('da algo estable cuando no hay encabezados', () => {
     expect(ipDe(new Headers())).toBe('desconocida')
+  })
+})
+
+describe('validarResta', () => {
+  it('acepta un número y el cero', () => {
+    expect(validarResta('0')).toBe(0)
+    expect(validarResta('350')).toBe(350)
+    expect(validarResta('60.50')).toBe(60.5)
+  })
+  it('rechaza lo que no es un monto', () => {
+    expect(validarResta('como $100')).toBeNull()
+    expect(validarResta('-50')).toBeNull()
+    expect(validarResta('')).toBeNull()
+  })
+})
+
+describe('validarPiezas', () => {
+  it('conserva completas las 25 figuras pegadas de WhatsApp', () => {
+    const lista = Array.from({ length: 25 }, (_, i) => `Iron Man Mk ${i + 1}`).join('\n')
+    expect(validarPiezas(lista)).toBe(lista)
+  })
+  it('rechaza vacío y lo absurdamente largo', () => {
+    expect(validarPiezas('   ')).toBeNull()
+    expect(validarPiezas('x'.repeat(5001))).toBeNull()
   })
 })

@@ -9,6 +9,7 @@ import {
   ipDe,
   type ContactoEnmascarado,
 } from '@/lib/entregas'
+import { perfilesPorTelefono } from '@/lib/entregas-perfiles'
 
 // Endpoint público: no hay sesión ni contraseña, el celular es toda la llave.
 // Por eso NUNCA sale de aquí la dirección completa, ningún id, ni una pista de
@@ -105,31 +106,11 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 2. Perfiles de LEGOD ──
-  // Los teléfonos están guardados en ~8 formatos distintos, así que no se puede
-  // comparar en SQL. Se traen SOLO id y teléfonos (nunca nombres ni direcciones),
-  // se normalizan aquí y únicamente del que coincida se lee la fila completa.
   // Se juntan TODAS las coincidencias: si dos perfiles comparten número no se
   // puede saber de quién es, y mostrar los datos de otra persona es peor que no reconocer a nadie.
-  const coincidencias: string[] = []
-  const PAGINA = 1000
-  for (let desde = 0; ; desde += PAGINA) {
-    const { data, error: errPerfiles } = await supabase
-      .from('profiles')
-      .select('id, whatsapp, ship_phone')
-      .order('id')
-      .range(desde, desde + PAGINA - 1)
-    if (errPerfiles) {
-      console.error('[entregas/buscar] perfiles', errPerfiles.message)
-      return NextResponse.json({ error: 'Error del servidor' }, { status: 500 })
-    }
-    const perfiles = data ?? []
-    for (const p of perfiles) {
-      if (
-        (p.whatsapp && normalizarTelefono(p.whatsapp) === telefono) ||
-        (p.ship_phone && normalizarTelefono(p.ship_phone) === telefono)
-      ) coincidencias.push(p.id)
-    }
-    if (perfiles.length < PAGINA) break
+  const coincidencias = await perfilesPorTelefono(supabase, telefono)
+  if (!coincidencias) {
+    return NextResponse.json({ error: 'Error del servidor' }, { status: 500 })
   }
 
   if (coincidencias.length > 1) {
