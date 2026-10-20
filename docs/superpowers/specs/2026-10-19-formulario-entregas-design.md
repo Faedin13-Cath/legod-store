@@ -60,7 +60,7 @@ Una sola caja grande: **"Tu celular"**. Al continuar, el servidor busca ese núm
 
 **"No soy yo" nunca sobreescribe el contacto que ya existe** (decisión del constructor). Lo más probable es que se haya equivocado de dígito, no que sea otra persona: primero se le pide revisar el número. Si insiste, su entrega se guarda con los datos que él escriba y queda marcada en el panel como *número en conflicto*, para que el dueño lo resuelva. Borrar de golpe el nombre y la dirección de un cliente real desde un formulario sin contraseña no es una opción.
 
-**El correo es opcional.** El formulario del Rock Show hoy no lo pide, y es un campo más entre el cliente y el botón de enviar.
+**El correo es obligatorio al registrarse** (decisión del dueño, 2026-10-19, durante la construcción). Lo ocupa para los envíos, y ahora además es a donde llega el código de verificación de "Cambiar dirección". Esto reemplaza la decisión anterior de dejarlo opcional.
 
 ### Paso 2 — Cómo quiere sus figuras
 
@@ -94,6 +94,16 @@ Decisión tomada (opción B de tres, elegida por el dueño sobre maquetas): **en
 - **No se muestra nunca en pantalla:** la dirección completa. Viaja del servidor al registro de administración sin pasar por el navegador del cliente.
 
 El cliente reconoce su propia dirección; un curioso saca un nombre de pila y una calle sin número.
+
+### Código de verificación para "Cambiar dirección" (decisión del dueño, 2026-10-19)
+
+Durante la construcción el dueño cerró el hueco que esta sección describe, por su cuenta y mejor de como se lo planteé.
+
+Después de los arreglos de las tareas 4 y 5, **el único camino que sobreescribe los datos guardados de un cliente es "Cambiar dirección"**. "Continuar" ya no manda ni nombre ni dirección, y "No soy yo" por diseño nunca toca el contacto — es la ruta segura, no la peligrosa.
+
+Así que: **"Cambiar dirección" exige un código de verificación que llega al correo del contacto.** "No soy yo" y "Continuar" no piden nada. Con eso, nadie puede alterar los datos guardados de un cliente sin tener acceso a su correo, y el formulario sigue abriéndose con solo teclear un celular.
+
+Contactos que ya existen **sin correo** (los que vienen de `profiles`, donde nunca fue obligatorio): no hay a dónde mandarles el código, así que al pedir "Cambiar dirección" se les manda a WhatsApp con el dueño (decisión del constructor). Pedirles un correo en ese momento no protegería nada — cualquiera pondría el suyo y se autovalidaría.
 
 Se le ofreció al dueño una cuarta salida —código de 4 dígitos por SMS antes de mostrar nada— y la dejó pasar. **Si en algún momento quiere cerrarlo del todo, ése es el camino, y el diseño no debe estorbarlo:** el paso de verificación cabe entre el paso 1 y el paso 2 sin tocar lo demás.
 
@@ -134,7 +144,7 @@ Tabla nueva en Supabase, con migración en `supabase/migrations/` siguiendo el e
 
 Hacen falta **dos** tablas, y la separación importa:
 
-1. **El contacto** — lo que se guarda una vez y se reusa: celular (la llave, única), nombre, correo (opcional) y su dirección (nulable: el que solo va al Rock Show no la da). Es lo que hace que la segunda vez solo tenga que poner su número. Conviene que lleve un `user_id` nulable hacia `profiles`: es lo que amarra al cliente que sí tiene cuenta de LEGOD, y es la base que necesitaría después lo de las palomitas sobre sus compras.
+1. **El contacto** — lo que se guarda una vez y se reusa: celular (la llave, única), nombre, correo (obligatorio para los contactos nuevos; nulable en la tabla porque los que vienen de `profiles` pueden no tenerlo) y su dirección (nulable: el que solo va al Rock Show no la da). Es lo que hace que la segunda vez solo tenga que poner su número. Conviene que lleve un `user_id` nulable hacia `profiles`: es lo que amarra al cliente que sí tiene cuenta de LEGOD, y es la base que necesitaría después lo de las palomitas sobre sus compras.
 2. **La entrega** — una fila por cada vez que llena el formulario: a qué contacto corresponde, si es envío o Rock Show, paquetería, el texto de las piezas, la foto si la subió, cuánto resta, el estado (sin atender / atendida / número en conflicto) y la fecha.
 
 La dirección se guarda **en los dos lados**: en el contacto como "la última que usó" y copiada dentro de la entrega como fotografía del momento. Si el cliente se muda, las entregas viejas deben seguir diciendo a dónde se mandaron. Es el mismo criterio que ya usa `orders.shipping` en este proyecto.
