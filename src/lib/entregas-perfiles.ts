@@ -7,10 +7,12 @@ import { normalizarTelefono } from '@/lib/entregas'
  * comparar en SQL. Se traen SOLO id y teléfonos (nunca nombres ni direcciones),
  * se normalizan aquí y se pagina porque PostgREST corta en 1000 filas.
  * Devuelve null si la consulta falla (distinto de "no hay coincidencias").
+ * `prefijo` es el del log de quien llama, para saber cuál endpoint falló.
  */
 export async function perfilesPorTelefono(
   supabase: SupabaseClient,
   telefono: string,
+  prefijo: string,
 ): Promise<string[] | null> {
   const coincidencias: string[] = []
   const PAGINA = 1000
@@ -21,7 +23,7 @@ export async function perfilesPorTelefono(
       .order('id')
       .range(desde, desde + PAGINA - 1)
     if (error) {
-      console.error('[entregas] perfiles', error.message)
+      console.error(`${prefijo} perfiles`, error.message)
       return null
     }
     const perfiles = data ?? []

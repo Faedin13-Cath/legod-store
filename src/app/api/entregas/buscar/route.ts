@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
   // ── 2. Perfiles de LEGOD ──
   // Se juntan TODAS las coincidencias: si dos perfiles comparten número no se
   // puede saber de quién es, y mostrar los datos de otra persona es peor que no reconocer a nadie.
-  const coincidencias = await perfilesPorTelefono(supabase, telefono)
+  const coincidencias = await perfilesPorTelefono(supabase, telefono, '[entregas/buscar]')
   if (!coincidencias) {
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 })
   }

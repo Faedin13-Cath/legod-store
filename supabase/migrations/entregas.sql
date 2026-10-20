@@ -65,3 +65,9 @@ alter table entrega_intentos enable row level security;
 -- Sin políticas públicas: solo el backend (service_role) lee/escribe.
 
 create index if not exists entrega_intentos_ip_idx on entrega_intentos (ip, created_at desc);
+
+-- Nombre y correo que mandó el cliente cuando dijo "no soy yo". Solo traen
+-- datos en entregas con status 'conflicto' (el contacto no se modificó, así
+-- que sin estas columnas se perderían). En las demás quedan en null.
+alter table entregas add column if not exists nombre_enviado text;
+alter table entregas add column if not exists email_enviado text;

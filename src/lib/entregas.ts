@@ -87,7 +87,8 @@ const MAX_PIEZAS = 5000
  * figura. Devuelve null si queda vacía o pasa del tope.
  */
 export function validarPiezas(raw: string): string | null {
-  const s = raw.trim()
+  // Los navegadores mandan los <textarea> con CRLF; se guarda solo \n.
+  const s = raw.replace(/\r\n?/g, '\n').trim()
   if (!s || s.length > MAX_PIEZAS) return null
   return s
 }

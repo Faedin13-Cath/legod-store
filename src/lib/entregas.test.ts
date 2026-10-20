@@ -80,6 +80,9 @@ describe('validarPiezas', () => {
     const lista = Array.from({ length: 25 }, (_, i) => `Iron Man Mk ${i + 1}`).join('\n')
     expect(validarPiezas(lista)).toBe(lista)
   })
+  it('normaliza CRLF del navegador a \n sin perder renglones', () => {
+    expect(validarPiezas('Batman\r\nRobin\r\n\r\nJoker\r')).toBe('Batman\nRobin\n\nJoker')
+  })
   it('rechaza vacío y lo absurdamente largo', () => {
     expect(validarPiezas('   ')).toBeNull()
     expect(validarPiezas('x'.repeat(5001))).toBeNull()
