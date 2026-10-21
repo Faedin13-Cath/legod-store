@@ -98,3 +98,30 @@ export async function sendNewArrivalEmail(to: string, name: string, products: {
     `,
   })
 }
+
+/** Código de 6 dígitos para cambiar la dirección guardada en el formulario de entregas. */
+export async function sendCodigoEntregasEmail(to: string, codigo: string, vigenciaMin: number) {
+  return getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `Tu código de LEGOD: ${codigo}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px">
+        <img src="${STORE}/assets/logo/legod-logo-violet-128.png" width="40" style="border-radius:50%;margin-bottom:16px" />
+        <h2 style="margin:0 0 8px;color:#1a1a2e">¡Hola! 👋</h2>
+        <p style="color:#555;margin:0 0 20px">
+          Pediste cambiar tus datos de entrega. Escribe este código en el formulario para continuar:
+        </p>
+        <div style="background:#f5f3ef;border-radius:12px;padding:20px;margin-bottom:24px;text-align:center">
+          <div style="font-size:34px;font-weight:800;letter-spacing:8px;color:#6B3FA0">${codigo}</div>
+        </div>
+        <p style="color:#555;margin:0 0 8px">
+          Sirve ${vigenciaMin} minutos y solo una vez.
+        </p>
+        <p style="margin-top:24px;font-size:12px;color:#aaa">
+          Si tú no lo pediste, ignora este correo: tus datos siguen como estaban y nadie puede cambiarlos sin este código.
+        </p>
+      </div>
+    `,
+  })
+}

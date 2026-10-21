@@ -10,15 +10,12 @@ import {
   type ContactoEnmascarado,
 } from '@/lib/entregas'
 import { perfilesPorTelefono } from '@/lib/entregas-perfiles'
+import { registrarIntento } from '@/lib/entregas-limite'
 
 // Endpoint público: no hay sesión ni contraseña, el celular es toda la llave.
 // Por eso NUNCA sale de aquí la dirección completa ni ningún id. Todo se enmascara
 // en el servidor. La respuesta tiene siempre la misma forma; la única pista de origen
 // es el booleano tieneNombre (false = solo hay cuenta de la tienda, sin registro de entregas).
-
-const MAX_INTENTOS = 10      // por IP...
-const VENTANA_SEG = 60       // ...en esta ventana
-const LIMPIEZA_SEG = 3600    // los intentos más viejos se borran
 
 type Datos = {
   nombre: string | null
@@ -62,29 +59,12 @@ export async function POST(req: NextRequest) {
   const supabase = createAdminClient()
 
   // ── Límite de intentos por IP (en tabla: un contador en memoria no sirve en Vercel) ──
-  const ip = ipDe(req.headers)
-  const ahora = Date.now()
-  const { error: errInsert } = await supabase.from('entrega_intentos').insert({ ip })
-  if (errInsert) {
+  const limite = await registrarIntento(supabase, ipDe(req.headers), 'entregas/buscar')
+  if (limite === 'error') {
     // Si no se puede contar, no se contesta: sin tope el endpoint sería un buscador de clientes.
-    console.error('[entregas/buscar] no se pudo registrar el intento', errInsert.message)
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 })
   }
-  // Limpieza oportunista; si falla no pasa nada.
-  await supabase
-    .from('entrega_intentos')
-    .delete()
-    .lt('created_at', new Date(ahora - LIMPIEZA_SEG * 1000).toISOString())
-  const { count, error: errCount } = await supabase
-    .from('entrega_intentos')
-    .select('id', { count: 'exact', head: true })
-    .eq('ip', ip)
-    .gte('created_at', new Date(ahora - VENTANA_SEG * 1000).toISOString())
-  if (errCount || count === null) {
-    console.error('[entregas/buscar] no se pudo contar intentos', errCount?.message)
-    return NextResponse.json({ error: 'Error del servidor' }, { status: 500 })
-  }
-  if (count > MAX_INTENTOS) {
+  if (limite === 'tope') {
     return NextResponse.json({ error: 'Demasiados intentos, espera un minuto' }, { status: 429 })
   }
 

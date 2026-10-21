@@ -84,3 +84,22 @@ alter table entregas add column if not exists numero int;
 create unique index if not exists entregas_numero_activo_idx
   on entregas (numero)
   where numero is not null and status <> 'atendida';
+
+-- ── Código de verificación para "Cambiar dirección" ──
+-- Se manda al correo del contacto y se pide antes de cambiar su dirección o su
+-- correo. Se guarda HASHEADO (sha256), nunca en claro: esta tabla la lee cualquiera
+-- con la llave de servicio. Vigencia de 15 minutos, un solo uso, 5 intentos.
+create table if not exists entrega_codigos (
+  id           uuid primary key default gen_random_uuid(),
+  contacto_id  uuid not null references entrega_contactos(id) on delete cascade,
+  codigo_hash  text not null,
+  expira_at    timestamptz not null,
+  intentos     int not null default 0,
+  usado        boolean not null default false,
+  created_at   timestamptz not null default now()
+);
+
+alter table entrega_codigos enable row level security;
+-- Sin políticas públicas: solo el backend (service_role) lee/escribe.
+
+create index if not exists entrega_codigos_contacto_idx on entrega_codigos (contacto_id, created_at desc);

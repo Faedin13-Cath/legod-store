@@ -1,6 +1,6 @@
 'use client'
 
-import { cloneElement, isValidElement, useId, useRef, useState } from 'react'
+import { cloneElement, isValidElement, useEffect, useId, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import Icon from '@/components/ui/Icon'
@@ -12,8 +12,9 @@ const WHATSAPP = process.env.NEXT_PUBLIC_WHATSAPP ?? '525574777350'
 // Vercel rechaza cuerpos de ~4.5 MB; con el resto del formulario la foto debe quedar por debajo.
 const MAX_FOTO = 4 * 1024 * 1024
 const MAX_PIEZAS = 5000
+const ESPERA_REENVIO_MS = 60_000
 
-type Fase = 'telefono' | 'conocido' | 'nuevo'
+type Fase = 'telefono' | 'conocido' | 'nuevo' | 'codigo' | 'sin_correo'
 type Tipo = 'envio' | 'rock_show'
 type Pago = 'pagado' | 'falta'
 
@@ -128,6 +129,12 @@ export default function EntregasPage() {
   const [noSoyYo, setNoSoyYo] = useState(false)
   // El servidor no encontró su registro de entregas (p. ej. solo tiene cuenta en la tienda).
   const [pedirNombre, setPedirNombre] = useState(false)
+  // Código por correo para "Cambiar dirección". Se teclea aquí y el servidor lo revisa al enviar.
+  const [codigo, setCodigo] = useState('')
+  const [correoCodigo, setCorreoCodigo] = useState('')
+  const [volverCodigo, setVolverCodigo] = useState<2 | 3>(2)
+  const [reenvioDesde, setReenvioDesde] = useState(0) // cuándo se mandó el último; 0 = ya se puede pedir otro
+  const [ahora, setAhora] = useState(() => Date.now())
 
   // Paso 2
   const [tipo, setTipo] = useState<Tipo | ''>('')
@@ -194,12 +201,57 @@ export default function EntregasPage() {
   function esOtraPersona() {
     // Lo más probable es un dígito mal puesto: se regresa al celular para corregirlo.
     setRechazado(normalizarTelefono(telefono) ?? '')
-    setContacto(null); setNombre(''); setEmail(''); setCambiarDir(false); setNoSoyYo(false); setPedirNombre(false)
+    setContacto(null); setNombre(''); setEmail(''); setCambiarDir(false); setNoSoyYo(false); setPedirNombre(false); setCodigo('')
     setFase('telefono'); setError('')
   }
 
+  // ── Código de verificación ──
+  // Segundos que faltan para poder pedir otro código.
+  const faltaReenvio = Math.max(0, Math.ceil((reenvioDesde + ESPERA_REENVIO_MS - ahora) / 1000))
+  useEffect(() => {
+    if (fase !== 'codigo') return
+    const t = setInterval(() => setAhora(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [fase])
+
+  // Manda el código al correo guardado y abre la pantalla donde se escribe.
+  async function pedirCodigo(volver: 2 | 3) {
+    setError('')
+    setBusy(true)
+    try {
+      const res = await fetch('/api/entregas/codigo', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telefono }),
+      })
+      if (res.status === 429) { falla('Has intentado muchas veces. Espera un minuto y vuelve a intentar.'); return }
+      const data = await res.json().catch(() => null) as { enviado?: boolean; motivo?: string; correo?: string; error?: string } | null
+      if (data?.motivo === 'sin_correo') { setFase('sin_correo'); irA(1); return }
+      if (!res.ok || !data?.enviado) { falla(data?.error ?? 'No pudimos mandar el código. Intenta de nuevo en un momento.'); return }
+      const ahoraMs = Date.now()
+      setCorreoCodigo(data.correo ?? ''); setCodigo(''); setVolverCodigo(volver)
+      setReenvioDesde(ahoraMs); setAhora(ahoraMs)
+      setFase('codigo'); irA(1)
+    } catch {
+      falla('No hay conexión. Revisa tu internet e intenta de nuevo.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function confirmarCodigo() {
+    setError('')
+    if (!/^\d{6}$/.test(codigo)) { falla('El código son 6 números. Revisa tu correo.'); return }
+    // Aún no se sabe si es el bueno: el servidor lo revisa al enviar. Si no lo es, regresa aquí.
+    setCambiarDir(true); setFase('conocido')
+    irA(volverCodigo)
+  }
+
+  function cancelarCodigo() {
+    setCodigo(''); setFase('conocido'); setError('')
+  }
+
   function cambiarNumero() {
-    setContacto(null); setNombre(''); setEmail(''); setCambiarDir(false); setNoSoyYo(false); setPedirNombre(false)
+    setContacto(null); setNombre(''); setEmail(''); setCambiarDir(false); setNoSoyYo(false); setPedirNombre(false); setCodigo('')
     setFase('telefono'); setError('')
   }
 
@@ -226,6 +278,9 @@ export default function EntregasPage() {
         .some(k => !dir[k].trim())
       if (faltan) { falla('Faltan datos de la dirección. Solo el número interior es opcional.'); return }
       if (!/^\d{5}$/.test(dir.cp.trim())) { falla('El código postal son 5 números.'); return }
+      // Escribir una dirección para un contacto que ya existe la cambia en su registro:
+      // antes hay que confirmar con el código que llega a su correo.
+      if (contacto?.tieneNombre && !noSoyYo && !codigo) { void pedirCodigo(2); return }
     }
     irA(3)
   }
@@ -259,6 +314,7 @@ export default function EntregasPage() {
     if (nombre.trim()) fd.set('nombre', nombre.trim()) // solo cliente nuevo o "no soy yo"
     if (email.trim()) fd.set('email', email.trim())
     if (noSoyYo) fd.set('noSoyYo', 'true')
+    if (codigo) fd.set('codigo', codigo)
     fd.set('tipo', tipo)
     if (tipo === 'envio') {
       fd.set('paqueteria', paqueteria)
@@ -290,6 +346,14 @@ export default function EntregasPage() {
       if (data.codigo === 'falta_nombre') {
         setPedirNombre(true); setFase('nuevo')
         irA(1); falla('Necesitamos tu nombre completo para guardar tu entrega.')
+        return
+      }
+      if (data.codigo === 'codigo_requerido' || data.codigo === 'codigo_invalido') {
+        // Código faltante, malo, vencido o ya usado: se vuelve a la pantalla del código con todo lo demás intacto.
+        setCodigo(''); setVolverCodigo(3); setReenvioDesde(0); setFase('codigo')
+        irA(1); falla(data.codigo === 'codigo_requerido'
+          ? 'Necesitamos el código que te mandamos por correo. Pide uno nuevo.'
+          : 'Ese código no sirvió: pudo vencer, estar mal escrito o ya se usó. Pide uno nuevo.')
         return
       }
       if (data.codigo === 'falta_correo') {
@@ -405,7 +469,9 @@ export default function EntregasPage() {
                 {puedeReusar ? 'Continuar, a la misma dirección' : 'Continuar'}
               </button>
               {puedeReusar && (
-                <button type="button" onClick={() => continuarPaso1(true)} className="btn btn-secondary" style={btn}>Cambiar dirección</button>
+                <button type="button" onClick={() => (codigo ? continuarPaso1(true) : void pedirCodigo(2))} disabled={busy} className="btn btn-secondary" style={btn}>
+                  {busy ? 'Mandando el código…' : 'Cambiar dirección'}
+                </button>
               )}
               <button
                 type="button" onClick={esOtraPersona} className="btn btn-secondary"
@@ -416,6 +482,56 @@ export default function EntregasPage() {
               <p style={{ fontSize: 12, color: 'var(--ink-3)', margin: 0, lineHeight: 1.5, textAlign: 'center' }}>
                 ¿Esos no son tus datos? Toca <strong>No soy yo</strong> y revisa tu número.
               </p>
+            </div>
+          )}
+
+          {/* ───────── Paso 1: código para cambiar la dirección guardada ───────── */}
+          {paso === 1 && fase === 'codigo' && (
+            <form onSubmit={e => { e.preventDefault(); confirmarCodigo() }} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', margin: '0 0 6px' }}>Revisa tu correo</h1>
+                <p style={{ fontSize: 14, color: 'var(--ink-2)', margin: 0, lineHeight: 1.5 }}>
+                  Para cambiar tus datos guardados te mandamos un código de 6 números a{' '}
+                  <strong style={{ color: 'var(--ink)' }}>{correoCodigo || 'tu correo'}</strong>.
+                  Sirve 15 minutos. Si no lo ves, revisa también el correo no deseado.
+                </p>
+              </div>
+              <input
+                type="text" inputMode="numeric" autoComplete="one-time-code" autoFocus maxLength={6}
+                value={codigo} onChange={e => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="000000" aria-label="Código de 6 números"
+                className="input" style={{ ...inputStyle, fontSize: 28, minHeight: 64, textAlign: 'center', letterSpacing: '0.3em' }}
+              />
+              <button type="submit" className="btn btn-primary" style={btn}>Confirmar código</button>
+              <button
+                type="button" onClick={() => void pedirCodigo(volverCodigo)} disabled={busy || faltaReenvio > 0}
+                className="btn btn-secondary" style={btn}
+              >
+                {busy ? 'Mandando…' : faltaReenvio > 0 ? `Pedir otro código en ${faltaReenvio} s` : 'Pedir otro código'}
+              </button>
+              <button type="button" onClick={cancelarCodigo} style={enlaceStyle}>Atrás</button>
+            </form>
+          )}
+
+          {/* ───────── Paso 1: sin correo guardado, se atiende por WhatsApp ───────── */}
+          {paso === 1 && fase === 'sin_correo' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', margin: '0 0 6px' }}>Esto lo vemos por WhatsApp</h1>
+                <p style={{ fontSize: 14, color: 'var(--ink-2)', margin: 0, lineHeight: 1.5 }}>
+                  No tenemos un correo guardado para mandarte el código de seguridad, así que no podemos cambiar tu
+                  dirección desde aquí. Escríbenos y la actualizamos contigo.
+                </p>
+              </div>
+              <a
+                href={`https://wa.me/${WHATSAPP}?text=${encodeURIComponent('Hola, quiero cambiar mi dirección de entrega.')}`}
+                target="_blank" rel="noreferrer" className="btn btn-primary" style={{ ...btn, textDecoration: 'none' }}
+              >
+                Escribir por WhatsApp
+              </a>
+              <button type="button" onClick={cancelarCodigo} className="btn btn-secondary" style={btn}>
+                Mejor seguir con la misma dirección
+              </button>
             </div>
           )}
 
@@ -475,7 +591,7 @@ export default function EntregasPage() {
                       Lo enviamos a la <strong>misma dirección de siempre</strong>:{' '}
                       <strong style={{ color: 'var(--ink)' }}>{contacto.calle}, col. {contacto.colonia}, C.P. {contacto.cp}</strong>.
                       <br />
-                      <button type="button" onClick={() => setCambiarDir(true)} style={{ ...enlaceStyle, padding: 0, justifyContent: 'flex-start' }}>
+                      <button type="button" onClick={() => (codigo ? setCambiarDir(true) : void pedirCodigo(2))} disabled={busy} style={{ ...enlaceStyle, padding: 0, justifyContent: 'flex-start' }}>
                         Usar otra dirección
                       </button>
                     </div>
