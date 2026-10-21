@@ -22,5 +22,6 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "comentario-exclude": "Las pruebas y la config de vitest importan 'vitest', que es solo de desarrollo. Next revisa los tipos de TODO el proyecto al compilar, así que si quedan incluidas el build de producción falla donde vitest no esté instalado — que es lo que pasó en Vercel. Para correr las pruebas se usa tsconfig.test.json.",
+  "exclude": ["node_modules", "vitest.config.ts", "**/*.test.ts", "**/*.test.tsx"]
 }
