@@ -17,6 +17,11 @@ import Link from 'next/link'
 import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { normalizarTelefono } from '@/lib/entregas'
+import {
+  copiarEntregas as copiarEntregasVisibles,
+  bajarExcelEstafeta as bajarExcelEstafetaVisibles,
+  sinAcentos,
+} from '@/lib/entregas-export'
 
 type Contacto = { id: string; nombre: string; telefono: string; email: string | null }
 type Entrega = {
@@ -30,9 +35,6 @@ type Entrega = {
 
 type Filtro = 'pendientes' | 'entregadas' | 'envios'
 
-const sinAcentos = (s: string) =>
-  s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-
 export default function BolsasPage() {
   const { profile, loading } = useAuth()
   const esDueno = !!profile?.is_admin
@@ -44,6 +46,9 @@ export default function BolsasPage() {
   const [filtro, setFiltro] = useState<Filtro>('pendientes')
   const [busca, setBusca] = useState('')
   const [marcando, setMarcando] = useState<string | null>(null)
+  const [avisoExport, setAvisoExport] = useState('')
+  const [textoParaCopiar, setTextoParaCopiar] = useState('')
+  const [bajandoExcel, setBajandoExcel] = useState(false)
 
   // Dos lecturas: TODAS las pendientes (sin tope: retienen su número aunque sean
   // viejas) y las más recientes, que aportan las entregadas. Se mezclan por id.
@@ -126,6 +131,20 @@ export default function BolsasPage() {
       )
   }, [entregas, filtro, busca])
 
+  // Los dos botones de exportar trabajan sobre lo que se ve, en cualquier filtro.
+  async function copiar() {
+    setAvisoExport(''); setTextoParaCopiar('')
+    const r = await copiarEntregasVisibles(visibles)
+    setAvisoExport(r.aviso); setTextoParaCopiar(r.textoManual)
+  }
+
+  async function bajarExcel() {
+    setBajandoExcel(true); setAvisoExport('')
+    const r = await bajarExcelEstafetaVisibles(visibles)
+    setAvisoExport(r.aviso)
+    setBajandoExcel(false)
+  }
+
   const pendientes = entregas.filter(e => e.tipo === 'rock_show' && e.status !== 'atendida').length
 
   if (loading) return <Centro>Cargando…</Centro>
@@ -172,7 +191,30 @@ export default function BolsasPage() {
             >{etiqueta}</button>
           ))}
         </div>
+
+        {/* Exportar: lo que se ve en pantalla. Apilados en celular angosto. */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+          <button
+            type="button" onClick={copiar} disabled={visibles.length === 0}
+            className="btn btn-secondary" style={{ flex: '1 1 150px', minHeight: 44, fontSize: 13 }}
+          >Copiar ({visibles.length})</button>
+          <button
+            type="button" onClick={bajarExcel} disabled={visibles.length === 0 || bajandoExcel}
+            className="btn btn-secondary" style={{ flex: '1 1 150px', minHeight: 44, fontSize: 13 }}
+          >{bajandoExcel ? 'Generando…' : 'Bajar a Excel (Estafeta)'}</button>
+        </div>
       </div>
+
+      {avisoExport && (
+        <p role="status" style={{ fontSize: 13, color: 'var(--ink-2)', margin: '12px 16px 0', lineHeight: 1.6 }}>{avisoExport}</p>
+      )}
+      {textoParaCopiar && (
+        <textarea
+          readOnly value={textoParaCopiar} onFocus={e => e.currentTarget.select()}
+          aria-label="Texto para copiar a mano"
+          style={{ display: 'block', width: 'calc(100% - 32px)', margin: '8px 16px 0', height: 140, fontSize: 12, fontFamily: 'monospace' }}
+        />
+      )}
 
       {error && (
         <div style={{ margin: 16, background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#DC2626' }}>

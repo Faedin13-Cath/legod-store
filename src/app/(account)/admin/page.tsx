@@ -4,6 +4,11 @@ import { useEffect, useState } from 'react'
 import Icon from '@/components/ui/Icon'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { normalizarTelefono } from '@/lib/entregas'
+import {
+  copiarEntregas as copiarEntregasVisibles,
+  bajarExcelEstafeta as bajarExcelEstafetaVisibles,
+  direccionTexto, fechaEntrega, sinAcentos,
+} from '@/lib/entregas-export'
 
 type SellRequest = {
   id: string; created_at: string; name: string; phone: string
@@ -65,33 +70,6 @@ const FILTROS_ENTREGA: { id: FiltroEntrega; label: string }[] = [
   { id: 'rock_show', label: 'Rock Show' },
   { id: 'sin_atender', label: 'Sin atender' },
 ]
-
-function direccionTexto(d: EntregaAdmin['direccion']): string {
-  if (!d) return ''
-  const calle = [d.calle, d.numExt && `#${d.numExt}`, d.numInt && `int. ${d.numInt}`].filter(Boolean).join(' ')
-  const resto = [d.colonia, d.ciudad, d.estado, d.cp && `CP ${d.cp}`].filter(Boolean).join(', ')
-  return [calle, resto, d.referencia && `Ref: ${d.referencia}`].filter(Boolean).join(', ')
-}
-
-// Una celda para pegar en hoja de cálculo: sin saltos de línea ni tabuladores,
-// porque las piezas vienen en varias líneas y romperían la fila al pegar.
-function celda(v: unknown): string {
-  const t = String(v ?? '').replace(/\s*[\r\n]+\s*/g, ' · ').replace(/\t/g, ' ').trim()
-  // Texto que viene del formulario público: una celda que empieza con = + - @ se
-  // evalúa como fórmula al pegarla en Excel/Sheets. El apóstrofo la deja como texto.
-  const seguro = /^[=+\-@]/.test(t) ? `'${t}` : t
-  // Las comillas dobles pueden romper el análisis de la fila al pegar: se igualan a sencillas.
-  return seguro.replace(/"/g, "'")
-}
-
-// Minúsculas y sin acentos, para que "jose" encuentre "José".
-function sinAcentos(s: string): string {
-  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-}
-
-function fechaEntrega(iso: string): string {
-  return new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-}
 
 export default function AdminPage() {
   const { profile, loading } = useAuth()
@@ -228,51 +206,15 @@ export default function AdminPage() {
 
   async function copiarEntregas() {
     setAvisoEntregas(''); setTextoParaCopiar('')
-    const filas = [
-      ['Fecha', 'Cliente', 'Celular', 'Tipo', 'Piezas', 'Resta', 'Paquetería', 'Recibe', 'Dirección', 'Estado', 'Nombre enviado', 'Correo enviado'],
-      ...entregasVisibles.map(e => [
-        fechaEntrega(e.created_at),
-        e.contacto?.nombre,
-        e.contacto?.telefono,
-        e.tipo === 'envio' ? 'Envío' : 'Rock Show',
-        e.piezas,
-        e.resta,
-        e.paqueteria,
-        e.recibe,
-        direccionTexto(e.direccion),
-        e.status === 'conflicto' ? 'Conflicto' : e.status === 'atendida' ? 'Atendida' : 'Nueva',
-        e.nombre_enviado,
-        e.email_enviado,
-      ]),
-    ]
-    const texto = filas.map(f => f.map(celda).join('\t')).join('\n')
-    try {
-      await navigator.clipboard.writeText(texto)
-      setAvisoEntregas(`Copiadas ${entregasVisibles.length} ${entregasVisibles.length === 1 ? 'entrega' : 'entregas'}. Pégalas en tu hoja de cálculo.`)
-    } catch {
-      // Sin acceso al portapapeles (permiso negado o página sin https): se deja el texto a la vista.
-      setTextoParaCopiar(texto)
-      setAvisoEntregas('No se pudo copiar automáticamente. Selecciona el texto de abajo y cópialo a mano.')
-    }
+    const r = await copiarEntregasVisibles(entregasVisibles)
+    setAvisoEntregas(r.aviso); setTextoParaCopiar(r.textoManual)
   }
 
   async function bajarExcelEstafeta() {
     setBajandoExcel(true); setAvisoEntregas('')
-    try {
-      const ids = entregasVisibles.map(e => e.id).join(',')
-      const res = await fetch(`/api/admin/estafeta?scope=all&entregas=${encodeURIComponent(ids)}`)
-      if (!res.ok) { setAvisoEntregas('No se pudo generar el archivo de Estafeta.'); return }
-      const url = URL.createObjectURL(await res.blob())
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `estafeta_entregas_${new Date().toISOString().slice(0, 10)}.csv`
-      document.body.appendChild(a); a.click(); a.remove()
-      URL.revokeObjectURL(url)
-    } catch {
-      setAvisoEntregas('No se pudo conectar.')
-    } finally {
-      setBajandoExcel(false)
-    }
+    const r = await bajarExcelEstafetaVisibles(entregasVisibles)
+    setAvisoEntregas(r.aviso)
+    setBajandoExcel(false)
   }
 
   useEffect(() => {
