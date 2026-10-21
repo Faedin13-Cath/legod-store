@@ -126,6 +126,9 @@ export default function EntregasPage() {
   const [fotoFallo, setFotoFallo] = useState(false)
   const [numero, setNumero] = useState<number | null>(null)
   const [sinNumero, setSinNumero] = useState(false)
+  // Se congela al enviar: la captura del cliente tiene que decir de cuándo es,
+  // porque los números de bolsa se reciclan entre eventos.
+  const [enviadoEl, setEnviadoEl] = useState<Date | null>(null)
 
   const setD = (k: keyof typeof DIR_VACIA) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setDir(d => ({ ...d, [k]: e.target.value }))
@@ -284,6 +287,7 @@ export default function EntregasPage() {
       }
       setFotoFallo(Boolean(data.fotoFallo))
       setNumero(typeof data.numero === 'number' ? data.numero : null)
+      setEnviadoEl(new Date())
       setSinNumero(Boolean(data.sinNumero))
       irA(4)
     } catch {
@@ -584,8 +588,22 @@ export default function EntregasPage() {
                   <div style={{ fontSize: 52, fontWeight: 800, color: 'var(--accent)', lineHeight: 1.1, margin: '4px 0 6px' }}>
                     {numero}
                   </div>
-                  <div style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.5 }}>
-                    Es solo para este Rock Show: dilo al llegar y te entregamos tu bolsa. Toma captura de pantalla; en otro evento tendrás otro número.
+                  {/* Nombre y fecha van en la misma caja a propósito: el cliente
+                      toma captura y con eso se identifica. La fecha además delata
+                      una captura vieja, porque los números se reciclan. */}
+                  <div style={{
+                    fontSize: 15, color: 'var(--ink)', fontWeight: 650,
+                    borderTop: '1px solid var(--accent)', paddingTop: 10, marginTop: 4,
+                  }}>
+                    {nombre.trim() || contacto?.nombre || '—'}
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 2 }}>
+                    {(enviadoEl ?? new Date()).toLocaleDateString('es-MX', {
+                      day: 'numeric', month: 'long', year: 'numeric',
+                    })}
+                  </div>
+                  <div style={{ fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.5, marginTop: 10 }}>
+                    Toma captura de pantalla y muéstrala al llegar. Es solo para este Rock Show: en otro evento tendrás otro número.
                   </div>
                 </div>
               )}
