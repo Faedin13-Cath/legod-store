@@ -6,6 +6,7 @@ import Image from 'next/image'
 import Icon from '@/components/ui/Icon'
 import { CARRIERS_ENVIO, SHIPPING_PRICES } from '@/lib/shipping'
 import { normalizarTelefono, validarResta, type ContactoEnmascarado } from '@/lib/entregas'
+import { estadoCorte, type EstadoCorte, type TipoCorte } from '@/lib/entregas-cortes'
 
 const WHATSAPP = process.env.NEXT_PUBLIC_WHATSAPP ?? '525574777350'
 // Vercel rechaza cuerpos de ~4.5 MB; con el resto del formulario la foto debe quedar por debajo.
@@ -90,6 +91,22 @@ function Opcion({ activa, onClick, titulo, detalle, icono }: {
       </span>
       {activa && <span style={{ color: 'var(--accent)', display: 'flex' }}><Icon name="check" size={20} /></span>}
     </button>
+  )
+}
+
+// Aviso de corte bajo cada opción. Es solo informativo: nunca bloquea nada.
+function textoCorte(tipo: TipoCorte, c: EstadoCorte): string {
+  const que = tipo === 'envio' ? 'Los envíos' : 'Los pedidos para el Rock Show'
+  return c.dentro
+    ? `${que} de esta semana se arman el ${c.diaCierre} a las ${c.horaCierre} (hora de la Ciudad de México). Todavía vas a tiempo.`
+    : `${que} de esta semana ya se cerraron. No pasa nada: tu pedido entra en el siguiente, que se arma el ${c.fechaCierre}.`
+}
+
+function AvisoCorte({ tipo, c }: { tipo: TipoCorte; c: EstadoCorte }) {
+  return (
+    <p style={{ fontSize: 13, lineHeight: 1.5, margin: '-8px 4px 0', color: c.dentro ? 'var(--success)' : 'var(--ink-2)' }}>
+      {textoCorte(tipo, c)}
+    </p>
   )
 }
 
@@ -439,7 +456,9 @@ export default function EntregasPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', margin: 0 }}>¿Cómo recibes tus piezas?</h1>
               <Opcion activa={tipo === 'envio'} onClick={() => setTipo('envio')} icono="truck" titulo="Envío a domicilio" detalle="Te lo mandamos por paquetería" />
+              <AvisoCorte tipo="envio" c={estadoCorte('envio')} />
               <Opcion activa={tipo === 'rock_show'} onClick={() => setTipo('rock_show')} icono="gift" titulo="Lo recojo en el Rock Show" detalle="No necesitamos tu dirección" />
+              <AvisoCorte tipo="rock_show" c={estadoCorte('rock_show')} />
 
               {tipo === 'envio' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 6 }}>
@@ -607,6 +626,18 @@ export default function EntregasPage() {
                   </div>
                 </div>
               )}
+              {/* Con la hora en que envió, no con la de ahora: así el aviso no cambia si deja la pantalla abierta. */}
+              {tipo && (() => {
+                const c = estadoCorte(tipo, enviadoEl ?? new Date())
+                const cuando = tipo === 'envio' ? 'tu envío' : 'tu pedido del Rock Show'
+                return (
+                  <p style={{ marginTop: 20, fontSize: 14.5, lineHeight: 1.6, color: 'var(--ink-2)' }}>
+                    {c.dentro
+                      ? `¡Llegaste a tiempo! ${cuando[0].toUpperCase() + cuando.slice(1)} entra en el lote de esta semana, que se arma el ${c.fechaCierre}.`
+                      : `Esta semana ya cerramos, pero no te preocupes: ${cuando} queda en el lote de la siguiente semana, que se arma el ${c.fechaCierre}.`}
+                  </p>
+                )
+              })()}
               {sinNumero && (
                 <div style={{ marginTop: 20, textAlign: 'left', background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 12, padding: '12px 14px', fontSize: 14, color: '#92400E', lineHeight: 1.5 }}>
                   <strong>Tu pedido quedó registrado, pero sin número de bolsa.</strong>{' '}
