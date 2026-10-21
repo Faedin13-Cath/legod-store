@@ -119,6 +119,9 @@ export async function POST(req: NextRequest) {
   // Contacto reconocido y confirmado: su nombre guardado no se toca.
   const confirmado = Boolean(existente) && !noSoyYo
   if (!confirmado && !nombre) return bad('Falta tu nombre', 'falta_nombre')
+  // Registrarse exige correo: es por donde se avisa de los envíos. Al contacto
+  // ya confirmado no se le pide, porque no se está registrando de nuevo.
+  if (!confirmado && !email) return bad('Falta tu correo', 'falta_correo')
 
   if (usarGuardada) {
     // Sin contacto, o con una dirección incompleta, no hay nada que reutilizar: jamás se
