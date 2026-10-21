@@ -65,7 +65,7 @@ describe('POST /api/entregas: usarGuardada', () => {
   })
 
   it('sin contacto: 400 sin_direccion_guardada y no se escribe nada ni se sube la foto', async () => {
-    const r = await req({ tipo: 'envio', paqueteria: 'Estafeta', usarGuardada: 'true', nombre: 'Ana' }, true)
+    const r = await req({ tipo: 'envio', paqueteria: 'Estafeta', usarGuardada: 'true', nombre: 'Ana', email: 'ana@example.com' }, true)
     expect(r.status).toBe(400)
     expect((await r.json()).codigo).toBe('sin_direccion_guardada')
     expect(db.writes).toEqual([])
@@ -83,7 +83,7 @@ describe('POST /api/entregas: usarGuardada', () => {
 
   it('con "no soy yo" no usa la dirección de otra persona', async () => {
     db.contacto = GUARDADA
-    const r = await req({ tipo: 'envio', paqueteria: 'Estafeta', usarGuardada: 'true', noSoyYo: 'true', nombre: 'Otro' })
+    const r = await req({ tipo: 'envio', paqueteria: 'Estafeta', usarGuardada: 'true', noSoyYo: 'true', nombre: 'Otro', email: 'otro@example.com' })
     expect(r.status).toBe(400)
     expect(db.writes).toEqual([])
   })
@@ -122,17 +122,24 @@ describe('POST /api/entregas: nombre', () => {
     expect('nombre' in cambios).toBe(false)
   })
 
-  it('cliente nuevo sin nombre: 400 falta_nombre; con nombre se guarda', async () => {
+  it('cliente nuevo sin nombre: 400 falta_nombre; con nombre y correo se guarda', async () => {
     const r = await req({ tipo: 'rock_show' })
     expect(r.status).toBe(400)
     expect((await r.json()).codigo).toBe('falta_nombre')
-    expect((await req({ tipo: 'rock_show', nombre: 'Ana' })).status).toBe(200)
+    expect((await req({ tipo: 'rock_show', nombre: 'Ana', email: 'ana@example.com' })).status).toBe(200)
+  })
+
+  it('cliente nuevo sin correo: 400 falta_correo y no se escribe nada', async () => {
+    const r = await req({ tipo: 'rock_show', nombre: 'Ana' })
+    expect(r.status).toBe(400)
+    expect((await r.json()).codigo).toBe('falta_correo')
+    expect(db.writes).toEqual([])
   })
 
   it('"no soy yo" exige nombre y deja la entrega en conflicto', async () => {
     db.contacto = GUARDADA
     expect((await req({ tipo: 'rock_show', noSoyYo: 'true' })).status).toBe(400)
-    expect((await req({ tipo: 'rock_show', noSoyYo: 'true', nombre: 'Otro' })).status).toBe(200)
+    expect((await req({ tipo: 'rock_show', noSoyYo: 'true', nombre: 'Otro', email: 'otro@example.com' })).status).toBe(200)
     expect(entrega()?.status).toBe('conflicto')
     expect(escriturasContacto()).toEqual([])
   })
