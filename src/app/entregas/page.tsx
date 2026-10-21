@@ -134,6 +134,7 @@ export default function EntregasPage() {
   const [correoCodigo, setCorreoCodigo] = useState('')
   const [volverCodigo, setVolverCodigo] = useState<2 | 3>(2)
   const [reenvioDesde, setReenvioDesde] = useState(0) // cuándo se mandó el último; 0 = ya se puede pedir otro
+  const [restantes, setRestantes] = useState<number | null>(null) // intentos que le quedan al código escrito
   const [ahora, setAhora] = useState(() => Date.now())
 
   // Paso 2
@@ -228,7 +229,7 @@ export default function EntregasPage() {
       if (data?.motivo === 'sin_correo') { setFase('sin_correo'); irA(1); return }
       if (!res.ok || !data?.enviado) { falla(data?.error ?? 'No pudimos mandar el código. Intenta de nuevo en un momento.'); return }
       const ahoraMs = Date.now()
-      setCorreoCodigo(data.correo ?? ''); setCodigo(''); setVolverCodigo(volver)
+      setCorreoCodigo(data.correo ?? ''); setCodigo(''); setRestantes(null); setVolverCodigo(volver)
       setReenvioDesde(ahoraMs); setAhora(ahoraMs)
       setFase('codigo'); irA(1)
     } catch {
@@ -238,16 +239,41 @@ export default function EntregasPage() {
     }
   }
 
-  function confirmarCodigo() {
+  // El código se revisa aquí mismo, no hasta el final del formulario: así un dedazo se
+  // corrige de inmediato. Revisar no lo gasta (el envío lo vuelve a revisar y ahí sí),
+  // pero un código malo sí cuenta contra los 5 intentos.
+  async function confirmarCodigo() {
     setError('')
     if (!/^\d{6}$/.test(codigo)) { falla('El código son 6 números. Revisa tu correo.'); return }
-    // Aún no se sabe si es el bueno: el servidor lo revisa al enviar. Si no lo es, regresa aquí.
-    setCambiarDir(true); setFase('conocido')
-    irA(volverCodigo)
+    setBusy(true)
+    try {
+      const res = await fetch('/api/entregas/codigo/verificar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telefono, codigo }),
+      })
+      if (res.status === 429) { falla('Has intentado muchas veces. Espera un minuto y vuelve a intentar.'); return }
+      const data = await res.json().catch(() => null) as { valido?: boolean; restantes?: number } | null
+      if (!res.ok || !data) { falla('No pudimos revisar el código. Intenta de nuevo en un momento.'); return }
+      if (!data.valido) {
+        const n = data.restantes ?? 0
+        setCodigo(''); setRestantes(n)
+        falla(n > 0
+          ? `Ese código no es el correcto. Revisa tu correo y vuelve a escribirlo. Te ${n === 1 ? 'queda 1 intento' : `quedan ${n} intentos`} con este código.`
+          : 'Ese código ya no sirve: se acabaron los intentos o venció. Pide uno nuevo, o escríbenos por WhatsApp y te ayudamos.')
+        return
+      }
+      setRestantes(null)
+      setCambiarDir(true); setFase('conocido')
+      irA(volverCodigo)
+    } catch {
+      falla('No hay conexión. Revisa tu internet e intenta de nuevo.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   function cancelarCodigo() {
-    setCodigo(''); setFase('conocido'); setError('')
+    setCodigo(''); setRestantes(null); setFase('conocido'); setError('')
   }
 
   function cambiarNumero() {
@@ -350,7 +376,7 @@ export default function EntregasPage() {
       }
       if (data.codigo === 'codigo_requerido' || data.codigo === 'codigo_invalido') {
         // Código faltante, malo, vencido o ya usado: se vuelve a la pantalla del código con todo lo demás intacto.
-        setCodigo(''); setVolverCodigo(3); setReenvioDesde(0); setFase('codigo')
+        setCodigo(''); setRestantes(0); setVolverCodigo(3); setReenvioDesde(0); setFase('codigo')
         irA(1); falla(data.codigo === 'codigo_requerido'
           ? 'Necesitamos el código que te mandamos por correo. Pide uno nuevo.'
           : 'Ese código no sirvió: pudo vencer, estar mal escrito o ya se usó. Pide uno nuevo.')
@@ -487,7 +513,7 @@ export default function EntregasPage() {
 
           {/* ───────── Paso 1: código para cambiar la dirección guardada ───────── */}
           {paso === 1 && fase === 'codigo' && (
-            <form onSubmit={e => { e.preventDefault(); confirmarCodigo() }} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <form onSubmit={e => { e.preventDefault(); void confirmarCodigo() }} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
                 <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', margin: '0 0 6px' }}>Revisa tu correo</h1>
                 <p style={{ fontSize: 14, color: 'var(--ink-2)', margin: 0, lineHeight: 1.5 }}>
@@ -502,13 +528,21 @@ export default function EntregasPage() {
                 placeholder="000000" aria-label="Código de 6 números"
                 className="input" style={{ ...inputStyle, fontSize: 28, minHeight: 64, textAlign: 'center', letterSpacing: '0.3em' }}
               />
-              <button type="submit" className="btn btn-primary" style={btn}>Confirmar código</button>
+              <button type="submit" disabled={busy} className="btn btn-primary" style={btn}>{busy ? 'Revisando…' : 'Confirmar código'}</button>
               <button
-                type="button" onClick={() => void pedirCodigo(volverCodigo)} disabled={busy || faltaReenvio > 0}
+                type="button" onClick={() => void pedirCodigo(volverCodigo)} disabled={busy || (faltaReenvio > 0 && restantes !== 0)}
                 className="btn btn-secondary" style={btn}
               >
-                {busy ? 'Mandando…' : faltaReenvio > 0 ? `Pedir otro código en ${faltaReenvio} s` : 'Pedir otro código'}
+                {busy ? 'Mandando…' : faltaReenvio > 0 && restantes !== 0 ? `Pedir otro código en ${faltaReenvio} s` : 'Pedir otro código'}
               </button>
+              {restantes === 0 && (
+                <a
+                  href={`https://wa.me/${WHATSAPP}?text=${encodeURIComponent('Hola, mi código de verificación ya no sirve y quiero cambiar mi dirección de entrega.')}`}
+                  target="_blank" rel="noreferrer" className="btn btn-secondary" style={{ ...btn, textDecoration: 'none' }}
+                >
+                  Escribir por WhatsApp
+                </a>
+              )}
               <button type="button" onClick={cancelarCodigo} style={enlaceStyle}>Atrás</button>
             </form>
           )}
