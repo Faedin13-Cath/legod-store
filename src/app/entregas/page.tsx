@@ -532,7 +532,10 @@ export default function EntregasPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 20, fontWeight: 600, color: 'var(--ink)' }}>$</span>
                       <input
-                        type="text" inputMode="decimal" value={monto} onChange={e => setMonto(e.target.value)}
+                        /* Solo números y un punto decimal: lo que no sea eso ni
+                           se alcanza a escribir. */
+                        type="text" inputMode="decimal" value={monto}
+                        onChange={e => setMonto(e.target.value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1'))}
                         placeholder="Cuánto te falta, ej. 350" aria-label="Cantidad que te falta pagar"
                         className="input" style={inputStyle}
                       />
