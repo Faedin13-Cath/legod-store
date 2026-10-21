@@ -33,7 +33,8 @@ type Entrega = {
   contacto: Contacto | null
 }
 
-type Filtro = 'pendientes' | 'entregadas' | 'envios'
+type Seccion = 'rock' | 'envios'
+type FiltroRock = 'pendientes' | 'entregadas'
 
 export default function BolsasPage() {
   const { profile, loading } = useAuth()
@@ -43,7 +44,8 @@ export default function BolsasPage() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const [aviso, setAviso] = useState('')
-  const [filtro, setFiltro] = useState<Filtro>('pendientes')
+  const [seccion, setSeccion] = useState<Seccion>('rock')
+  const [filtroRock, setFiltroRock] = useState<FiltroRock>('pendientes')
   const [busca, setBusca] = useState('')
   const [marcando, setMarcando] = useState<string | null>(null)
   const [avisoExport, setAvisoExport] = useState('')
@@ -114,9 +116,9 @@ export default function BolsasPage() {
 
     return entregas
       .filter(e => {
-        if (filtro === 'envios') return e.tipo === 'envio'
+        if (seccion === 'envios') return e.tipo === 'envio'
         if (e.tipo !== 'rock_show') return false
-        return filtro === 'entregadas' ? e.status === 'atendida' : e.status !== 'atendida'
+        return filtroRock === 'entregadas' ? e.status === 'atendida' : e.status !== 'atendida'
       })
       .filter(e => {
         if (!q) return true
@@ -125,11 +127,11 @@ export default function BolsasPage() {
         return (nom && nombres.includes(nom)) || (tel.length >= 3 && telefono.includes(tel))
       })
       .sort((a, b) =>
-        filtro === 'pendientes'
+        seccion === 'rock' && filtroRock === 'pendientes'
           ? (a.numero ?? 9999) - (b.numero ?? 9999)
           : b.created_at.localeCompare(a.created_at)
       )
-  }, [entregas, filtro, busca])
+  }, [entregas, seccion, filtroRock, busca])
 
   // Los dos botones de exportar trabajan sobre lo que se ve, en cualquier filtro.
   async function copiar() {
@@ -168,43 +170,67 @@ export default function BolsasPage() {
         position: 'sticky', top: 0, zIndex: 10, background: 'var(--paper)',
         borderBottom: '1px solid var(--line)', padding: '18px 16px 12px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', margin: 0 }}>Entregas</h1>
-          <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>{pendientes} bolsa{pendientes === 1 ? '' : 's'} por entregar</span>
+        {/* Dos mundos distintos: las bolsas que se entregan en mano y los
+            paquetes que salen por paquetería. Cada uno con lo suyo adentro. */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+          {([['rock', 'Entregas Rock'], ['envios', 'Envíos']] as const).map(([s, etiqueta]) => {
+            const activa = seccion === s
+            return (
+              <button
+                key={s} type="button" onClick={() => setSeccion(s)}
+                style={{
+                  flex: 1, minHeight: 46, borderRadius: 12, cursor: 'pointer', fontSize: 14,
+                  fontWeight: activa ? 700 : 500,
+                  background: activa ? 'var(--accent)' : 'transparent',
+                  color: activa ? '#fff' : 'var(--ink-2)',
+                  border: `1px solid ${activa ? 'var(--accent)' : 'var(--line)'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                }}
+              >
+                <Icon name={s === 'rock' ? 'package' : 'truck'} size={16} />
+                {etiqueta}
+              </button>
+            )
+          })}
         </div>
 
         <input
           type="search" value={busca} onChange={e => setBusca(e.target.value)}
           placeholder="Buscar por nombre o celular…" aria-label="Buscar por nombre o celular"
-          className="input" style={{ width: '100%', marginBottom: 10 }}
+          className="input" style={{ width: '100%' }}
         />
 
-        <div style={{ display: 'flex', gap: 6 }}>
-          {([['pendientes', 'Por entregar'], ['entregadas', 'Entregadas'], ['envios', 'Envíos']] as const).map(([f, etiqueta]) => (
-            <button
-              key={f} type="button" onClick={() => setFiltro(f)}
-              style={{
-                flex: 1, minHeight: 44, borderRadius: 999, cursor: 'pointer', fontSize: 13,
-                fontWeight: filtro === f ? 650 : 500,
-                background: filtro === f ? 'var(--accent)' : 'var(--paper)',
-                color: filtro === f ? '#fff' : 'var(--ink-2)',
-                border: `1px solid ${filtro === f ? 'var(--accent)' : 'var(--line)'}`,
-              }}
-            >{etiqueta}</button>
-          ))}
-        </div>
-
-        {/* Exportar: lo que se ve en pantalla. Apilados en celular angosto. */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-          <button
-            type="button" onClick={copiar} disabled={visibles.length === 0}
-            className="btn btn-secondary" style={{ flex: '1 1 150px', minHeight: 44, fontSize: 13 }}
-          >Copiar ({visibles.length})</button>
-          <button
-            type="button" onClick={bajarExcel} disabled={visibles.length === 0 || bajandoExcel}
-            className="btn btn-secondary" style={{ flex: '1 1 150px', minHeight: 44, fontSize: 13 }}
-          >{bajandoExcel ? 'Generando…' : 'Bajar a Excel (Estafeta)'}</button>
-        </div>
+        {seccion === 'rock' ? (
+          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+            {([['pendientes', 'Por entregar'], ['entregadas', 'Entregadas']] as const).map(([f, etiqueta]) => (
+              <button
+                key={f} type="button" onClick={() => setFiltroRock(f)}
+                style={{
+                  flex: 1, minHeight: 40, borderRadius: 999, cursor: 'pointer', fontSize: 13,
+                  fontWeight: filtroRock === f ? 650 : 500,
+                  background: filtroRock === f ? 'var(--accent-soft)' : 'transparent',
+                  color: filtroRock === f ? 'var(--accent)' : 'var(--ink-3)',
+                  border: `1px solid ${filtroRock === f ? 'var(--accent-soft)' : 'var(--line)'}`,
+                }}
+              >{etiqueta}</button>
+            ))}
+          </div>
+        ) : (
+          /* Exportar: siempre sobre lo que se ve en pantalla. */
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, alignItems: 'center' }}>
+            <span style={{ fontSize: 13, color: 'var(--ink-3)', flex: 1 }}>
+              {visibles.length} envío{visibles.length === 1 ? '' : 's'}
+            </span>
+            <BotonIcono
+              icono="copy" titulo="Copiar para pegar en una hoja"
+              onClick={copiar} disabled={visibles.length === 0}
+            />
+            <BotonIcono
+              icono="download" titulo="Bajar a Excel para las guías de Estafeta"
+              onClick={bajarExcel} disabled={visibles.length === 0 || bajandoExcel} ocupado={bajandoExcel}
+            />
+          </div>
+        )}
       </div>
 
       {avisoExport && (
@@ -324,6 +350,27 @@ function Fila({ e, marcando, onMarcar }: {
         {marcando ? '…' : atendida ? 'Regresar' : 'Entregado'}
       </button>
     </div>
+  )
+}
+
+/** Botón de solo icono: en el encabezado el espacio es poco y el título lo explica. */
+function BotonIcono({ icono, titulo, onClick, disabled, ocupado }: {
+  icono: string; titulo: string; onClick: () => void; disabled?: boolean; ocupado?: boolean
+}) {
+  return (
+    <button
+      type="button" onClick={onClick} disabled={disabled}
+      title={titulo} aria-label={titulo}
+      style={{
+        width: 44, height: 44, borderRadius: 11, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'var(--paper)', border: '1px solid var(--line)',
+        color: disabled ? 'var(--ink-3)' : 'var(--ink)',
+        cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      <Icon name={ocupado ? 'clock' : icono} size={18} />
+    </button>
   )
 }
 
