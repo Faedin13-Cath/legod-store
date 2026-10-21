@@ -159,16 +159,18 @@ export default function BolsasPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
+    <div style={{
+      background: 'var(--paper)', border: '1px solid var(--line)',
+      borderRadius: 16, overflow: 'hidden',
+    }}>
       {/* Encabezado pegado: en el evento se busca con el pulgar sin subir */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 10, background: 'var(--paper)',
-        borderBottom: '1px solid var(--line)', padding: '14px 16px 12px',
+        borderBottom: '1px solid var(--line)', padding: '18px 16px 12px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-          <h1 style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)', margin: 0 }}>Bolsas del Rock Show</h1>
-          <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>{pendientes} por entregar</span>
-          <Link href="/admin" style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--accent)', textDecoration: 'none' }}>Panel</Link>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', margin: 0 }}>Entregas</h1>
+          <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>{pendientes} bolsa{pendientes === 1 ? '' : 's'} por entregar</span>
         </div>
 
         <input
