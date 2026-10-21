@@ -40,15 +40,31 @@ export default function BolsasPage() {
   const [entregas, setEntregas] = useState<Entrega[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
+  const [aviso, setAviso] = useState('')
   const [filtro, setFiltro] = useState<Filtro>('pendientes')
   const [busca, setBusca] = useState('')
   const [marcando, setMarcando] = useState<string | null>(null)
 
+  // Dos lecturas: TODAS las pendientes (sin tope: retienen su número aunque sean
+  // viejas) y las más recientes, que aportan las entregadas. Se mezclan por id.
+  async function leer(): Promise<Entrega[]> {
+    const [pend, rec] = await Promise.all([
+      fetch('/api/admin/entregas?pendientes=1'),
+      fetch('/api/admin/entregas').catch(() => null),
+    ])
+    if (!pend.ok) throw new Error(String(pend.status))
+    const lista: Entrega[] = (await pend.json()).entregas ?? []
+    if (rec?.ok) {
+      const vistos = new Set(lista.map(x => x.id))
+      for (const x of ((await rec.json()).entregas ?? []) as Entrega[]) if (!vistos.has(x.id)) lista.push(x)
+    }
+    return lista
+  }
+
   useEffect(() => {
     if (!esDueno) return
-    fetch('/api/admin/entregas')
-      .then(r => r.ok ? r.json() : Promise.reject(new Error(String(r.status))))
-      .then(d => setEntregas(d.entregas ?? []))
+    leer()
+      .then(setEntregas)
       .catch(() => setError('No se pudieron cargar las entregas.'))
       .finally(() => setCargando(false))
   }, [esDueno])
@@ -61,6 +77,8 @@ export default function BolsasPage() {
       )
       if (!ok) return
     }
+    setError('')
+    setAviso('')
     setMarcando(e.id)
     try {
       const res = await fetch('/api/admin/entregas', {
@@ -68,11 +86,15 @@ export default function BolsasPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: e.id, status: nuevo }),
       })
-      if (!res.ok) { setError('No se pudo actualizar. Intenta de nuevo.'); return }
-      // El número se libera al atender y se reasigna al regresar a pendiente,
+      const resp = await res.json().catch(() => null) as { error?: string; numero?: number | null; renumerado?: boolean } | null
+      if (!res.ok) { setError(resp?.error ?? 'No se pudo actualizar. Intenta de nuevo.'); return }
+      if (resp?.renumerado && resp.numero != null) {
+        const quien = e.contacto?.nombre ?? e.nombre_enviado ?? 'este cliente'
+        setAviso('Su número anterior ya lo tiene otra bolsa. Vuelve a marcar la bolsa de ' + quien + ' con el ' + resp.numero + '.')
+      }
+      // El número se libera al atender y puede reasignarse al regresar a pendiente,
       // así que se vuelve a leer la lista en vez de adivinar el estado nuevo.
-      const r = await fetch('/api/admin/entregas')
-      if (r.ok) setEntregas((await r.json()).entregas ?? [])
+      try { setEntregas(await leer()) } catch { /* se queda la lista anterior */ }
     } catch {
       setError('No hay conexión.')
     } finally {
@@ -141,7 +163,7 @@ export default function BolsasPage() {
             <button
               key={f} type="button" onClick={() => setFiltro(f)}
               style={{
-                flex: 1, minHeight: 40, borderRadius: 999, cursor: 'pointer', fontSize: 13,
+                flex: 1, minHeight: 44, borderRadius: 999, cursor: 'pointer', fontSize: 13,
                 fontWeight: filtro === f ? 650 : 500,
                 background: filtro === f ? 'var(--accent)' : 'var(--paper)',
                 color: filtro === f ? '#fff' : 'var(--ink-2)',
@@ -155,6 +177,12 @@ export default function BolsasPage() {
       {error && (
         <div style={{ margin: 16, background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#DC2626' }}>
           {error}
+        </div>
+      )}
+
+      {aviso && (
+        <div role="status" style={{ margin: 16, background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 10, padding: '10px 14px', fontSize: 14, fontWeight: 600, color: '#92400E', lineHeight: 1.5 }}>
+          {aviso}
         </div>
       )}
 
@@ -204,6 +232,11 @@ function Fila({ e, marcando, onMarcar }: {
               DEBE ${e.resta.toLocaleString('es-MX')}
             </span>
           )}
+          {e.tipo === 'rock_show' && e.numero == null && (
+            <span style={{ marginLeft: 7, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: '#FEF3C7', color: '#92400E' }}>
+              SIN NÚMERO
+            </span>
+          )}
           {e.status === 'conflicto' && (
             <span style={{ marginLeft: 7, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: '#FEF3C7', color: '#92400E' }}>
               CONFLICTO
@@ -216,7 +249,7 @@ function Fila({ e, marcando, onMarcar }: {
         </div>
 
         <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.6, marginTop: 6 }}>
-          {piezas.map((p, i) => <div key={i}>{p}</div>)}
+          {piezas.map((p, i) => <div key={i} style={{ overflowWrap: 'anywhere' }}>{p}</div>)}
         </div>
 
         {e.tipo === 'envio' && dir && (

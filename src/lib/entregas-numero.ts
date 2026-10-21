@@ -14,15 +14,28 @@ type Admin = ReturnType<typeof createAdminClient>
  * (`numero is not null and status <> 'atendida'`), así que los dos no pueden
  * discrepar sobre qué número está ocupado.
  */
-export async function numeroLibre(supabase: Admin): Promise<number> {
-  const { data } = await supabase
+export async function numerosOcupados(supabase: Admin): Promise<number[] | null> {
+  const { data, error } = await supabase
     .from('entregas')
     .select('numero')
     .not('numero', 'is', null)
     .neq('status', 'atendida')
     .order('numero')
 
-  return primerHueco((data ?? []).map(f => f.numero as number))
+  if (error || !data) {
+    console.error('[entregas-numero] leer números ocupados', error?.message)
+    return null
+  }
+  return data.map(f => f.numero as number)
+}
+
+/**
+ * El número libre más chico, o `null` si no se pudo leer la lista de ocupados.
+ * `null` NO significa "el 1 está libre": quien llama debe distinguirlo.
+ */
+export async function numeroLibre(supabase: Admin): Promise<number | null> {
+  const ocupados = await numerosOcupados(supabase)
+  return ocupados === null ? null : primerHueco(ocupados)
 }
 
 /** El entero positivo más chico que no está en la lista ya ordenada. */

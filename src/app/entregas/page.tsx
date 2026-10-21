@@ -125,6 +125,7 @@ export default function EntregasPage() {
 
   const [fotoFallo, setFotoFallo] = useState(false)
   const [numero, setNumero] = useState<number | null>(null)
+  const [sinNumero, setSinNumero] = useState(false)
 
   const setD = (k: keyof typeof DIR_VACIA) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setDir(d => ({ ...d, [k]: e.target.value }))
@@ -252,7 +253,7 @@ export default function EntregasPage() {
     setBusy(true)
     try {
       const res = await fetch('/api/entregas', { method: 'POST', body: fd })
-      const data = await res.json().catch(() => null) as { ok?: boolean; fotoFallo?: boolean; numero?: number; error?: string; codigo?: string } | null
+      const data = await res.json().catch(() => null) as { ok?: boolean; fotoFallo?: boolean; numero?: number; sinNumero?: boolean; error?: string; codigo?: string } | null
       if (!data) {
         // Sin JSON: no contestó nuestro servidor, sino el hosting (cuerpo demasiado grande) o la red.
         if (res.ok) falla('No pudimos confirmar que se guardara. Antes de volver a enviar, escríbenos por WhatsApp para no duplicar tu entrega.')
@@ -283,6 +284,7 @@ export default function EntregasPage() {
       }
       setFotoFallo(Boolean(data.fotoFallo))
       setNumero(typeof data.numero === 'number' ? data.numero : null)
+      setSinNumero(Boolean(data.sinNumero))
       irA(4)
     } catch {
       falla('No hay conexión. Revisa tu internet e intenta de nuevo; tus datos siguen aquí.')
@@ -577,14 +579,20 @@ export default function EntregasPage() {
                   borderRadius: 16, padding: '18px 16px',
                 }}>
                   <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent)' }}>
-                    Tu número de pedido
+                    Tu número de bolsa
                   </div>
                   <div style={{ fontSize: 52, fontWeight: 800, color: 'var(--accent)', lineHeight: 1.1, margin: '4px 0 6px' }}>
                     {numero}
                   </div>
                   <div style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.5 }}>
-                    Dilo al llegar al Rock Show y te entregamos tu bolsa. Toma captura de pantalla.
+                    Es solo para este Rock Show: dilo al llegar y te entregamos tu bolsa. Toma captura de pantalla; en otro evento tendrás otro número.
                   </div>
+                </div>
+              )}
+              {sinNumero && (
+                <div style={{ marginTop: 20, textAlign: 'left', background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 12, padding: '12px 14px', fontSize: 14, color: '#92400E', lineHeight: 1.5 }}>
+                  <strong>Tu pedido quedó registrado, pero sin número de bolsa.</strong>{' '}
+                  Al llegar al Rock Show da tu nombre y te buscamos.
                 </div>
               )}
               {fotoFallo && (

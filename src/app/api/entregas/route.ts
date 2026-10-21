@@ -248,6 +248,7 @@ export async function POST(req: NextRequest) {
   // siguiente hueco en vez de fallarle al cliente.
   for (let intento = 0; intento < MAX_INTENTOS_NUMERO; intento++) {
     const numero = await numeroLibre(supabase)
+    if (numero === null) break // no se pudo leer: reintentar no ayuda ni se adivina el 1
     const { error } = await supabase.from('entregas').insert({ ...fila, numero })
     if (!error) {
       return NextResponse.json({ ok: true, numero, ...(fotoFallo ? { fotoFallo: true } : {}) })
@@ -259,13 +260,14 @@ export async function POST(req: NextRequest) {
     // 23505: otro pedido ganó ese número entre la consulta y el insert.
   }
 
-  // Tantas carreras seguidas no pasan en la práctica; si pasaran, vale más
-  // guardar la entrega sin número que perderla.
+  // Sin poder leer los números, o tras tantas carreras seguidas (no pasa en la
+  // práctica), vale más guardar la entrega sin número que perderla. No es
+  // invisible: `sinNumero` llega al cliente y /bolsas lo marca.
   const { error: errSinNumero } = await supabase.from('entregas').insert(fila)
   if (errSinNumero) {
     console.error('[entregas] guardar entrega sin número', errSinNumero.message)
     return fallo()
   }
-  console.error('[entregas] no se consiguió número de bolsa tras', MAX_INTENTOS_NUMERO, 'intentos')
-  return NextResponse.json(fotoFallo ? { ok: true, fotoFallo: true } : { ok: true })
+  console.error('[entregas] entrega de Rock Show guardada sin número de bolsa')
+  return NextResponse.json({ ok: true, sinNumero: true, ...(fotoFallo ? { fotoFallo: true } : {}) })
 }
