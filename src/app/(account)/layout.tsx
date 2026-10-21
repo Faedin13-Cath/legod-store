@@ -66,7 +66,10 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
   const displayHandle = profile?.handle || 'usuario'
   const isOwner = !!profile?.is_admin
   const grupos = isOwner
-    ? [...GRUPOS, { titulo: 'Tienda', items: [{ href: '/admin', icon: 'settings', label: 'Administración' }] }]
+    ? [...GRUPOS, { titulo: 'Tienda', items: [
+        { href: '/bolsas', icon: 'package', label: 'Entregas' },
+        { href: '/admin',  icon: 'settings', label: 'Administración' },
+      ] }]
     : GRUPOS
   const navItems = grupos.flatMap(g => g.items)
   const pts  = profile?.points_total ?? 0
