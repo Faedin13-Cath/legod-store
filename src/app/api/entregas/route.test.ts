@@ -4,7 +4,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // qué se escribe (y qué NO) según el contacto guardado y las banderas del formulario.
 
 type Row = Record<string, unknown> | null
-const db = { contacto: null as Row, writes: [] as { t: string; op: string; v: unknown }[], uploads: 0 }
+const db = {
+  contacto: null as Row,
+  writes: [] as { t: string; op: string; v: unknown }[],
+  uploads: 0,
+  // Números de bolsa ya ocupados, para probar que se da el hueco más chico.
+  numerosOcupados: [] as number[],
+  // La lectura de números ocupados falla (p. ej. caché de esquema de PostgREST).
+  numerosFallan: false,
+  // Errores que devuelve, en orden, cada insert en `entregas` (null = éxito).
+  erroresInsert: [] as ({ code: string; message: string } | null)[],
+  lecturasNumero: 0,
+}
 
 vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({
@@ -16,12 +27,23 @@ vi.mock('@/lib/supabase/admin', () => ({
       }),
     },
     from: (t: string) => ({
-      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: db.contacto, error: null }) }) }),
+      select: () => ({
+        // Contacto por teléfono.
+        eq: () => ({ maybeSingle: async () => ({ data: db.contacto, error: null }) }),
+        // Números de bolsa ocupados (numeroLibre).
+        not: () => ({ neq: () => ({ order: async () => {
+          db.lecturasNumero++
+          return db.numerosFallan
+            ? { data: null, error: { message: 'schema cache' } }
+            : { data: db.numerosOcupados.map(n => ({ numero: n })), error: null }
+        } }) }),
+      }),
       insert: (v: unknown) => {
         db.writes.push({ t, op: 'insert', v })
+        const err = t === 'entregas' ? (db.erroresInsert.shift() ?? null) : null
         return {
           select: () => ({ single: async () => ({ data: { id: 'nuevo' }, error: null }) }),
-          then: (r: (x: unknown) => void) => r({ error: null }),
+          then: (r: (x: unknown) => void) => r({ error: err }),
         }
       },
       update: (v: unknown) => { db.writes.push({ t, op: 'update', v }); return { eq: async () => ({ error: null }) } },
@@ -52,7 +74,11 @@ function req(campos: Record<string, string>, foto = false) {
 const entrega = () => db.writes.find(w => w.t === 'entregas')?.v as Record<string, unknown> | undefined
 const escriturasContacto = () => db.writes.filter(w => w.t === 'entrega_contactos')
 
-beforeEach(() => { db.contacto = null; db.writes = []; db.uploads = 0 })
+beforeEach(() => {
+  db.contacto = null; db.writes = []; db.uploads = 0; db.numerosOcupados = []
+  db.numerosFallan = false; db.erroresInsert = []; db.lecturasNumero = 0
+  vi.spyOn(console, 'error').mockImplementation(() => {})
+})
 
 describe('POST /api/entregas: usarGuardada', () => {
   it('arma el snapshot con la dirección guardada y no toca la dirección del contacto', async () => {
@@ -142,5 +168,78 @@ describe('POST /api/entregas: nombre', () => {
     expect((await req({ tipo: 'rock_show', noSoyYo: 'true', nombre: 'Otro', email: 'otro@example.com' })).status).toBe(200)
     expect(entrega()?.status).toBe('conflicto')
     expect(escriturasContacto()).toEqual([])
+  })
+})
+
+describe('POST /api/entregas: número de bolsa', () => {
+  const numeroGuardado = () =>
+    (db.writes.find(w => w.t === 'entregas')?.v as { numero?: number } | undefined)?.numero
+
+  it('Rock Show recibe el hueco más chico y se lo devuelve al cliente', async () => {
+    db.numerosOcupados = [1, 2, 4]
+    const r = await req({ tipo: 'rock_show', nombre: 'Ana', email: 'ana@example.com' })
+    expect(r.status).toBe(200)
+    expect((await r.json()).numero).toBe(3)
+    expect(numeroGuardado()).toBe(3)
+  })
+
+  it('los envíos no llevan número', async () => {
+    db.contacto = GUARDADA
+    const r = await req({ tipo: 'envio', paqueteria: 'Estafeta', usarGuardada: 'true' })
+    expect(r.status).toBe(200)
+    expect((await r.json()).numero).toBeUndefined()
+    expect(numeroGuardado()).toBeUndefined()
+  })
+})
+
+describe('POST /api/entregas: carreras y respaldo del número', () => {
+  const inserciones = () => db.writes.filter(w => w.t === 'entregas').map(w => w.v as { numero?: number })
+  const nuevo = { tipo: 'rock_show', nombre: 'Ana', email: 'ana@example.com' }
+  const choque = { code: '23505', message: 'duplicate key' }
+
+  it('ante 23505 vuelve a leer y reintenta; entrega el número del segundo intento', async () => {
+    db.numerosOcupados = [1, 2]
+    db.erroresInsert = [choque]
+    const r = await req(nuevo)
+    expect(r.status).toBe(200)
+    expect(inserciones()).toHaveLength(2)
+    expect(db.lecturasNumero).toBe(2)
+    expect((await r.json()).numero).toBe(3)
+  })
+
+  it('un error que no es 23505 falla con 500 sin reintentar', async () => {
+    db.erroresInsert = [{ code: '42P01', message: 'boom' }]
+    const r = await req(nuevo)
+    expect(r.status).toBe(500)
+    expect(inserciones()).toHaveLength(1)
+  })
+
+  it('5 choques seguidos: guarda sin número y lo avisa con sinNumero', async () => {
+    db.erroresInsert = [choque, choque, choque, choque, choque]
+    const r = await req(nuevo)
+    const cuerpo = await r.json()
+    expect(r.status).toBe(200)
+    expect(cuerpo.sinNumero).toBe(true)
+    expect(cuerpo.numero).toBeUndefined()
+    const filas = inserciones()
+    expect(filas).toHaveLength(6)
+    expect(filas[5].numero).toBeUndefined()
+  })
+
+  it('si no se pueden leer los números: no gasta reintentos, guarda sin número y avisa', async () => {
+    db.numerosFallan = true
+    const r = await req(nuevo)
+    const cuerpo = await r.json()
+    expect(r.status).toBe(200)
+    expect(cuerpo.sinNumero).toBe(true)
+    expect(db.lecturasNumero).toBe(1)
+    const filas = inserciones()
+    expect(filas).toHaveLength(1)
+    expect(filas[0].numero).toBeUndefined()
+  })
+
+  it('con número normal no marca sinNumero', async () => {
+    const r = await req(nuevo)
+    expect((await r.json()).sinNumero).toBeUndefined()
   })
 })

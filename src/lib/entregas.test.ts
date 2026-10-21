@@ -9,6 +9,7 @@ import {
   validarResta,
   validarPiezas,
 } from './entregas'
+import { primerHueco } from './entregas-numero'
 
 describe('normalizarTelefono', () => {
   it('acepta las formas en que la gente escribe su celular', () => {
@@ -86,5 +87,20 @@ describe('validarPiezas', () => {
   it('rechaza vacío y lo absurdamente largo', () => {
     expect(validarPiezas('   ')).toBeNull()
     expect(validarPiezas('x'.repeat(5001))).toBeNull()
+  })
+})
+
+describe('primerHueco (número de bolsa)', () => {
+  it('empieza en 1 cuando no hay nada ocupado', () => {
+    expect(primerHueco([])).toBe(1)
+  })
+  it('da el hueco más chico, no el siguiente del final', () => {
+    expect(primerHueco([1, 2, 4])).toBe(3)
+    expect(primerHueco([2, 3])).toBe(1)
+    expect(primerHueco([1, 2, 3])).toBe(4)
+  })
+  it('un número repetido no corre la cuenta de más', () => {
+    // El índice único lo impide en la base, pero si llegara se daría un hueco real.
+    expect(primerHueco([1, 1, 2])).toBe(3)
   })
 })

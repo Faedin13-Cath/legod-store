@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizarTelefono, validarResta, validarPiezas } from '@/lib/entregas'
 import { perfilesPorTelefono } from '@/lib/entregas-perfiles'
+import { numeroLibre } from '@/lib/entregas-numero'
 import { CARRIERS_ENVIO } from '@/lib/shipping'
 
 // Endpoint público: guarda lo que el cliente llenó en el formulario de entregas.
@@ -13,6 +14,7 @@ const BUCKET = 'entregas-fotos'
 // 4 MB, igual que el cliente: el host rechaza cuerpos de ~4.5 MB antes de llegar aquí.
 const MAX_FOTO = 4 * 1024 * 1024
 const MAX_CAMPO = 200
+const MAX_INTENTOS_NUMERO = 5
 
 // `codigo` deja que el formulario decida qué mostrar sin leer el texto del mensaje.
 const bad = (error: string, codigo?: string) => NextResponse.json({ error, codigo }, { status: 400 })
@@ -224,16 +226,48 @@ export async function POST(req: NextRequest) {
   const direccion = dir
   const enConflicto = status === 'conflicto'
 
-  const { error: errEntrega } = await supabase.from('entregas').insert({
+  const fila = {
     contacto_id: contactoId,
     tipo, paqueteria, recibe, direccion, piezas, foto: fotoUrl, resta, status,
     nombre_enviado: enConflicto ? nombre : null,
     email_enviado: enConflicto ? email : null,
-  })
-  if (errEntrega) {
-    console.error('[entregas] guardar entrega', errEntrega.message)
-    return fallo()
   }
 
-  return NextResponse.json(fotoFallo ? { ok: true, fotoFallo: true } : { ok: true })
+  // Los envíos no llevan número: van por guía y nadie los recoge.
+  if (tipo !== 'rock_show') {
+    const { error } = await supabase.from('entregas').insert(fila)
+    if (error) {
+      console.error('[entregas] guardar entrega', error.message)
+      return fallo()
+    }
+    return NextResponse.json(fotoFallo ? { ok: true, fotoFallo: true } : { ok: true })
+  }
+
+  // Número de bolsa: el libre más chico. El índice único impide que dos envíos
+  // simultáneos se lleven el mismo, así que al chocar se reintenta con el
+  // siguiente hueco en vez de fallarle al cliente.
+  for (let intento = 0; intento < MAX_INTENTOS_NUMERO; intento++) {
+    const numero = await numeroLibre(supabase)
+    if (numero === null) break // no se pudo leer: reintentar no ayuda ni se adivina el 1
+    const { error } = await supabase.from('entregas').insert({ ...fila, numero })
+    if (!error) {
+      return NextResponse.json({ ok: true, numero, ...(fotoFallo ? { fotoFallo: true } : {}) })
+    }
+    if (error.code !== '23505') {
+      console.error('[entregas] guardar entrega', error.message)
+      return fallo()
+    }
+    // 23505: otro pedido ganó ese número entre la consulta y el insert.
+  }
+
+  // Sin poder leer los números, o tras tantas carreras seguidas (no pasa en la
+  // práctica), vale más guardar la entrega sin número que perderla. No es
+  // invisible: `sinNumero` llega al cliente y /bolsas lo marca.
+  const { error: errSinNumero } = await supabase.from('entregas').insert(fila)
+  if (errSinNumero) {
+    console.error('[entregas] guardar entrega sin número', errSinNumero.message)
+    return fallo()
+  }
+  console.error('[entregas] entrega de Rock Show guardada sin número de bolsa')
+  return NextResponse.json({ ok: true, sinNumero: true, ...(fotoFallo ? { fotoFallo: true } : {}) })
 }
