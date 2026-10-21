@@ -212,7 +212,11 @@ export default function BolsasPage() {
                   color: filtroRock === f ? 'var(--accent)' : 'var(--ink-3)',
                   border: `1px solid ${filtroRock === f ? 'var(--accent-soft)' : 'var(--line)'}`,
                 }}
-              >{etiqueta}</button>
+              >
+                {etiqueta}
+                {/* La cuenta de pendientes es lo que mira al llegar al evento. */}
+                {f === 'pendientes' && pendientes > 0 && ` · ${pendientes}`}
+              </button>
             ))}
           </div>
         ) : (
