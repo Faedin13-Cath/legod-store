@@ -71,3 +71,16 @@ create index if not exists entrega_intentos_ip_idx on entrega_intentos (ip, crea
 -- que sin estas columnas se perderían). En las demás quedan en null.
 alter table entregas add column if not exists nombre_enviado text;
 alter table entregas add column if not exists email_enviado text;
+
+-- ── Número de bolsa (solo Rock Show) ──
+-- Al recoger en el convive, cada pedido va en una bolsa marcada con un número.
+-- Funciona como casillero: se asigna el número libre más chico y, al marcar la
+-- entrega como atendida, el número se libera para el siguiente pedido. Así los
+-- números se quedan chicos en vez de crecer sin fin.
+alter table entregas add column if not exists numero int;
+
+-- Candado: dos personas mandando el formulario al mismo tiempo no pueden
+-- quedarse con el mismo número. Solo aplica a lo que sigue por entregar.
+create unique index if not exists entregas_numero_activo_idx
+  on entregas (numero)
+  where numero is not null and status <> 'atendida';

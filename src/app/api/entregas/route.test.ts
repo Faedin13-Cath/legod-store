@@ -4,7 +4,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // qué se escribe (y qué NO) según el contacto guardado y las banderas del formulario.
 
 type Row = Record<string, unknown> | null
-const db = { contacto: null as Row, writes: [] as { t: string; op: string; v: unknown }[], uploads: 0 }
+const db = {
+  contacto: null as Row,
+  writes: [] as { t: string; op: string; v: unknown }[],
+  uploads: 0,
+  // Números de bolsa ya ocupados, para probar que se da el hueco más chico.
+  numerosOcupados: [] as number[],
+}
 
 vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({
@@ -16,7 +22,14 @@ vi.mock('@/lib/supabase/admin', () => ({
       }),
     },
     from: (t: string) => ({
-      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: db.contacto, error: null }) }) }),
+      select: () => ({
+        // Contacto por teléfono.
+        eq: () => ({ maybeSingle: async () => ({ data: db.contacto, error: null }) }),
+        // Números de bolsa ocupados (numeroLibre).
+        not: () => ({ neq: () => ({ order: async () => ({
+          data: db.numerosOcupados.map(n => ({ numero: n })), error: null,
+        }) }) }),
+      }),
       insert: (v: unknown) => {
         db.writes.push({ t, op: 'insert', v })
         return {
@@ -52,7 +65,7 @@ function req(campos: Record<string, string>, foto = false) {
 const entrega = () => db.writes.find(w => w.t === 'entregas')?.v as Record<string, unknown> | undefined
 const escriturasContacto = () => db.writes.filter(w => w.t === 'entrega_contactos')
 
-beforeEach(() => { db.contacto = null; db.writes = []; db.uploads = 0 })
+beforeEach(() => { db.contacto = null; db.writes = []; db.uploads = 0; db.numerosOcupados = [] })
 
 describe('POST /api/entregas: usarGuardada', () => {
   it('arma el snapshot con la dirección guardada y no toca la dirección del contacto', async () => {
@@ -142,5 +155,26 @@ describe('POST /api/entregas: nombre', () => {
     expect((await req({ tipo: 'rock_show', noSoyYo: 'true', nombre: 'Otro', email: 'otro@example.com' })).status).toBe(200)
     expect(entrega()?.status).toBe('conflicto')
     expect(escriturasContacto()).toEqual([])
+  })
+})
+
+describe('POST /api/entregas: número de bolsa', () => {
+  const numeroGuardado = () =>
+    (db.writes.find(w => w.t === 'entregas')?.v as { numero?: number } | undefined)?.numero
+
+  it('Rock Show recibe el hueco más chico y se lo devuelve al cliente', async () => {
+    db.numerosOcupados = [1, 2, 4]
+    const r = await req({ tipo: 'rock_show', nombre: 'Ana', email: 'ana@example.com' })
+    expect(r.status).toBe(200)
+    expect((await r.json()).numero).toBe(3)
+    expect(numeroGuardado()).toBe(3)
+  })
+
+  it('los envíos no llevan número', async () => {
+    db.contacto = GUARDADA
+    const r = await req({ tipo: 'envio', paqueteria: 'Estafeta', usarGuardada: 'true' })
+    expect(r.status).toBe(200)
+    expect((await r.json()).numero).toBeUndefined()
+    expect(numeroGuardado()).toBeUndefined()
   })
 })

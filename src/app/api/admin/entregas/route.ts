@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isAdmin } from '@/lib/admin'
 import { cookies } from 'next/headers'
+import { numeroLibre } from '@/lib/entregas-numero'
 
 // Mismo patrón de validación que /api/admin/sell-requests.
 async function esAdmin(): Promise<boolean> {
@@ -26,7 +27,7 @@ export async function GET() {
   const { data, error } = await admin
     .from('entregas')
     .select(`
-      id, created_at, tipo, paqueteria, recibe, direccion, piezas, foto, resta, status,
+      id, created_at, numero, tipo, paqueteria, recibe, direccion, piezas, foto, resta, status,
       nombre_enviado, email_enviado,
       contacto:entrega_contactos ( id, nombre, telefono, email )
     `)
@@ -52,7 +53,19 @@ export async function PATCH(req: NextRequest) {
   }
 
   const admin = createAdminClient()
-  const { error } = await admin.from('entregas').update({ status }).eq('id', id)
+
+  // Marcar atendida libera el número de bolsa solo (el índice único y la
+  // búsqueda del hueco ignoran lo atendido), y la fila conserva cuál fue.
+  // Regresarla a pendiente es lo delicado: su número viejo puede estar ya
+  // ocupado por otro pedido, así que se le da uno libre.
+  const cambios: { status: string; numero?: number } = { status }
+  if (status === 'nueva') {
+    const { data: fila } = await admin
+      .from('entregas').select('tipo, numero').eq('id', id).maybeSingle()
+    if (fila?.tipo === 'rock_show') cambios.numero = await numeroLibre(admin)
+  }
+
+  const { error } = await admin.from('entregas').update(cambios).eq('id', id)
   if (error) {
     console.error('[admin/entregas] actualizar', error.message)
     return NextResponse.json({ error: 'No se pudo actualizar' }, { status: 500 })
