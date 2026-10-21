@@ -8,8 +8,10 @@ import {
   ipDe,
   validarResta,
   validarPiezas,
+  requiereCodigo,
 } from './entregas'
 import { primerHueco } from './entregas-numero'
+import { generarCodigo, hashCodigo } from './entregas-codigo'
 
 describe('normalizarTelefono', () => {
   it('acepta las formas en que la gente escribe su celular', () => {
@@ -102,5 +104,52 @@ describe('primerHueco (número de bolsa)', () => {
   it('un número repetido no corre la cuenta de más', () => {
     // El índice único lo impide en la base, pero si llegara se daría un hueco real.
     expect(primerHueco([1, 1, 2])).toBe(3)
+  })
+})
+
+describe('generarCodigo', () => {
+  it('da 6 dígitos', () => expect(generarCodigo()).toMatch(/^\d{6}$/))
+  it('no repite el mismo código', () => {
+    const vistos = new Set(Array.from({ length: 50 }, () => generarCodigo()))
+    expect(vistos.size).toBeGreaterThan(40)
+  })
+  it('conserva los ceros a la izquierda', () => {
+    const muchos = Array.from({ length: 3000 }, () => generarCodigo())
+    expect(muchos.every(c => c.length === 6)).toBe(true)
+    expect(muchos.some(c => c.startsWith('0'))).toBe(true)
+  })
+})
+
+describe('hashCodigo', () => {
+  it('es estable y no reversible a simple vista', () => {
+    expect(hashCodigo('123456')).toBe(hashCodigo('123456'))
+    expect(hashCodigo('123456')).not.toBe(hashCodigo('123457'))
+    expect(hashCodigo('123456')).not.toContain('123456')
+  })
+})
+
+describe('requiereCodigo', () => {
+  const base = { existe: true, noSoyYo: false, direccionNueva: false, emailNuevo: null, emailGuardado: 'ana@example.com' }
+
+  it('contacto nuevo: no pide código', () => {
+    expect(requiereCodigo({ ...base, existe: false, direccionNueva: true, emailNuevo: 'otro@x.com' })).toBe(false)
+  })
+  it('"no soy yo": no pide código (no toca el contacto)', () => {
+    expect(requiereCodigo({ ...base, noSoyYo: true, direccionNueva: true, emailNuevo: 'otro@x.com' })).toBe(false)
+  })
+  it('"Continuar" sin dirección ni correo nuevos: no pide código', () => {
+    expect(requiereCodigo(base)).toBe(false)
+  })
+  it('dirección nueva de un contacto que existe: pide código', () => {
+    expect(requiereCodigo({ ...base, direccionNueva: true })).toBe(true)
+  })
+  it('correo distinto al guardado: pide código', () => {
+    expect(requiereCodigo({ ...base, emailNuevo: 'atacante@x.com' })).toBe(true)
+  })
+  it('contacto sin correo guardado que manda uno: pide código', () => {
+    expect(requiereCodigo({ ...base, emailGuardado: null, emailNuevo: 'atacante@x.com' })).toBe(true)
+  })
+  it('el mismo correo (mayúsculas aparte) no pide código', () => {
+    expect(requiereCodigo({ ...base, emailNuevo: 'ANA@Example.com' })).toBe(false)
   })
 })

@@ -95,3 +95,28 @@ export function validarPiezas(raw: string): string | null {
   if (!s || s.length > MAX_PIEZAS) return null
   return s
 }
+
+// ── Código de verificación para cambiar datos guardados ──
+
+export const CODIGO_VIGENCIA_MIN = 15
+export const CODIGO_MAX_INTENTOS = 5
+
+/**
+ * ¿Hace falta un código para esta petición? Solo cuando se va a ESCRIBIR sobre un
+ * contacto que ya existe: una dirección nueva o un correo distinto al guardado. El correo
+ * cuenta porque es adonde se manda el código: si cualquiera pudiera cambiarlo con solo
+ * saber el celular, se enviaría el código a sí mismo y se verificaría solo.
+ * "No soy yo" nunca toca el contacto, y "Continuar" no manda ni dirección ni correo.
+ */
+export function requiereCodigo(p: {
+  existe: boolean
+  noSoyYo: boolean
+  direccionNueva: boolean
+  emailNuevo: string | null
+  emailGuardado: string | null
+}): boolean {
+  if (!p.existe || p.noSoyYo) return false
+  const correoCambia = Boolean(p.emailNuevo) &&
+    p.emailNuevo!.trim().toLowerCase() !== (p.emailGuardado ?? '').trim().toLowerCase()
+  return p.direccionNueva || correoCambia
+}

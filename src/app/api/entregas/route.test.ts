@@ -51,6 +51,14 @@ vi.mock('@/lib/supabase/admin', () => ({
   }),
 }))
 vi.mock('@/lib/entregas-perfiles', () => ({ perfilesPorTelefono: async () => [] }))
+// El código se prueba aparte (entregas-codigo.test.ts); aquí solo importa si el endpoint lo exige.
+const codigoResp = { valor: 'invalido' as 'ok' | 'invalido' | 'error', llamadas: [] as string[] }
+vi.mock('@/lib/entregas-codigo', () => ({
+  verificarYGastarCodigo: async (_s: unknown, _id: string, codigo: string) => {
+    codigoResp.llamadas.push(codigo)
+    return codigoResp.valor
+  },
+}))
 
 import { POST } from './route'
 
@@ -77,6 +85,7 @@ const escriturasContacto = () => db.writes.filter(w => w.t === 'entrega_contacto
 beforeEach(() => {
   db.contacto = null; db.writes = []; db.uploads = 0; db.numerosOcupados = []
   db.numerosFallan = false; db.erroresInsert = []; db.lecturasNumero = 0
+  codigoResp.valor = 'invalido'; codigoResp.llamadas = []
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 
@@ -138,9 +147,10 @@ describe('POST /api/entregas: nombre', () => {
 
   it('cliente reconocido con dirección nueva: actualiza la dirección pero nunca el nombre', async () => {
     db.contacto = GUARDADA
+    codigoResp.valor = 'ok'
     const r = await req({
       tipo: 'envio', paqueteria: 'FedEx', recibe: 'A', calle: 'Nueva', numExt: '1',
-      colonia: 'C', ciudad: 'D', estado: 'E', cp: '01000', referencia: 'R',
+      colonia: 'C', ciudad: 'D', estado: 'E', cp: '01000', referencia: 'R', codigo: '123456',
     })
     expect(r.status).toBe(200)
     const cambios = db.writes.find(w => w.op === 'update')?.v as Record<string, unknown>
@@ -241,5 +251,90 @@ describe('POST /api/entregas: carreras y respaldo del número', () => {
   it('con número normal no marca sinNumero', async () => {
     const r = await req(nuevo)
     expect((await r.json()).sinNumero).toBeUndefined()
+  })
+})
+
+describe('POST /api/entregas: código para cambiar datos guardados', () => {
+  const dirNueva = {
+    tipo: 'envio', paqueteria: 'FedEx', recibe: 'A', calle: 'Nueva', numExt: '1',
+    colonia: 'C', ciudad: 'D', estado: 'E', cp: '01000', referencia: 'R',
+  }
+  const CON_CORREO = { ...GUARDADA, email: 'ana@example.com' }
+  const actualizaciones = () => db.writes.filter(w => w.op === 'update')
+
+  it('dirección nueva sin código: 400 codigo_requerido y no se escribe ni se sube nada', async () => {
+    db.contacto = CON_CORREO
+    const r = await req(dirNueva, true)
+    expect(r.status).toBe(400)
+    expect((await r.json()).codigo).toBe('codigo_requerido')
+    expect(db.writes).toEqual([])
+    expect(db.uploads).toBe(0)
+  })
+
+  it('dirección nueva con código malo, vencido o usado: 400 codigo_invalido y no se escribe nada', async () => {
+    db.contacto = CON_CORREO
+    codigoResp.valor = 'invalido'
+    const r = await req({ ...dirNueva, codigo: '123456' })
+    expect(r.status).toBe(400)
+    expect((await r.json()).codigo).toBe('codigo_invalido')
+    expect(codigoResp.llamadas).toEqual(['123456'])
+    expect(db.writes).toEqual([])
+  })
+
+  it('dirección nueva con código bueno: se guarda', async () => {
+    db.contacto = CON_CORREO
+    codigoResp.valor = 'ok'
+    const r = await req({ ...dirNueva, codigo: '123456' })
+    expect(r.status).toBe(200)
+    expect((actualizaciones()[0].v as Record<string, unknown>).calle).toBe('Nueva')
+  })
+
+  it('un correo nuevo sin código no reemplaza el guardado (así no se podría autoverificar)', async () => {
+    db.contacto = CON_CORREO
+    const r = await req({ tipo: 'rock_show', email: 'atacante@example.com' })
+    expect(r.status).toBe(400)
+    expect((await r.json()).codigo).toBe('codigo_requerido')
+    expect(db.writes).toEqual([])
+  })
+
+  it('un correo nuevo con código malo: no se escribe nada', async () => {
+    db.contacto = CON_CORREO
+    const r = await req({ tipo: 'rock_show', email: 'atacante@example.com', codigo: '999999' })
+    expect(r.status).toBe(400)
+    expect(db.writes).toEqual([])
+  })
+
+  it('un correo nuevo con código bueno sí se guarda', async () => {
+    db.contacto = CON_CORREO
+    codigoResp.valor = 'ok'
+    const r = await req({ tipo: 'rock_show', email: 'nuevo@example.com', codigo: '123456' })
+    expect(r.status).toBe(200)
+    expect((actualizaciones()[0].v as Record<string, unknown>).email).toBe('nuevo@example.com')
+  })
+
+  it('contacto sin correo guardado que manda uno: también pide código (no se registra uno ajeno)', async () => {
+    db.contacto = GUARDADA
+    const r = await req({ tipo: 'rock_show', email: 'atacante@example.com' })
+    expect(r.status).toBe(400)
+    expect(db.writes).toEqual([])
+  })
+
+  it('si la base falla al revisar el código: 500, no se escribe', async () => {
+    db.contacto = CON_CORREO
+    codigoResp.valor = 'error'
+    const r = await req({ ...dirNueva, codigo: '123456' })
+    expect(r.status).toBe(500)
+    expect(db.writes).toEqual([])
+  })
+
+  it('no pide código: mismo correo, "Continuar", "no soy yo" ni cliente nuevo', async () => {
+    db.contacto = CON_CORREO
+    expect((await req({ tipo: 'rock_show', email: 'ANA@example.com' })).status).toBe(200)
+    expect((await req({ tipo: 'envio', paqueteria: 'Estafeta', usarGuardada: 'true' })).status).toBe(200)
+    expect((await req({ tipo: 'rock_show', noSoyYo: 'true', nombre: 'Otro', email: 'otro@example.com' })).status).toBe(200)
+    expect(codigoResp.llamadas).toEqual([])
+    db.contacto = null
+    expect((await req({ tipo: 'rock_show', nombre: 'Ana', email: 'nueva@example.com' })).status).toBe(200)
+    expect(codigoResp.llamadas).toEqual([])
   })
 })

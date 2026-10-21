@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { normalizarTelefono, validarResta, validarPiezas } from '@/lib/entregas'
+import { normalizarTelefono, validarResta, validarPiezas, requiereCodigo } from '@/lib/entregas'
+import { verificarYGastarCodigo } from '@/lib/entregas-codigo'
 import { perfilesPorTelefono } from '@/lib/entregas-perfiles'
 import { numeroLibre } from '@/lib/entregas-numero'
 import { CARRIERS_ENVIO } from '@/lib/shipping'
@@ -109,7 +110,7 @@ export async function POST(req: NextRequest) {
   // ── Contacto (se busca antes de subir la foto: si algo falla aquí no queda una foto huérfana) ──
   const buscarContacto = () =>
     supabase.from('entrega_contactos')
-      .select('id, calle, num_ext, num_int, colonia, ciudad, estado, cp, referencia')
+      .select('id, email, calle, num_ext, num_int, colonia, ciudad, estado, cp, referencia')
       .eq('telefono', telefono).maybeSingle()
 
   const { data: existente, error: errBusca } = await buscarContacto()
@@ -124,6 +125,29 @@ export async function POST(req: NextRequest) {
   // Registrarse exige correo: es por donde se avisa de los envíos. Al contacto
   // ya confirmado no se le pide, porque no se está registrando de nuevo.
   if (!confirmado && !email) return bad('Falta tu correo', 'falta_correo')
+
+  // ── Código de verificación ──
+  // Cambiar la dirección o el correo de un contacto que ya existe exige el código que
+  // se mandó a SU correo guardado. Sin esto, saber el celular bastaría para reescribirle
+  // los datos (o poner un correo propio y verificarse solo). Nada se escribe ni se sube
+  // antes de pasar esta puerta. El correo guardado de un contacto sin correo no existe,
+  // así que ahí el código nunca se puede pedir: el formulario lo manda a WhatsApp.
+  if (existente && requiereCodigo({
+    existe: true, noSoyYo,
+    direccionNueva: dir !== null,
+    emailNuevo: email,
+    emailGuardado: existente.email ?? null,
+  })) {
+    const codigo = texto('codigo')
+    if (!codigo) {
+      return bad('Para cambiar tus datos guardados necesitamos el código que te mandamos por correo', 'codigo_requerido')
+    }
+    const veredicto = await verificarYGastarCodigo(supabase, existente.id, codigo)
+    if (veredicto === 'error') return fallo()
+    if (veredicto !== 'ok') {
+      return bad('Ese código no es válido. Puede haber vencido o ya se usó: pide otro e inténtalo de nuevo', 'codigo_invalido')
+    }
+  }
 
   if (usarGuardada) {
     // Sin contacto, o con una dirección incompleta, no hay nada que reutilizar: jamás se
