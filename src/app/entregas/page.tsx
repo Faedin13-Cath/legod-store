@@ -284,10 +284,11 @@ export default function EntregasPage() {
   function continuarPaso1(conCambioDir: boolean) {
     setError('')
     if (pideNombre && !nombre.trim()) { falla('Escribe tu nombre.'); return }
-    // El correo es obligatorio al registrarse: ahí se avisa de los envíos.
-    if (fase === 'nuevo') {
-      if (!email.trim()) { falla('Escribe tu correo: ahí te avisamos de tu envío.'); return }
-      if (!/^[^\s@]+@[^\s@]+$/.test(email.trim())) { falla('Ese correo no parece válido. Revísalo.'); return }
+    // El correo es opcional: hay clientes que simplemente no tienen. Si lo dan,
+    // tiene que estar bien escrito — es a donde llega el código para cambiar
+    // la dirección, y sin él ese cambio hay que resolverlo por WhatsApp.
+    if (fase === 'nuevo' && email.trim() && !/^[^\s@]+@[^\s@]+$/.test(email.trim())) {
+      falla('Ese correo no parece válido. Revísalo o déjalo en blanco.'); return
     }
     setCambiarDir(conCambioDir)
     irA(2)
@@ -380,11 +381,6 @@ export default function EntregasPage() {
         irA(1); falla(data.codigo === 'codigo_requerido'
           ? 'Necesitamos el código que te mandamos por correo. Pide uno nuevo.'
           : 'Ese código no sirvió: pudo vencer, estar mal escrito o ya se usó. Pide uno nuevo.')
-        return
-      }
-      if (data.codigo === 'falta_correo') {
-        setFase('nuevo')
-        irA(1); falla('Necesitamos tu correo: ahí te avisamos de tu envío.')
         return
       }
       if (!res.ok || !data.ok) {
@@ -594,7 +590,7 @@ export default function EntregasPage() {
               <Campo label="Tu nombre completo">
                 <input type="text" autoComplete="name" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre y apellido" className="input" style={inputStyle} />
               </Campo>
-              <Campo label="Correo">
+              <Campo label="Correo" opcional>
                 <input type="email" inputMode="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" className="input" style={inputStyle} />
               </Campo>
               <button type="button" onClick={() => continuarPaso1(cambiarDir)} className="btn btn-primary" style={btn}>Continuar</button>

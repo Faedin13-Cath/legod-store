@@ -165,11 +165,11 @@ describe('POST /api/entregas: nombre', () => {
     expect((await req({ tipo: 'rock_show', nombre: 'Ana', email: 'ana@example.com' })).status).toBe(200)
   })
 
-  it('cliente nuevo sin correo: 400 falta_correo y no se escribe nada', async () => {
+  it('cliente nuevo sin correo: se guarda igual, porque hay quien no tiene', async () => {
     const r = await req({ tipo: 'rock_show', nombre: 'Ana' })
-    expect(r.status).toBe(400)
-    expect((await r.json()).codigo).toBe('falta_correo')
-    expect(db.writes).toEqual([])
+    expect(r.status).toBe(200)
+    const contacto = db.writes.find(w => w.t === 'entrega_contactos')?.v as { email?: string } | undefined
+    expect(contacto?.email).toBeFalsy()
   })
 
   it('"no soy yo" exige nombre y deja la entrega en conflicto', async () => {

@@ -60,7 +60,9 @@ Una sola caja grande: **"Tu celular"**. Al continuar, el servidor busca ese núm
 
 **"No soy yo" nunca sobreescribe el contacto que ya existe** (decisión del constructor). Lo más probable es que se haya equivocado de dígito, no que sea otra persona: primero se le pide revisar el número. Si insiste, su entrega se guarda con los datos que él escriba y queda marcada en el panel como *número en conflicto*, para que el dueño lo resuelva. Borrar de golpe el nombre y la dirección de un cliente real desde un formulario sin contraseña no es una opción.
 
-**El correo es obligatorio al registrarse** (decisión del dueño, 2026-10-19, durante la construcción). **Estado: pendiente, es la Tarea 8 y aún no está construido en esta rama.** Lo ocupa para los envíos, y ahora además es a donde llega el código de verificación de "Cambiar dirección". Esto reemplaza la decisión anterior de dejarlo opcional.
+**El correo es opcional.** Se intentó hacerlo obligatorio el 2026-10-19 y el dueño lo revirtió el 2026-10-21, después de que un cliente real le dijera que no tiene correo. La regla final es la original: se pide, no se exige.
+
+El costo está medido y aceptado: **un contacto sin correo no puede recibir el código de verificación**, así que nunca podrá usar "Cambiar dirección" por su cuenta. Cuando lo intente, el formulario lo manda a WhatsApp con el dueño, que lo resuelve a mano. Es trabajo extra por cada cliente sin correo, y a cambio nadie se queda fuera del formulario.
 
 ### Paso 2 — Cómo quiere sus figuras
 
