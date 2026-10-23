@@ -3,205 +3,182 @@
 /**
  * ███ MAQUETA DESECHABLE ███
  *
- * El problema real que las referencias no resuelven: una tienda tiene que
- * MOSTRAR productos, no solo verse bonita. Aquí la propuesta es que la rejilla
- * deje de ser uniforme sin dejar de ser escaneable:
+ * La misma idea que /mockinicio, aplicada al problema difícil: una tienda
+ * tiene que MOSTRAR producto, no solo verse bien.
  *
- *  - Los filtros son pastillas de color, no un menú lateral gris.
- *  - Las fichas tienen tres tamaños y algunas traen fondo de color, así la
- *    vista respira y no parece hoja de cálculo.
- *  - El precio vive en una etiqueta encimada, no en una línea más de texto.
+ * Decisiones:
+ *  - Fondo oscuro para que el plástico de colores sea lo más brillante.
+ *  - Los filtros son una barra pegada, con el conteo vivo al lado.
+ *  - La rejilla se adapta sola (auto-fit) en vez de romperse por breakpoints.
+ *  - El precio en dorado es lo único de color fuerte dentro de la ficha,
+ *    así se escanea una columna de precios de un vistazo.
  *
  * Productos y fotos: reales, de la tienda.
  */
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Image from 'next/image'
 
-const MORADO = '#5526AD'
-const MORADO_BRILLANTE = '#6050DC'
-const DORADO = '#E2A91A'
-const TINTA = '#1A1E5A'
-const CREMA = '#F5F3EF'
-
-type Figura = { t: string; p: number; img: string; tema: string; estado?: string }
+type Figura = { t: string; p: number; img: string; tema: string; nota?: string }
 
 const FIGURAS: Figura[] = [
-  { t: 'Darth Maul, brazos rojos impresos', p: 900, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sw0384.png?v=1791321948', tema: 'Star Wars' },
-  { t: 'Taskmaster, capa y capucha blancas', p: 300, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0100.png?v=1787789994', tema: 'Marvel' },
-  { t: 'Iron Man, armadura Mark 6', p: 250, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0015.png?v=1790042228', tema: 'Marvel', estado: 'Nuevo' },
-  { t: 'Doctor Strange, capa de hule', p: 100, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0802.png?v=1790042258', tema: 'Marvel' },
-  { t: 'Venom con bufanda y hot dog', p: 120, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/76293-6.png?v=1790042311', tema: 'Marvel' },
-  { t: 'Miles Morales con audífonos', p: 150, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/76293-14.png?v=1790042310', tema: 'Marvel', estado: 'Nuevo' },
-  { t: 'Storm, Marvel Studios Serie 2', p: 120, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/colmar23_15fdb798-3efd-4616-b05f-6daa243270eb.png?v=1791134171', tema: 'Marvel', estado: 'Sin accesorios' },
-  { t: 'Hawkeye, traje blanco', p: 110, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0570_04ffa12e-764c-4fd7-8ef0-a564a51a5e30.png?v=1787196888', tema: 'Marvel' },
-  { t: 'Ant-Man, traje blanco', p: 100, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0563_fa945662-9cbc-4648-8dbd-27d966f745df.png?v=1787196887', tema: 'Marvel' },
-  { t: 'War Machine, traje blanco', p: 90, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0564_9d69588c-2f04-4c84-89c8-834a40ebb76a.png?v=1787196888', tema: 'Marvel' },
-  { t: 'Nebula, traje blanco', p: 80, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0574_012ffa38-72f2-4405-b598-fb2d9af4b905.png?v=1787196887', tema: 'Marvel' },
-  { t: 'Loki, capa de tela', p: 180, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0802.png?v=1790042258', tema: 'Marvel' },
+  { t: 'Darth Maul, brazos rojos impresos', p: 900, tema: 'Star Wars', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sw0384.png?v=1791321948' },
+  { t: 'Taskmaster, capa y capucha blancas', p: 300, tema: 'Marvel', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0100.png?v=1787789994' },
+  { t: 'Iron Man, armadura Mark 6', p: 250, tema: 'Marvel', nota: 'Nuevo', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0015.png?v=1790042228' },
+  { t: 'Miles Morales con audífonos', p: 150, tema: 'Marvel', nota: 'Nuevo', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/76293-14.png?v=1790042310' },
+  { t: 'Venom con bufanda y hot dog', p: 120, tema: 'Marvel', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/76293-6.png?v=1790042311' },
+  { t: 'Storm, Marvel Studios Serie 2', p: 120, tema: 'Marvel', nota: 'Sin accesorios', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/colmar23_15fdb798-3efd-4616-b05f-6daa243270eb.png?v=1791134171' },
+  { t: 'Hawkeye, traje blanco', p: 110, tema: 'Marvel', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0570_04ffa12e-764c-4fd7-8ef0-a564a51a5e30.png?v=1787196888' },
+  { t: 'Doctor Strange, capa de hule', p: 100, tema: 'Marvel', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0802.png?v=1790042258' },
+  { t: 'Ant-Man, traje blanco', p: 100, tema: 'Marvel', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0563_fa945662-9cbc-4648-8dbd-27d966f745df.png?v=1787196887' },
+  { t: 'War Machine, traje blanco', p: 90, tema: 'Marvel', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0564_9d69588c-2f04-4c84-89c8-834a40ebb76a.png?v=1787196888' },
+  { t: 'Nebula, traje blanco', p: 80, tema: 'Marvel', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0574_012ffa38-72f2-4405-b598-fb2d9af4b905.png?v=1787196887' },
 ]
 
-const FILTROS = [
-  { n: 'Todas',      bg: TINTA,   fg: '#fff' },
-  { n: 'Star Wars',  bg: '#1A1E5A', fg: '#fff' },
-  { n: 'Marvel',     bg: '#D92B3A', fg: '#fff' },
-  { n: 'DC',         bg: '#1763D1', fg: '#fff' },
-  { n: 'Customs',    bg: MORADO,  fg: '#fff' },
-  { n: 'Menos de $150', bg: DORADO, fg: TINTA },
-]
-
+const FILTROS = ['Todas', 'Star Wars', 'Marvel', 'Menos de $150'] as const
 const precio = (n: number) => '$' + n.toLocaleString('es-MX')
 
-/** Tres tamaños de ficha para que la rejilla respire sin dejar de escanearse. */
-function tamano(i: number): 'grande' | 'color' | 'normal' {
-  if (i === 0) return 'grande'
-  if (i % 5 === 2) return 'color'
-  return 'normal'
-}
-
 export default function MockProductos() {
-  const [activo, setActivo] = useState('Todas')
-  const lista = activo === 'Todas'
-    ? FIGURAS
-    : activo === 'Menos de $150'
-      ? FIGURAS.filter(f => f.p < 150)
-      : FIGURAS.filter(f => f.tema === activo)
+  const [activo, setActivo] = useState<typeof FILTROS[number]>('Todas')
+
+  const lista = useMemo(() => {
+    if (activo === 'Todas') return FIGURAS
+    if (activo === 'Menos de $150') return FIGURAS.filter(f => f.p < 150)
+    return FIGURAS.filter(f => f.tema === activo)
+  }, [activo])
 
   return (
-    <div style={{ background: CREMA, minHeight: '100dvh' }}>
+    <div className="mp">
       <style>{`
-        .mp h1, .mp h2 { letter-spacing: -0.035em; line-height: .94; margin: 0; }
+        header { display: none !important; }
+        footer { display: none !important; }
+
+        .mp {
+          --fondo:  #17062E;
+          --alto:   #22093F;
+          --morado: #7B4BE8;
+          --oro:    #F0B429;
+          --texto:  #F4F1FB;
+          --tenue:  #BCADD8;
+          --ease:   cubic-bezier(0.23, 1, 0.32, 1);
+          background: var(--fondo); color: var(--texto); min-height: 100dvh;
+        }
+        .mp h1 { margin: 0; letter-spacing: -0.03em; }
+
+        .mp-barra {
+          position: sticky; top: 0; z-index: 10;
+          background: rgba(23,6,46,.88); backdrop-filter: blur(12px);
+          border-bottom: 1px solid rgba(244,241,251,.08);
+          padding: 14px clamp(18px, 4vw, 56px);
+          display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+        }
+        .mp-filtro {
+          border: 1px solid rgba(244,241,251,.18); background: transparent;
+          color: var(--texto); border-radius: 999px; padding: 10px 18px;
+          font-size: 14.5px; font-weight: 600; font-family: inherit;
+          cursor: pointer; min-height: 44px; white-space: nowrap;
+          transition: background 160ms var(--ease), border-color 160ms var(--ease), color 160ms var(--ease), transform 140ms var(--ease);
+        }
+        .mp-filtro[aria-pressed="true"] {
+          background: var(--morado); border-color: var(--morado); color: #fff;
+        }
+
         .mp-rejilla {
-          display: grid; grid-template-columns: repeat(4, 1fr);
-          gap: 16px; grid-auto-flow: dense;
+          display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 14px; padding: clamp(20px, 3vw, 32px) clamp(18px, 4vw, 56px) 90px;
         }
-        .mp-grande { grid-column: span 2; grid-row: span 2; }
-        .mp-ficha { transition: transform .18s cubic-bezier(.16,1,.3,1); }
-        .mp-pill  { transition: transform .15s, box-shadow .15s; }
-        @media (hover: hover) {
-          .mp-ficha:hover { transform: translateY(-6px) rotate(-.8deg); }
-          .mp-pill:hover  { transform: translateY(-2px); }
+        .mp-ficha {
+          position: relative; background: var(--alto); border-radius: 20px; padding: 14px;
+          border: 1px solid rgba(244,241,251,.07);
+          display: flex; flex-direction: column;
+          opacity: 0; transform: translateY(10px);
+          animation: mp-entra 420ms var(--ease) forwards;
+          transition: transform 180ms var(--ease), border-color 180ms var(--ease);
         }
-        .mp-ficha:active { transform: scale(.985); }
+        @keyframes mp-entra { to { opacity: 1; transform: translateY(0); } }
+
+        .mp-plato {
+          background: rgba(244,241,251,.05); border-radius: 14px; height: 196px;
+          display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
+        }
+        .mp-plato img { transition: transform 220ms var(--ease); }
+
+        .mp-nota {
+          position: absolute; top: 22px; left: 22px; z-index: 2;
+          background: var(--morado); color: #fff; border-radius: 999px;
+          padding: 4px 11px; font-size: 11px; font-weight: 800; letter-spacing: .01em;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+          .mp-filtro:hover { background: rgba(244,241,251,.1); border-color: rgba(244,241,251,.34); }
+          .mp-ficha:hover  { transform: translateY(-4px); border-color: rgba(123,75,232,.5); }
+          .mp-ficha:hover .mp-plato img { transform: scale(1.06); }
+        }
+        .mp-filtro:active, .mp-ficha:active { transform: scale(0.97); }
+
         @media (prefers-reduced-motion: reduce) {
-          .mp-ficha, .mp-pill { transition: none !important; transform: none !important; }
-        }
-        @media (max-width: 1100px) { .mp-rejilla { grid-template-columns: repeat(3, 1fr); } }
-        @media (max-width: 820px)  {
-          .mp-rejilla { grid-template-columns: repeat(2, 1fr); }
-          .mp-grande  { grid-column: span 2; grid-row: span 1; }
+          .mp-ficha { opacity: 1; transform: none; animation: none; }
+          .mp *, .mp *::before { transition: none !important; }
         }
       `}</style>
 
       <div style={{
-        background: TINTA, color: '#fff', textAlign: 'center',
-        padding: '8px 16px', fontSize: 12.5, fontWeight: 600, letterSpacing: '0.04em',
+        background: '#0D0318', color: '#BCADD8', textAlign: 'center',
+        padding: '8px 16px', fontSize: 12.5, fontWeight: 600,
       }}>
         Maqueta desechable. No es la tienda real.
       </div>
 
-      <div className="mp">
-        {/* Encabezado corto: en una tienda la gente viene a ver, no a leer */}
-        <div style={{ padding: 'clamp(30px, 4vw, 52px) clamp(18px, 4vw, 48px) 0' }}>
-          <h1 style={{ fontSize: 'clamp(34px, 5.4vw, 66px)', fontWeight: 800, color: TINTA }}>
-            La tienda
-          </h1>
-          <p style={{ fontSize: 16, color: '#4F5180', margin: '12px 0 0', fontWeight: 600 }}>
-            {lista.length} figuras disponibles
-          </p>
-        </div>
-
-        {/* Filtros como pastillas de color, pegados al desplazar */}
-        <div style={{
-          position: 'sticky', top: 0, zIndex: 5, background: CREMA,
-          padding: 'clamp(16px, 2.4vw, 26px) clamp(18px, 4vw, 48px)',
-        }}>
-          <div style={{ display: 'flex', gap: 9, overflowX: 'auto', paddingBottom: 4 }}>
-            {FILTROS.map(f => {
-              const on = activo === f.n
-              return (
-                <button key={f.n} type="button" onClick={() => setActivo(f.n)} className="mp-pill"
-                  style={{
-                    flex: '0 0 auto', border: on ? 'none' : '2px solid #DCD9D1',
-                    background: on ? f.bg : 'transparent',
-                    color: on ? f.fg : TINTA,
-                    borderRadius: 999, padding: on ? '12px 22px' : '10px 20px',
-                    fontSize: 14.5, fontWeight: 700, cursor: 'pointer',
-                    fontFamily: 'inherit', minHeight: 44, whiteSpace: 'nowrap',
-                  }}>
-                  {f.n}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <div style={{ padding: '6px clamp(18px, 4vw, 48px) 90px' }}>
-          {lista.length === 0 ? (
-            <div style={{
-              background: '#fff', border: '2px dashed #DCD9D1', borderRadius: 24,
-              padding: '60px 24px', textAlign: 'center', color: TINTA,
-            }}>
-              <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Nada por aquí todavía</div>
-              <p style={{ color: '#4F5180', margin: '0 0 18px' }}>Prueba con otro filtro, o escríbenos y la conseguimos.</p>
-              <button type="button" onClick={() => setActivo('Todas')} className="mp-pill" style={{
-                background: TINTA, color: '#fff', border: 'none', borderRadius: 999,
-                padding: '13px 26px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-                fontFamily: 'inherit', minHeight: 44,
-              }}>Ver todas</button>
-            </div>
-          ) : (
-            <div className="mp-rejilla">
-              {lista.map((f, i) => {
-                const forma = tamano(i)
-                const esColor = forma === 'color'
-                const esGrande = forma === 'grande'
-                return (
-                  <article key={f.t + i} className={`mp-ficha${esGrande ? ' mp-grande' : ''}`} style={{
-                    position: 'relative', borderRadius: 24, padding: 14,
-                    background: esColor ? MORADO_BRILLANTE : '#fff',
-                    color: esColor ? '#fff' : TINTA,
-                    border: esColor ? 'none' : '1px solid #E6E4DD',
-                    display: 'flex', flexDirection: 'column',
-                  }}>
-                    {f.estado && (
-                      <span style={{
-                        position: 'absolute', top: 20, left: 20, zIndex: 2,
-                        background: esColor ? '#fff' : TINTA, color: esColor ? TINTA : '#fff',
-                        borderRadius: 999, padding: '5px 12px', fontSize: 11.5, fontWeight: 800,
-                      }}>{f.estado}</span>
-                    )}
-
-                    <div style={{
-                      background: esColor ? '#ffffff1f' : CREMA, borderRadius: 16,
-                      flex: 1, minHeight: esGrande ? 300 : 188,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12,
-                    }}>
-                      <Image src={f.img} alt={f.t} width={520} height={520}
-                        priority={i === 0}
-                        style={{ width: esGrande ? '58%' : '76%', height: 'auto', objectFit: 'contain' }} />
-                    </div>
-
-                    <div style={{
-                      display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10,
-                    }}>
-                      <div style={{
-                        fontSize: esGrande ? 19 : 14.5, fontWeight: 700,
-                        lineHeight: 1.25, flex: 1, minWidth: 0,
-                      }}>{f.t}</div>
-                      <div style={{
-                        background: esColor ? '#fff' : DORADO, color: TINTA,
-                        borderRadius: 999, padding: esGrande ? '9px 18px' : '7px 14px',
-                        fontSize: esGrande ? 20 : 16, fontWeight: 800, whiteSpace: 'nowrap',
-                      }}>{precio(f.p)}</div>
-                    </div>
-                  </article>
-                )
-              })}
-            </div>
-          )}
-        </div>
+      <div style={{ padding: 'clamp(26px, 3.6vw, 44px) clamp(18px, 4vw, 56px) 18px' }}>
+        <h1 style={{ fontSize: 'clamp(30px, 4.4vw, 56px)', fontWeight: 800, lineHeight: 1.04 }}>
+          La tienda
+        </h1>
       </div>
+
+      <div className="mp-barra">
+        {FILTROS.map(f => (
+          <button key={f} type="button" className="mp-filtro"
+            aria-pressed={activo === f} onClick={() => setActivo(f)}>
+            {f}
+          </button>
+        ))}
+        <span style={{ marginLeft: 'auto', fontSize: 14, color: 'var(--tenue)', fontWeight: 600 }}>
+          {lista.length} {lista.length === 1 ? 'figura' : 'figuras'}
+        </span>
+      </div>
+
+      {lista.length === 0 ? (
+        <div style={{
+          margin: 'clamp(32px, 5vw, 56px) clamp(18px, 4vw, 56px) 90px',
+          border: '1px dashed rgba(244,241,251,.22)', borderRadius: 20,
+          padding: '56px 24px', textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>Nada con ese filtro</div>
+          <p style={{ color: 'var(--tenue)', margin: '0 0 20px', lineHeight: 1.6 }}>
+            Escríbenos y la conseguimos.
+          </p>
+          <button type="button" className="mp-filtro" onClick={() => setActivo('Todas')}>
+            Ver todas
+          </button>
+        </div>
+      ) : (
+        <div className="mp-rejilla">
+          {lista.map((f, i) => (
+            <article key={f.t} className="mp-ficha" style={{ animationDelay: `${Math.min(i, 9) * 45}ms` }}>
+              {f.nota && <span className="mp-nota">{f.nota}</span>}
+              <div className="mp-plato">
+                <Image src={f.img} alt={f.t} width={360} height={360} priority={i < 4}
+                  style={{ width: '72%', height: 'auto', objectFit: 'contain' }} />
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--tenue)', fontWeight: 600 }}>{f.tema}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3, margin: '2px 0 10px' }}>{f.t}</div>
+              <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--oro)', marginTop: 'auto' }}>
+                {precio(f.p)}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
