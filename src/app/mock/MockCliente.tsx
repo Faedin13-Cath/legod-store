@@ -23,6 +23,20 @@ const TICKER = 'Star Wars · Marvel · DC · Harry Potter · Stranger Things · 
  * la imagen más grande de la página y la que marca la velocidad de carga. Si
  * dependiera de la petición a Shopify, el hero saldría vacío el primer segundo.
  */
+const CDN = 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/'
+
+/**
+ * La escolta del hero: figuras de la tienda que rodean a la principal, como
+ * las minifiguras alrededor del Sentinel en el set de Doomsday. Son decorativas
+ * (aria-hidden) y van a distinto tamaño para que la del centro siga mandando.
+ */
+const ESCOLTA = [
+  { src: CDN + 'sw0117.png?v=1787198272', w: '21%', pos: { top: '4%',   left: '-4%'  } }, // Darth Vader
+  { src: CDN + 'sh0015.png?v=1790042228', w: '18%', pos: { top: '18%',  right: '-2%' } }, // Iron Man
+  { src: CDN + 'sh1018.png?v=1787712736', w: '16%', pos: { bottom: '20%', left: '0%'  } }, // Scarlet Witch
+  { src: CDN + 'sh0033.png?v=1789696217', w: '17%', pos: { bottom: '12%', right: '2%' } }, // Loki
+]
+
 const HERO = {
   handle: 'the-kraang-battle-damage-suit',
   nombre: 'The Kraang · TMNT',
@@ -116,7 +130,22 @@ export default function MockCliente() {
                 parezca pegada. El producto es lo más interesante que hay
                 en la página: merece el tamaño. */}
             <div className="hero-img-col" style={{ position:'relative', height:580 }}>
-              <div className="anim-scale-in d-2" style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              {/* La composición del set de Doomsday, pero con figuras de la
+                  tienda: una grande al centro y cuatro alrededor, a distinta
+                  altura y tamaño. La escala las jerarquiza y el conjunto dice
+                  "hay catálogo" sin tener que escribirlo. */}
+              {ESCOLTA.map((f, i) => (
+                <div key={f.src} className={`anim-fade-up d-${4 + i} hero-escolta`} aria-hidden style={{
+                  position:'absolute', ...f.pos, width:f.w, zIndex:1, pointerEvents:'none',
+                }}>
+                  <div className="anim-float-soft" style={{ animationDelay:`${i * 0.7}s` }}>
+                    <Image src={f.src} alt="" width={260} height={260} sizes="18vw"
+                      style={{ width:'100%', height:'auto', filter:'drop-shadow(0 18px 20px rgba(0,0,0,.45))' }} />
+                  </div>
+                </div>
+              ))}
+
+              <div className="anim-scale-in d-2" style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', zIndex:2 }}>
                 <div className="anim-float" style={{ position:'relative', width:'100%', height:'100%' }}>
                   <Image
                     src={shopifyImg(heroFoto, 1200)!} alt={HERO.alt} fill priority sizes="55vw"

@@ -735,3 +735,7 @@ a[href*="/tienda"].more-link,
 .opcion-variante { transition: border-color .15s, background .15s; }
 .opcion-variante:not(:disabled):not([aria-checked="true"]):hover { border-color: var(--ink-3) !important; }
 .opcion-variante:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Maqueta: la escolta del hero se esconde en pantallas angostas, donde la
+   figura principal ya ocupa todo y las de alrededor solo estorbarían. */
+@media (max-width: 900px) { .hero-escolta { display: none; } }
