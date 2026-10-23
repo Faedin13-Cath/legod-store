@@ -107,14 +107,14 @@ export default function MockCliente() {
                 fontWeight:900, letterSpacing:'-0.04em',
                 textTransform:'lowercase', color:'var(--ink)', margin:'0 0 28px',
               }}>
-                figuras<br/>
-                que no<br/>
-                <em style={{ color:'#F5C84A', fontStyle:'italic', fontWeight:800 }}>consigues</em><br/>
-                en tienda
+                {/* Dos palabras en vez de cuatro renglones. El dorado se queda
+                    en "no consigues", que es la parte que vende. */}
+                las que<br/>
+                <em style={{ color:'#B8860B', fontStyle:'italic', fontWeight:800 }}>no consigues</em>
               </h1>
 
               <p className="anim-fade-up d-2 hero-desc" style={{ fontSize:17, color:'var(--ink-2)', lineHeight:1.65, maxWidth:400, margin:'0 0 36px' }}>
-                Star Wars, Marvel, sports y más. Nuevos ingresos cada semana. Apartas con 60% y liquidas en 7 días.
+                Minifiguras originales. Nuevas cada semana, apartas con 60%.
               </p>
 
               {/* CTAs */}
@@ -142,7 +142,7 @@ export default function MockCliente() {
                 }}>
                   <div className="anim-float-soft" style={{ animationDelay:`${i * 0.7}s` }}>
                     <Image src={f.src} alt="" width={260} height={260} sizes="18vw"
-                      style={{ width:'100%', height:'auto', filter:'drop-shadow(0 14px 16px rgba(26,30,90,.18))' }} />
+                      style={{ width:'100%', height:'auto', mixBlendMode:'multiply' }} />
                   </div>
                 </div>
               ))}
@@ -153,7 +153,10 @@ export default function MockCliente() {
                     src={shopifyImg(heroFoto, 1200)!} alt={HERO.alt} fill priority sizes="55vw"
                     style={{
                       objectFit:'contain', objectPosition:'center',
-                      filter:'drop-shadow(0 34px 28px rgba(26,30,90,.22))',
+                      /* El fondo blanco de la foto se funde con el fondo claro
+                         de la sección: así la figura queda recortada sin tener
+                         que editar el archivo. */
+                      mixBlendMode:'multiply',
                     }}
                   />
                 </div>
