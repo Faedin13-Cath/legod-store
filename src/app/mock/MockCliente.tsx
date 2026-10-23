@@ -79,10 +79,12 @@ export default function MockCliente() {
           HERO — full-viewport dark gradient
       ═══════════════════════════════════════════════════════ */}
       <section className="hero-section" style={{
-        /* Color plano, como el verde del Burgur. El degradado de tres paradas
-           más las dos manchas de luz hacían ruido detrás de la figura; con un
-           solo tono el producto es lo único que llama. */
-        background: '#241061',
+        /* Fondo CLARO a propósito. Las fotos de la tienda traen el fondo
+           blanco pegado: sobre morado salían como rectángulos blancos. Con
+           un fondo casi blanco ese recorte se vuelve invisible y las figuras
+           sí flotan, que es el efecto del Burgur. El arreglo de raíz es
+           reexportar las fotos con transparencia; esto funciona hoy. */
+        background: '#F2F0EC',
         position: 'relative', overflow: 'hidden',
         minHeight: '100svh',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
@@ -94,16 +96,16 @@ export default function MockCliente() {
             {/* ── Left: copy ── */}
             <div>
               {/* Live-dot eyebrow */}
-              <div className="anim-fade-right d-0 hero-eyebrow" style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'6px 14px', borderRadius:999, background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.14)', marginBottom:28 }}>
+              <div className="anim-fade-right d-0 hero-eyebrow" style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'6px 14px', borderRadius:999, background:'rgba(26,30,90,0.05)', border:'1px solid rgba(26,30,90,0.12)', marginBottom:28 }}>
                 <div style={{ width:6, height:6, borderRadius:'50%', background:'#F5C84A', animation:'pulse 2s ease-in-out infinite' }} />
-                <span style={{ fontSize:11, fontWeight:600, letterSpacing:'0.12em', textTransform:'uppercase', color:'rgba(255,255,255,0.7)' }}>CDMX · Envíos a todo México e internacionales a cotizar</span>
+                <span style={{ fontSize:11, fontWeight:600, letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--ink-2)' }}>CDMX · Envíos a todo México e internacionales a cotizar</span>
               </div>
 
               {/* Mega headline */}
               <h1 className="anim-fade-up d-1 hero-h1" style={{
                 fontSize:'clamp(64px, 8.5vw, 120px)', lineHeight:0.87,
                 fontWeight:900, letterSpacing:'-0.04em',
-                textTransform:'lowercase', color:'#fff', margin:'0 0 28px',
+                textTransform:'lowercase', color:'var(--ink)', margin:'0 0 28px',
               }}>
                 figuras<br/>
                 que no<br/>
@@ -111,7 +113,7 @@ export default function MockCliente() {
                 en tienda
               </h1>
 
-              <p className="anim-fade-up d-2 hero-desc" style={{ fontSize:17, color:'rgba(255,255,255,0.55)', lineHeight:1.65, maxWidth:400, margin:'0 0 36px' }}>
+              <p className="anim-fade-up d-2 hero-desc" style={{ fontSize:17, color:'var(--ink-2)', lineHeight:1.65, maxWidth:400, margin:'0 0 36px' }}>
                 Star Wars, Marvel, sports y más. Nuevos ingresos cada semana. Apartas con 60% y liquidas en 7 días.
               </p>
 
@@ -140,7 +142,7 @@ export default function MockCliente() {
                 }}>
                   <div className="anim-float-soft" style={{ animationDelay:`${i * 0.7}s` }}>
                     <Image src={f.src} alt="" width={260} height={260} sizes="18vw"
-                      style={{ width:'100%', height:'auto', filter:'drop-shadow(0 18px 20px rgba(0,0,0,.45))' }} />
+                      style={{ width:'100%', height:'auto', filter:'drop-shadow(0 14px 16px rgba(26,30,90,.18))' }} />
                   </div>
                 </div>
               ))}
@@ -151,7 +153,7 @@ export default function MockCliente() {
                     src={shopifyImg(heroFoto, 1200)!} alt={HERO.alt} fill priority sizes="55vw"
                     style={{
                       objectFit:'contain', objectPosition:'center',
-                      filter:'drop-shadow(0 42px 38px rgba(0,0,0,.55))',
+                      filter:'drop-shadow(0 34px 28px rgba(26,30,90,.22))',
                     }}
                   />
                 </div>
@@ -161,7 +163,7 @@ export default function MockCliente() {
               <div aria-hidden style={{
                 position:'absolute', bottom:34, left:'50%', transform:'translateX(-50%)',
                 width:'52%', height:26, borderRadius:'50%',
-                background:'radial-gradient(ellipse, rgba(0,0,0,.5) 0%, transparent 72%)',
+                background:'radial-gradient(ellipse, rgba(26,30,90,.26) 0%, transparent 72%)',
                 filter:'blur(8px)', pointerEvents:'none',
               }} />
 
