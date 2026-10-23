@@ -192,20 +192,19 @@ export default function MockCliente() {
           CATEGORÍAS — horizontal scroll cards
       ═══════════════════════════════════════════════════════ */}
       <Sec top={16}>
-        <Reveal><Head title="por tema" /></Reveal>
+        <Reveal><Head eyebrow="Explora" title="por tema" /></Reveal>
         <Reveal delay={80} animation="fade-in">
           <div className="h-scroll-wrap">
             <div className="h-scroll" style={{ gap:12 }}>
               {cats.map(c => {
                 const count = allProducts.filter(p => p.cat === c.id).length
                 return (
-                  /* ARREGLO 3: esta sección deja de ser tarjetas. Cuatro
-                     secciones seguidas con la misma forma hacen que al bajar
-                     sientas que no avanzas. Aquí va texto grande, sin caja y
-                     sin morado, para que la página respire y cambie de ritmo. */
-                  <Link key={c.id} href={categoriaPorCat(c.id) ? `/minifiguras/${categoriaPorCat(c.id)!.slug}` : `/tienda?cat=${c.id}`} className="cat-card" style={{ flexShrink:0, textDecoration:'none', display:'flex', alignItems:'baseline', gap:7, paddingRight:14 }}>
-                    <span style={{ fontSize:26, fontWeight:700, color:'var(--ink)', letterSpacing:'-0.02em', lineHeight:1.1, whiteSpace:'nowrap' }}>{c.label}</span>
-                    <span style={{ fontSize:13, color:'var(--ink-3)', fontVariantNumeric:'tabular-nums' }}>{count}</span>
+                  <Link key={c.id} href={categoriaPorCat(c.id) ? `/minifiguras/${categoriaPorCat(c.id)!.slug}` : `/tienda?cat=${c.id}`} className="cat-card" style={{ flexShrink:0, width:134, borderRadius:20, padding:'18px 16px', textDecoration:'none', background:'var(--paper)', border:'1px solid var(--line)', display:'flex', flexDirection:'column', gap:10 }}>
+                    <span style={{ width:44, height:44, borderRadius:12, background:'var(--accent-soft)', color:'var(--accent)', display:'flex', alignItems:'center', justifyContent:'center' }}><Icon name={c.icon} size={24} /></span>
+                    <div>
+                      <div style={{ fontSize:14, fontWeight:600, color:'var(--ink)', lineHeight:1.2 }}>{c.label}</div>
+                      <div style={{ fontSize:11, color:'var(--ink-3)', marginTop:3 }}>{count} figuras</div>
+                    </div>
                   </Link>
                 )
               })}
@@ -247,7 +246,7 @@ export default function MockCliente() {
       ═══════════════════════════════════════════════════════ */}
       <Sec top={0}>
         <Reveal>
-          <Head title="restock reciente">
+          <Head eyebrow="Volvieron" title="restock reciente">
             <Link href="/tienda?tag=restock" className="more-link" style={moreLink}>ver todos →</Link>
           </Head>
         </Reveal>
