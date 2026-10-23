@@ -65,15 +65,14 @@ export default function MockCliente() {
           HERO — full-viewport dark gradient
       ═══════════════════════════════════════════════════════ */}
       <section className="hero-section" style={{
-        background: 'linear-gradient(150deg, #0F1240 0%, #1A1E5A 50%, #2D1869 100%)',
+        /* Color plano, como el verde del Burgur. El degradado de tres paradas
+           más las dos manchas de luz hacían ruido detrás de la figura; con un
+           solo tono el producto es lo único que llama. */
+        background: '#241061',
         position: 'relative', overflow: 'hidden',
         minHeight: '100svh',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
       }}>
-        {/* Atmospheric glow blobs */}
-        <div style={{ position:'absolute', top:'10%', right:'20%', width:720, height:720, borderRadius:'50%', background:'radial-gradient(circle, rgba(85,38,173,0.5) 0%, transparent 70%)', filter:'blur(96px)', pointerEvents:'none' }} />
-        <div style={{ position:'absolute', bottom:'-8%', left:'-6%', width:520, height:520, borderRadius:'50%', background:'radial-gradient(circle, rgba(96,80,220,0.38) 0%, transparent 70%)', filter:'blur(84px)', pointerEvents:'none' }} />
-        <Dragon style={{ position:'absolute', right:'-3%', bottom:'-12%', width:'26%', color:'rgba(255,255,255,0.03)', pointerEvents:'none' }} />
 
         <div className="hero-inner" style={{ maxWidth:1280, margin:'0 auto', padding:'120px 48px 100px', position:'relative', zIndex:1, width:'100%' }}>
           <div className="hero-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:56, alignItems:'center' }}>
@@ -109,17 +108,33 @@ export default function MockCliente() {
               </div>
             </div>
 
-            {/* ── Right: floating image ── */}
+            {/* ── Derecha: la figura suelta, sin tarjeta ──
+                El cambio del Burgur. Antes la figura vivía dentro de una
+                tarjeta blanca que la encogía al 82% y le ponía una pared
+                alrededor. Aquí sale recortada sobre el morado, mucho más
+                grande, con una sombra de contacto en el piso para que no
+                parezca pegada. El producto es lo más interesante que hay
+                en la página: merece el tamaño. */}
             <div className="hero-img-col" style={{ position:'relative', height:580 }}>
-              {/* Main image card */}
-              <div className="anim-scale-in d-2" style={{ position:'absolute', inset:0, borderRadius:32, overflow:'hidden', boxShadow:'0 48px 96px -24px rgba(0,0,0,0.7)', background:'#fff' }}>
-                <div className="anim-float" style={{ position:'absolute', inset:0 }}>
-                  <div style={{ position:'absolute', inset:0, transform:'scale(0.82)', transformOrigin:'center' }}>
-                    <Image src={shopifyImg(heroFoto, 900)!} alt={HERO.alt} fill style={{ objectFit:'contain', objectPosition:'center' }} sizes="45vw" priority />
-                  </div>
+              <div className="anim-scale-in d-2" style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <div className="anim-float" style={{ position:'relative', width:'100%', height:'100%' }}>
+                  <Image
+                    src={shopifyImg(heroFoto, 1200)!} alt={HERO.alt} fill priority sizes="55vw"
+                    style={{
+                      objectFit:'contain', objectPosition:'center',
+                      filter:'drop-shadow(0 42px 38px rgba(0,0,0,.55))',
+                    }}
+                  />
                 </div>
-                <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, transparent 55%, rgba(15,18,64,0.55) 100%)' }} />
               </div>
+
+              {/* La sombra en el piso: lo que la hace sentir parada y no flotando */}
+              <div aria-hidden style={{
+                position:'absolute', bottom:34, left:'50%', transform:'translateX(-50%)',
+                width:'52%', height:26, borderRadius:'50%',
+                background:'radial-gradient(ellipse, rgba(0,0,0,.5) 0%, transparent 72%)',
+                filter:'blur(8px)', pointerEvents:'none',
+              }} />
 
               {/* Glass badge — promo */}
               <div className="anim-fade-up d-5 hero-badge-promo" style={{ position:'absolute', bottom:28, left:-36, background:'rgba(15,18,64,0.72)', backdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.18)', borderRadius:20, padding:'14px 18px', zIndex:2, minWidth:184 }}>
