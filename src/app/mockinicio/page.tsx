@@ -3,255 +3,243 @@
 /**
  * ███ MAQUETA DESECHABLE ███
  *
- * Borrador visual para decidir hacia dónde va la tienda. No está ligada desde
- * ningún lado y no comparte componentes con el sitio real: se puede borrar
- * entera sin tocar nada que funcione.
+ * Segundo intento. El primero falló por la razón de fondo: puse las figuras a
+ * competir contra bloques de color enormes, y una minifigura sobre crema o
+ * sobre amarillo se pierde.
  *
- * La idea: la marca ya tiene morado, dorado y azul tinta, pero hoy los usa
- * como acentos tímidos sobre crema. Aquí el color se usa en BLOQUES grandes,
- * las cosas se enciman, y las figuras salen recortadas sobre el color.
+ * La idea ahora: la página es morado profundo, casi negro, y las figuras son
+ * lo único brillante. El plástico de colores resalta sobre oscuro. Un solo
+ * color manda la superficie; el dorado aparece solo en los precios.
  *
- * Productos y fotos: reales, de la tienda.
+ * Productos y fotos: reales, de la tienda. Los conteos por tema son de relleno.
  */
 
 import Image from 'next/image'
 
-const MORADO = '#5526AD'
-const MORADO_BRILLANTE = '#6050DC'
-const DORADO = '#E2A91A'
-const TINTA = '#1A1E5A'
-const CREMA = '#F5F3EF'
-
-type Figura = { t: string; p: number; img: string }
+type Figura = { t: string; p: number; img: string; tema: string }
 
 const DESTACADA: Figura = {
-  t: 'Darth Maul',
-  p: 900,
+  t: 'Darth Maul', p: 900, tema: 'Star Wars',
   img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sw0384.png?v=1791321948',
 }
 
-const NUEVAS: Figura[] = [
-  { t: 'Taskmaster', p: 300, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0100.png?v=1787789994' },
-  { t: 'Iron Man Mark 6', p: 250, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0015.png?v=1790042228' },
-  { t: 'Doctor Strange', p: 100, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0802.png?v=1790042258' },
-  { t: 'Venom navideño', p: 120, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/76293-6.png?v=1790042311' },
-  { t: 'Miles Morales', p: 150, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/76293-14.png?v=1790042310' },
-  { t: 'Storm', p: 120, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/colmar23_15fdb798-3efd-4616-b05f-6daa243270eb.png?v=1791134171' },
-  { t: 'Hawkeye', p: 110, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0570_04ffa12e-764c-4fd7-8ef0-a564a51a5e30.png?v=1787196888' },
-  { t: 'Ant-Man', p: 100, img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0563_fa945662-9cbc-4648-8dbd-27d966f745df.png?v=1787196887' },
+const FIGURAS: Figura[] = [
+  { t: 'Taskmaster', p: 300, tema: 'Marvel', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0100.png?v=1787789994' },
+  { t: 'Iron Man Mark 6', p: 250, tema: 'Marvel', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0015.png?v=1790042228' },
+  { t: 'Miles Morales', p: 150, tema: 'Marvel', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/76293-14.png?v=1790042310' },
+  { t: 'Venom navideño', p: 120, tema: 'Marvel', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/76293-6.png?v=1790042311' },
+  { t: 'Storm', p: 120, tema: 'Marvel', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/colmar23_15fdb798-3efd-4616-b05f-6daa243270eb.png?v=1791134171' },
+  { t: 'Hawkeye', p: 110, tema: 'Marvel', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0570_04ffa12e-764c-4fd7-8ef0-a564a51a5e30.png?v=1787196888' },
+  { t: 'Doctor Strange', p: 100, tema: 'Marvel', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0802.png?v=1790042258' },
+  { t: 'Ant-Man', p: 100, tema: 'Marvel', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0563_fa945662-9cbc-4648-8dbd-27d966f745df.png?v=1787196887' },
+  { t: 'War Machine', p: 90, tema: 'Marvel', img: 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/sh0564_9d69588c-2f04-4c84-89c8-834a40ebb76a.png?v=1787196888' },
 ]
 
-// Los mundos de la tienda, cada uno con su color. El color ES la navegación.
-const MUNDOS = [
-  { n: 'Star Wars',       bg: '#1A1E5A', fg: '#FFFFFF', c: 412 },
-  { n: 'Marvel',          bg: '#D92B3A', fg: '#FFFFFF', c: 388 },
-  { n: 'DC',              bg: '#1763D1', fg: '#FFFFFF', c: 146 },
-  { n: 'Harry Potter',    bg: '#E2A91A', fg: '#1A1E5A', c: 97  },
-  { n: 'Stranger Things', bg: '#13111C', fg: '#F05A28', c: 34  },
-  { n: 'Ninjago',         bg: '#17A34A', fg: '#FFFFFF', c: 58  },
-  { n: 'Customs',         bg: '#5526AD', fg: '#FFFFFF', c: 211 },
-  { n: 'Deportes',        bg: '#F2F0EA', fg: '#1A1E5A', c: 29  },
-]
+const TEMAS = ['Star Wars', 'Marvel', 'DC', 'Harry Potter', 'Stranger Things', 'Ninjago', 'Customs', 'Deportes']
 
 const precio = (n: number) => '$' + n.toLocaleString('es-MX')
 
 export default function MockInicio() {
   return (
-    <div style={{ background: CREMA, minHeight: '100dvh', overflowX: 'hidden' }}>
+    <div className="mi">
       <style>{`
-        .mk { --borde: 3px solid ${TINTA}; }
-        .mk h1, .mk h2 { letter-spacing: -0.035em; line-height: 0.92; margin: 0; }
-        .mk-ficha {
-          transition: transform .18s cubic-bezier(.16,1,.3,1), box-shadow .18s;
+        /* La barra crema del sitio pelea con una página oscura. En la maqueta
+           se esconde para poder juzgar la idea completa, no un pegote. */
+        header { display: none !important; }
+        footer { display: none !important; }
+
+        .mi {
+          --fondo:  #17062E;   /* morado casi negro: la superficie ES el color */
+          --alto:   #22093F;   /* un escalón arriba, para separar sin bordes */
+          --morado: #7B4BE8;   /* el morado de marca, subido para brillar en oscuro */
+          --oro:    #F0B429;   /* único acento, solo precios y la acción principal */
+          --texto:  #F4F1FB;
+          --tenue:  #BCADD8;   /* 6.1:1 sobre el fondo, legible de verdad */
+          --ease:   cubic-bezier(0.23, 1, 0.32, 1);
+
+          background: var(--fondo);
+          color: var(--texto);
+          min-height: 100dvh;
+          overflow-x: hidden;
         }
-        @media (hover: hover) {
-          .mk-ficha:hover { transform: translateY(-6px) rotate(-1deg); }
-          .mk-mundo:hover { transform: translateY(-4px); }
-          .mk-pill:hover { transform: translateY(-2px); }
+        .mi h1, .mi h2 { margin: 0; letter-spacing: -0.03em; text-wrap: balance; }
+
+        .mi-marca {
+          display: flex; align-items: center; gap: 10px;
+          padding: 20px clamp(18px, 4vw, 56px);
         }
-        .mk-ficha:active { transform: scale(.985); }
-        .mk-mundo { transition: transform .18s cubic-bezier(.16,1,.3,1); }
-        .mk-pill  { transition: transform .15s; }
-        .mk-fila::-webkit-scrollbar { height: 6px; }
-        .mk-fila::-webkit-scrollbar-thumb { background: ${TINTA}33; border-radius: 99px; }
+
+        /* Portada: la figura manda, el texto la acompaña */
+        .mi-portada {
+          display: grid; grid-template-columns: 1fr 1fr; align-items: center;
+          gap: clamp(20px, 4vw, 56px);
+          padding: clamp(8px, 2vw, 24px) clamp(18px, 4vw, 56px) clamp(48px, 7vw, 92px);
+        }
+        .mi-halo {
+          position: relative; display: flex; align-items: center; justify-content: center;
+          min-height: clamp(320px, 40vw, 520px);
+        }
+        /* El resplandor es lo que hace que el plástico se vea iluminado */
+        .mi-halo::before {
+          content: ""; position: absolute; width: 78%; aspect-ratio: 1; border-radius: 50%;
+          background: radial-gradient(circle, rgba(123,75,232,.55) 0%, rgba(123,75,232,0) 68%);
+          filter: blur(10px);
+        }
+        .mi-halo img { position: relative; }
+
+        .mi-precio {
+          position: absolute; right: 2%; bottom: 10%;
+          background: var(--oro); color: #17062E;
+          border-radius: 999px; padding: 10px 20px;
+          font-size: clamp(18px, 2vw, 24px); font-weight: 800;
+          box-shadow: 0 14px 34px rgba(0,0,0,.45);
+        }
+
+        /* Temas: una tira que se arrastra, no ocho cuadros de colores distintos */
+        .mi-tira {
+          display: flex; gap: 8px; overflow-x: auto;
+          padding: 0 clamp(18px, 4vw, 56px) clamp(40px, 5vw, 64px);
+          scrollbar-width: none;
+        }
+        .mi-tira::-webkit-scrollbar { display: none; }
+        .mi-tema {
+          flex: 0 0 auto; border: 1px solid rgba(244,241,251,.18);
+          background: transparent; color: var(--texto);
+          border-radius: 999px; padding: 11px 20px; font-size: 15px; font-weight: 600;
+          font-family: inherit; cursor: pointer; min-height: 44px;
+          transition: background 160ms var(--ease), border-color 160ms var(--ease), transform 140ms var(--ease);
+        }
+
+        /* Rejilla: celdas de dos tamaños, tantas como productos hay */
+        .mi-rejilla {
+          display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+          gap: 14px; padding: 0 clamp(18px, 4vw, 56px) clamp(56px, 7vw, 96px);
+        }
+        .mi-ficha {
+          background: var(--alto); border-radius: 20px; padding: 14px;
+          border: 1px solid rgba(244,241,251,.07);
+          display: flex; flex-direction: column;
+          opacity: 0; transform: translateY(10px);
+          animation: mi-entra 460ms var(--ease) forwards;
+          transition: transform 180ms var(--ease), border-color 180ms var(--ease);
+        }
+        .mi-ficha:nth-child(1){animation-delay:0ms}   .mi-ficha:nth-child(2){animation-delay:45ms}
+        .mi-ficha:nth-child(3){animation-delay:90ms}  .mi-ficha:nth-child(4){animation-delay:135ms}
+        .mi-ficha:nth-child(5){animation-delay:180ms} .mi-ficha:nth-child(6){animation-delay:225ms}
+        .mi-ficha:nth-child(7){animation-delay:270ms} .mi-ficha:nth-child(8){animation-delay:315ms}
+        .mi-ficha:nth-child(9){animation-delay:360ms}
+        @keyframes mi-entra { to { opacity: 1; transform: translateY(0); } }
+
+        .mi-plato {
+          background: rgba(244,241,251,.05); border-radius: 14px; height: 190px;
+          display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
+        }
+        .mi-plato img { transition: transform 220ms var(--ease); }
+
+        .mi-cta {
+          background: var(--oro); color: #17062E; border: none; border-radius: 999px;
+          padding: 15px 30px; font-size: 16px; font-weight: 800; font-family: inherit;
+          cursor: pointer; min-height: 48px; text-decoration: none;
+          display: inline-flex; align-items: center; justify-content: center;
+          transition: transform 140ms var(--ease);
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+          .mi-tema:hover  { background: rgba(244,241,251,.1); border-color: rgba(244,241,251,.34); }
+          .mi-ficha:hover { transform: translateY(-4px); border-color: rgba(123,75,232,.5); }
+          .mi-ficha:hover .mi-plato img { transform: scale(1.06); }
+        }
+        .mi-tema:active, .mi-cta:active, .mi-ficha:active { transform: scale(0.97); }
+
         @media (prefers-reduced-motion: reduce) {
-          .mk-ficha, .mk-mundo, .mk-pill { transition: none !important; transform: none !important; }
+          .mi-ficha { opacity: 1; transform: none; animation: none; }
+          .mi *, .mi *::before { transition: none !important; }
         }
-        .mk-hero-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 0; align-items: stretch; }
-        .mk-mundos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-        .mk-rejilla { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-        @media (max-width: 900px) {
-          .mk-hero-grid { grid-template-columns: 1fr; }
-          .mk-mundos   { grid-template-columns: repeat(2, 1fr); }
-          .mk-rejilla  { grid-template-columns: repeat(2, 1fr); }
+        @media (max-width: 860px) {
+          .mi-portada { grid-template-columns: 1fr; text-align: left; }
+          .mi-halo { order: -1; min-height: 280px; }
         }
       `}</style>
 
       <div style={{
-        background: TINTA, color: '#fff', textAlign: 'center',
-        padding: '8px 16px', fontSize: 12.5, fontWeight: 600, letterSpacing: '0.04em',
+        background: '#0D0318', color: '#BCADD8', textAlign: 'center',
+        padding: '8px 16px', fontSize: 12.5, fontWeight: 600,
       }}>
         Maqueta desechable. No es la tienda real.
       </div>
 
-      <div className="mk">
-
-        {/* ─────────── Portada: bloque de color a sangre, la figura encimada ─────────── */}
-        <section style={{ position: 'relative' }}>
-          <div className="mk-hero-grid">
-            <div style={{
-              background: MORADO, color: '#fff',
-              padding: 'clamp(40px, 7vw, 84px) clamp(22px, 5vw, 64px) clamp(56px, 7vw, 84px)',
-              display: 'flex', flexDirection: 'column', justifyContent: 'center',
-            }}>
-              <h1 style={{ fontSize: 'clamp(44px, 7.5vw, 104px)', fontWeight: 800 }}>
-                Figuras que<br />
-                no consigues<br />
-                <span style={{ color: DORADO }}>en tienda.</span>
-              </h1>
-              <p style={{
-                fontSize: 'clamp(15px, 1.6vw, 19px)', lineHeight: 1.5, margin: '22px 0 0',
-                maxWidth: '34ch', color: '#E9E2FB',
-              }}>
-                Star Wars, Marvel, DC y customs. Originales, revisadas una por una.
-              </p>
-              <div style={{ display: 'flex', gap: 10, marginTop: 30, flexWrap: 'wrap' }}>
-                <a href="#rejilla" className="mk-pill" style={{
-                  background: DORADO, color: TINTA, borderRadius: 999,
-                  padding: '15px 30px', fontSize: 16, fontWeight: 800,
-                  textDecoration: 'none', whiteSpace: 'nowrap',
-                }}>Ver la tienda</a>
-                <a href="#mundos" className="mk-pill" style={{
-                  background: 'transparent', color: '#fff', border: '2px solid #ffffff66',
-                  borderRadius: 999, padding: '13px 28px', fontSize: 16, fontWeight: 700,
-                  textDecoration: 'none', whiteSpace: 'nowrap',
-                }}>Por tema</a>
-              </div>
-            </div>
-
-            <div style={{
-              background: DORADO, position: 'relative',
-              minHeight: 'clamp(300px, 42vw, 540px)',
-              display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-            }}>
-              <Image
-                src={DESTACADA.img} alt={DESTACADA.t} width={620} height={620} priority
-                style={{
-                  width: 'min(86%, 420px)', height: 'auto', objectFit: 'contain',
-                  filter: 'drop-shadow(0 26px 40px rgba(26,30,90,.42))',
-                }}
-              />
-              {/* Etiqueta de precio encimada sobre el borde de los dos bloques */}
-              <div style={{
-                position: 'absolute', left: 'clamp(-26px, -2vw, -10px)', top: 'clamp(26px, 5vw, 54px)',
-                background: '#fff', color: TINTA, borderRadius: 18,
-                padding: '12px 18px', boxShadow: '0 18px 40px rgba(26,30,90,.3)',
-                transform: 'rotate(-4deg)',
-              }}>
-                <div style={{ fontSize: 13, fontWeight: 700, opacity: .62 }}>{DESTACADA.t}</div>
-                <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.05 }}>{precio(DESTACADA.p)}</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ─────────── Los mundos: el color es la navegación ─────────── */}
-        <section id="mundos" style={{ padding: 'clamp(44px, 6vw, 76px) clamp(18px, 4vw, 48px)' }}>
-          <h2 style={{ fontSize: 'clamp(30px, 4.4vw, 54px)', fontWeight: 800, color: TINTA, marginBottom: 22 }}>
-            Escoge tu mundo
-          </h2>
-          <div className="mk-mundos">
-            {MUNDOS.map(m => (
-              <a key={m.n} href="#rejilla" className="mk-mundo" style={{
-                background: m.bg, color: m.fg, borderRadius: 24,
-                padding: '22px 20px 18px', minHeight: 132, textDecoration: 'none',
-                display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-              }}>
-                <span style={{ fontSize: 'clamp(19px, 2vw, 26px)', fontWeight: 800, lineHeight: 1.04, letterSpacing: '-0.02em' }}>
-                  {m.n}
-                </span>
-                <span style={{ fontSize: 13, fontWeight: 600, opacity: .76 }}>{m.c} figuras</span>
-              </a>
-            ))}
-          </div>
-        </section>
-
-        {/* ─────────── Lo nuevo: fila que se arrastra, rompe la rejilla ─────────── */}
-        <section style={{ padding: '0 0 clamp(44px, 6vw, 72px)' }}>
-          <div style={{
-            display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap',
-            padding: '0 clamp(18px, 4vw, 48px) 18px',
-          }}>
-            <h2 style={{ fontSize: 'clamp(30px, 4.4vw, 54px)', fontWeight: 800, color: TINTA }}>
-              Recién llegadas
-            </h2>
-            <span style={{ fontSize: 15, color: '#4F5180', fontWeight: 600 }}>cada semana</span>
-          </div>
-          <div className="mk-fila" style={{
-            display: 'flex', gap: 14, overflowX: 'auto', scrollSnapType: 'x mandatory',
-            padding: '4px clamp(18px, 4vw, 48px) 14px',
-          }}>
-            {NUEVAS.map((f, i) => (
-              <article key={f.t} className="mk-ficha" style={{
-                flex: '0 0 auto', width: 212, scrollSnapAlign: 'start',
-                background: i % 3 === 0 ? MORADO_BRILLANTE : '#fff',
-                color: i % 3 === 0 ? '#fff' : TINTA,
-                borderRadius: 24, padding: 14, border: i % 3 === 0 ? 'none' : '1px solid #E6E4DD',
-              }}>
-                <div style={{
-                  background: i % 3 === 0 ? '#ffffff1f' : CREMA, borderRadius: 16,
-                  height: 182, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12,
-                }}>
-                  <Image src={f.img} alt={f.t} width={300} height={300}
-                    style={{ width: '78%', height: 'auto', objectFit: 'contain' }} />
-                </div>
-                <div style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.25, minHeight: 36 }}>{f.t}</div>
-                <div style={{ fontSize: 20, fontWeight: 800, marginTop: 4 }}>{precio(f.p)}</div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        {/* ─────────── Bloque a sangre: un solo mensaje ─────────── */}
-        <section style={{
-          background: TINTA, color: '#fff',
-          padding: 'clamp(44px, 6vw, 80px) clamp(22px, 5vw, 64px)',
-          display: 'grid', gridTemplateColumns: '1fr', gap: 20,
-        }}>
-          <h2 style={{ fontSize: 'clamp(32px, 5.4vw, 68px)', fontWeight: 800, maxWidth: '18ch' }}>
-            Apártala con el <span style={{ color: DORADO }}>60%</span> y págala en 7 días.
-          </h2>
-          <a href="#rejilla" className="mk-pill" style={{
-            background: DORADO, color: TINTA, borderRadius: 999, padding: '15px 30px',
-            fontSize: 16, fontWeight: 800, textDecoration: 'none', justifySelf: 'start',
-          }}>Ver la tienda</a>
-        </section>
-
-        {/* ─────────── La rejilla de verdad ─────────── */}
-        <section id="rejilla" style={{ padding: 'clamp(44px, 6vw, 76px) clamp(18px, 4vw, 48px) 90px' }}>
-          <h2 style={{ fontSize: 'clamp(30px, 4.4vw, 54px)', fontWeight: 800, color: TINTA, marginBottom: 22 }}>
-            Todas las figuras
-          </h2>
-          <div className="mk-rejilla">
-            {[...NUEVAS, ...NUEVAS].slice(0, 8).map((f, i) => (
-              <article key={i} className="mk-ficha" style={{
-                background: '#fff', borderRadius: 24, padding: 14,
-                border: '1px solid #E6E4DD', color: TINTA,
-              }}>
-                <div style={{
-                  background: CREMA, borderRadius: 16, height: 186,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12,
-                }}>
-                  <Image src={f.img} alt={f.t} width={300} height={300}
-                    style={{ width: '76%', height: 'auto', objectFit: 'contain' }} />
-                </div>
-                <div style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.25, minHeight: 36 }}>{f.t}</div>
-                <div style={{ fontSize: 20, fontWeight: 800, marginTop: 4 }}>{precio(f.p)}</div>
-              </article>
-            ))}
-          </div>
-        </section>
+      <div className="mi-marca">
+        <Image src="/assets/logo/legod-logo-violet-128.webp" alt="" width={34} height={34} style={{ borderRadius: '50%' }} />
+        <span style={{ fontWeight: 800, fontSize: 19 }}>Jango&apos;s Store</span>
       </div>
+
+      <section className="mi-portada">
+        <div>
+          <h1 style={{ fontSize: 'clamp(38px, 5.6vw, 76px)', fontWeight: 800, lineHeight: 1.02 }}>
+            Figuras que no<br />consigues en tienda
+          </h1>
+          <p style={{
+            fontSize: 'clamp(15px, 1.5vw, 18px)', lineHeight: 1.6, color: 'var(--tenue)',
+            margin: '18px 0 0', maxWidth: '38ch',
+          }}>
+            Star Wars, Marvel, DC y customs. Revisadas una por una antes de salir.
+          </p>
+          <a href="#rejilla" className="mi-cta" style={{ marginTop: 28 }}>Ver las figuras</a>
+        </div>
+
+        <div className="mi-halo">
+          <Image
+            src={DESTACADA.img} alt={DESTACADA.t} width={560} height={560} priority
+            style={{
+              width: 'min(74%, 340px)', height: 'auto', objectFit: 'contain',
+              filter: 'drop-shadow(0 30px 44px rgba(0,0,0,.6))',
+            }}
+          />
+          <span className="mi-precio">{precio(DESTACADA.p)}</span>
+        </div>
+      </section>
+
+      <div className="mi-tira">
+        {TEMAS.map(t => (
+          <button key={t} type="button" className="mi-tema">{t}</button>
+        ))}
+      </div>
+
+      <section id="rejilla">
+        <h2 style={{
+          fontSize: 'clamp(26px, 3.4vw, 42px)', fontWeight: 800, lineHeight: 1.05,
+          padding: '0 clamp(18px, 4vw, 56px) 20px',
+        }}>
+          Recién llegadas
+        </h2>
+        <div className="mi-rejilla">
+          {FIGURAS.map(f => (
+            <article key={f.t} className="mi-ficha">
+              <div className="mi-plato">
+                <Image src={f.img} alt={f.t} width={320} height={320}
+                  style={{ width: '72%', height: 'auto', objectFit: 'contain' }} />
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--tenue)', fontWeight: 600 }}>{f.tema}</div>
+              <div style={{ fontSize: 15.5, fontWeight: 700, lineHeight: 1.3, margin: '2px 0 8px' }}>{f.t}</div>
+              <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--oro)', marginTop: 'auto' }}>
+                {precio(f.p)}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section style={{
+        background: 'var(--alto)', padding: 'clamp(44px, 6vw, 80px) clamp(18px, 4vw, 56px)',
+        textAlign: 'center',
+      }}>
+        <h2 style={{ fontSize: 'clamp(26px, 3.6vw, 46px)', fontWeight: 800, lineHeight: 1.1, maxWidth: '20ch', margin: '0 auto' }}>
+          Apártala con el <span style={{ color: 'var(--oro)' }}>60%</span> y págala en 7 días
+        </h2>
+        <p style={{ color: 'var(--tenue)', fontSize: 16, margin: '14px auto 0', maxWidth: '44ch', lineHeight: 1.6 }}>
+          Te la guardamos desde que la apartas. Sin intereses y sin tarjeta.
+        </p>
+      </section>
     </div>
   )
 }
