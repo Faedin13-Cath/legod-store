@@ -739,3 +739,17 @@ a[href*="/tienda"].more-link,
 /* Maqueta: la escolta del hero se esconde en pantallas angostas, donde la
    figura principal ya ocupa todo y las de alrededor solo estorbarían. */
 @media (max-width: 900px) { .hero-escolta { display: none; } }
+
+/* ── Header pegajoso de verdad ──────────────────────────────────────────
+   El header se declara `position: sticky`, pero nunca se queda pegado al
+   hacer scroll: `html` y `body` traen `overflow-x: hidden`, y eso los
+   convierte en contenedor de scroll, lo que anula el sticky de sus hijos.
+
+   `clip` recorta igual de horizontal pero no crea contenedor de scroll.
+   Va acotado con `:has()` a las páginas que piden header adaptativo —hoy
+   sólo la maqueta— para no cambiar el comportamiento del sitio en vivo.
+   Cuando se apruebe, esto se vuelve `overflow-x: clip` a secas arriba. */
+html:has([data-header-tono]),
+body:has([data-header-tono]) {
+  overflow-x: clip;
+}

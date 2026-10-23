@@ -10,7 +10,7 @@ import ProductCard from './MockProductCard'
 import { ProductCardSkeleton } from '@/components/ui/Skeleton'
 import Reveal from '@/components/ui/Reveal'
 import { useCart } from '@/components/cart/CartProvider'
-import { getProducts, shopifyToProduct, shopifyImg } from '@/lib/shopify'
+import { getProducts, shopifyToProduct } from '@/lib/shopify'
 import { cats } from '@/lib/data'
 import { categoriaPorCat } from '@/lib/categorias'
 import type { Product } from '@/types'
@@ -19,22 +19,15 @@ import type React from 'react'
 const TICKER = 'Star Wars · Marvel · DC · Harry Potter · Stranger Things · Deportes · Castle · Pixar · Custom · '
 
 /**
- * La figura del hero. Va escrita aquí y no leída del catálogo a propósito: es
- * la imagen más grande de la página y la que marca la velocidad de carga. Si
- * dependiera de la petición a Shopify, el hero saldría vacío el primer segundo.
- */
-const CDN = 'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/'
-
-/**
  * La escolta del hero: figuras de la tienda que rodean a la principal, como
  * las minifiguras alrededor del Sentinel en el set de Doomsday. Son decorativas
  * (aria-hidden) y van a distinto tamaño para que la del centro siga mandando.
  */
 const ESCOLTA = [
-  { src: CDN + 'sw0117.png?v=1787198272', w: '21%', pos: { top: '4%',   left: '-4%'  } }, // Darth Vader
-  { src: CDN + 'sh0015.png?v=1790042228', w: '18%', pos: { top: '18%',  right: '-2%' } }, // Iron Man
-  { src: CDN + 'sh1018.png?v=1787712736', w: '16%', pos: { bottom: '20%', left: '0%'  } }, // Scarlet Witch
-  { src: CDN + 'sh0033.png?v=1789696217', w: '17%', pos: { bottom: '12%', right: '2%' } }, // Loki
+  { src: '/recortes/sw0117.png', w: '21%', pos: { top: '4%',     left:  '-4%' } }, // Darth Vader
+  { src: '/recortes/sh0015.png', w: '18%', pos: { top: '18%',    right: '-2%' } }, // Iron Man
+  { src: '/recortes/sh1018.png', w: '16%', pos: { bottom: '20%', left:  '0%'  } }, // Scarlet Witch
+  { src: '/recortes/sh0033.png', w: '17%', pos: { bottom: '12%', right: '2%'  } }, // Loki
 ]
 
 const HERO = {
@@ -42,7 +35,10 @@ const HERO = {
   nombre: 'The Kraang · TMNT',
   precio: '$15,000 MXN',
   nota:   '⭐ Pieza única · NYCC',
-  foto:   'https://cdn.shopify.com/s/files/1/1012/4443/6789/files/kraang-be.png',
+  /* Recorte local, no la foto del CDN: la de Shopify trae el fondo blanco
+     pegado y sobre el morado sale como un rectángulo. Se regenera con
+     `node scripts/recortar-fondo.mjs --solo <url>`. */
+  foto:   '/recortes/kraang-be.png',
   alt:    'The Kraang - Battle Damage Suit',
 }
 
@@ -59,10 +55,10 @@ export default function MockCliente() {
   }, [])
 
   const nav     = (p2: Product) => router.push(`/tienda/${p2.id}`)
-  // La foto escrita en HERO sale de inmediato; en cuanto responde el catálogo
-  // manda la del producto. Así el hero sigue pintando rápido, pero si alguien
-  // reemplaza la imagen en Shopify el enlace viejo no deja el hueco en blanco.
-  const heroFoto = allProducts.find(p => p.id === HERO.handle)?.photo ?? HERO.foto
+  // Siempre el recorte local. Antes esto se cambiaba por la foto del catálogo
+  // en cuanto respondía Shopify, y esa trae el fondo blanco: el hero se veía
+  // bien un segundo y luego aparecía el rectángulo.
+  const heroFoto = HERO.foto
   const cargando = allProducts.length === 0
   // "Nuevos ingresos" va por fecha de alta, no por la etiqueta `nuevo`: Shopify
   // ya devuelve el catálogo del más reciente al más viejo. Con la etiqueta había
@@ -78,17 +74,23 @@ export default function MockCliente() {
       {/* ═══════════════════════════════════════════════════════
           HERO — full-viewport dark gradient
       ═══════════════════════════════════════════════════════ */}
-      <section className="hero-section" style={{
-        /* Fondo CLARO a propósito. Las fotos de la tienda traen el fondo
-           blanco pegado: sobre morado salían como rectángulos blancos. Con
-           un fondo casi blanco ese recorte se vuelve invisible y las figuras
-           sí flotan, que es el efecto del Burgur. El arreglo de raíz es
-           reexportar las fotos con transparencia; esto funciona hoy. */
-        background: '#F2F0EC',
+      {/* `data-header-tono="oscuro"`: es la portada quien le avisa al header
+          que debajo hay fondo oscuro, para que se ponga del mismo color en
+          vez de verse como una barra crema pegada encima. Al salir de esta
+          sección el header vuelve solo a claro. */}
+      <section className="hero-section" data-header-tono="oscuro" style={{
+        /* De vuelta al morado de la marca. El fondo claro era un parche para
+           esconder el fondo blanco de las fotos; ahora las fotos del hero
+           están recortadas de verdad (scripts/recortar-fondo.mjs), así que
+           el morado ya no las delata. */
+        background: 'linear-gradient(150deg, #0F1240 0%, #1A1E5A 50%, #2D1869 100%)',
         position: 'relative', overflow: 'hidden',
         minHeight: '100svh',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
       }}>
+        {/* Los dos halos que le quitan lo plano al degradado */}
+        <div aria-hidden style={{ position:'absolute', top:'8%', right:'14%', width:720, height:720, borderRadius:'50%', background:'radial-gradient(circle, rgba(85,38,173,0.50) 0%, transparent 70%)', filter:'blur(96px)', pointerEvents:'none' }} />
+        <div aria-hidden style={{ position:'absolute', bottom:'-8%', left:'-6%', width:520, height:520, borderRadius:'50%', background:'radial-gradient(circle, rgba(96,80,220,0.38) 0%, transparent 70%)', filter:'blur(84px)', pointerEvents:'none' }} />
 
         <div className="hero-inner" style={{ maxWidth:1280, margin:'0 auto', padding:'120px 48px 100px', position:'relative', zIndex:1, width:'100%' }}>
           <div className="hero-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:56, alignItems:'center' }}>
@@ -96,24 +98,24 @@ export default function MockCliente() {
             {/* ── Left: copy ── */}
             <div>
               {/* Live-dot eyebrow */}
-              <div className="anim-fade-right d-0 hero-eyebrow" style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'6px 14px', borderRadius:999, background:'rgba(26,30,90,0.05)', border:'1px solid rgba(26,30,90,0.12)', marginBottom:28 }}>
+              <div className="anim-fade-right d-0 hero-eyebrow" style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'6px 14px', borderRadius:999, background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.16)', marginBottom:28 }}>
                 <div style={{ width:6, height:6, borderRadius:'50%', background:'#F5C84A', animation:'pulse 2s ease-in-out infinite' }} />
-                <span style={{ fontSize:11, fontWeight:600, letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--ink-2)' }}>CDMX · Envíos a todo México e internacionales a cotizar</span>
+                <span style={{ fontSize:11, fontWeight:600, letterSpacing:'0.12em', textTransform:'uppercase', color:'rgba(255,255,255,0.78)' }}>CDMX · Envíos a todo México e internacionales a cotizar</span>
               </div>
 
               {/* Mega headline */}
               <h1 className="anim-fade-up d-1 hero-h1" style={{
                 fontSize:'clamp(64px, 8.5vw, 120px)', lineHeight:0.87,
                 fontWeight:900, letterSpacing:'-0.04em',
-                textTransform:'lowercase', color:'var(--ink)', margin:'0 0 28px',
+                textTransform:'lowercase', color:'#fff', margin:'0 0 28px',
               }}>
                 {/* Dos palabras en vez de cuatro renglones. El dorado se queda
                     en "no consigues", que es la parte que vende. */}
                 las que<br/>
-                <em style={{ color:'#B8860B', fontStyle:'italic', fontWeight:800 }}>no consigues</em>
+                <em style={{ color:'#F5C84A', fontStyle:'italic', fontWeight:800 }}>no consigues</em>
               </h1>
 
-              <p className="anim-fade-up d-2 hero-desc" style={{ fontSize:17, color:'var(--ink-2)', lineHeight:1.65, maxWidth:400, margin:'0 0 36px' }}>
+              <p className="anim-fade-up d-2 hero-desc" style={{ fontSize:17, color:'rgba(255,255,255,0.72)', lineHeight:1.65, maxWidth:400, margin:'0 0 36px' }}>
                 Minifiguras originales. Nuevas cada semana, apartas con 60%.
               </p>
 
@@ -142,7 +144,7 @@ export default function MockCliente() {
                 }}>
                   <div className="anim-float-soft" style={{ animationDelay:`${i * 0.7}s` }}>
                     <Image src={f.src} alt="" width={260} height={260} sizes="18vw"
-                      style={{ width:'100%', height:'auto', mixBlendMode:'multiply' }} />
+                      style={{ width:'100%', height:'auto', filter:'drop-shadow(0 18px 24px rgba(0,0,0,.45))' }} />
                   </div>
                 </div>
               ))}
@@ -150,13 +152,10 @@ export default function MockCliente() {
               <div className="anim-scale-in d-2" style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', zIndex:2 }}>
                 <div className="anim-float" style={{ position:'relative', width:'100%', height:'100%' }}>
                   <Image
-                    src={shopifyImg(heroFoto, 1200)!} alt={HERO.alt} fill priority sizes="55vw"
+                    src={heroFoto} alt={HERO.alt} fill priority sizes="55vw"
                     style={{
                       objectFit:'contain', objectPosition:'center',
-                      /* El fondo blanco de la foto se funde con el fondo claro
-                         de la sección: así la figura queda recortada sin tener
-                         que editar el archivo. */
-                      mixBlendMode:'multiply',
+                      filter:'drop-shadow(0 30px 40px rgba(0,0,0,.5))',
                     }}
                   />
                 </div>
@@ -166,7 +165,7 @@ export default function MockCliente() {
               <div aria-hidden style={{
                 position:'absolute', bottom:34, left:'50%', transform:'translateX(-50%)',
                 width:'52%', height:26, borderRadius:'50%',
-                background:'radial-gradient(ellipse, rgba(26,30,90,.26) 0%, transparent 72%)',
+                background:'radial-gradient(ellipse, rgba(0,0,0,.45) 0%, transparent 72%)',
                 filter:'blur(8px)', pointerEvents:'none',
               }} />
 
